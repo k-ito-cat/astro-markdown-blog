@@ -1,0 +1,29 @@
+---
+import type { Category } from '~/constants/categories';
+
+type Props = {
+  categories: Category[];
+};
+const { categories } = Astro.props;
+---
+
+{
+  categories && categories.length > 0 && (
+    <div class="flex items-center gap-2 text-[0.9rem]">
+      <ul class="flex flex-wrap gap-2">
+        {categories.map((category: Category) => {
+          return (
+            <li>
+              <a
+                href={`#${category}`}
+                class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+              >
+                {category}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  )
+}

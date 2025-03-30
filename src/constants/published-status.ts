@@ -1,0 +1,1 @@
+export const PUBLISHED_STATUS = ["published", "draft"] as const;
