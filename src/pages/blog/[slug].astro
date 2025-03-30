@@ -1,15 +1,23 @@
 ---
-import { getEntry,render } from "astro:content";
+import { getCollection, getEntry } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => {
+    return {
+      params: { slug: post.slug }
+    };
+  });
+}
+
 const { slug } = Astro.params;
-if(!slug) return;
 const post = await getEntry("posts", slug);
 if (!post) return Astro.redirect("/404");
 
 const rendered = await post.render();
-const { Content, headings } = rendered;
+const {Content,headings} = rendered;
 ---
 
 <BaseLayout title={`ブログ｜${post.data.title}`}>
