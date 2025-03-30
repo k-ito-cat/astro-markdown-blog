@@ -1,0 +1,35 @@
+---
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+
+type Props = {
+  content: AstroComponentFactory;
+};
+const { content:Content } = Astro.props;
+---
+
+<div
+  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-[55px] prose-h3:mt-[48px] prose-h2:mb-4 prose-h2:text-primary prose-h2:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:px-2 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:text-heading-third prose-a:break-words w-full max-w-full"
+>
+  <Content/>
+</div>
+
+<style is:global>
+  .prose [data-filename] {
+    position: relative;
+  }
+  .prose [data-filename]::before {
+    content: attr(data-filename);
+    position: absolute;
+    top: -22px;
+    left: 0;
+    background-color: var(--background-color-code);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
+  }
+  .prose [data-filename] pre {
+    margin-top: 30px;
+  }
+</style>

@@ -1,11 +1,53 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import BaseLayout from '~/layouts/BaseLayout.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const posts = await getCollection('posts');
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<BaseLayout title="ブログ一覧">
+  <ul class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4">
+    {
+      posts.map((post) => {
+        const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt } = post.data;
+
+        return (
+          <li>
+            <a href={`/blog/${post.slug}`}>
+              <article class="ease flex flex-col overflow-hidden rounded-lg bg-[var(--background-color-card)] shadow-[0_4px_15px_rgba(0,0,0,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.8)]">
+                {eyecatchUrl && (
+                  <img
+                    class="block h-auto w-full object-cover"
+                    src={eyecatchUrl}
+                    alt={eyecatchAlt || title}
+                    width="1200"
+                    height="630"
+                  />
+                )}
+                <div class="flex flex-col gap-2 p-4 text-[#f0f0f0]">
+                  <h2 class="m-0 text-[1.2rem] font-semibold">{title}</h2>
+
+                  {categories && categories.length > 0 && (
+                    <ul class="flex flex-wrap gap-2">
+                      {categories.map((category) => (
+                        <li class="bg-tag text-small rounded-sm px-2 py-1">
+                          {category}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div class="flex items-center justify-between">
+                    <span class="text-[0.85rem] text-[#999999]">
+                      {new Date(publishedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+</BaseLayout>

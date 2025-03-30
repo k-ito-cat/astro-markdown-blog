@@ -1,0 +1,25 @@
+---
+import { getEntry,render } from "astro:content";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import Article from "~/components/Article.astro";
+
+const { slug } = Astro.params;
+if(!slug) return;
+const post = await getEntry("posts", slug);
+if (!post) return Astro.redirect("/404");
+
+const rendered = await post.render();
+const { Content, headings } = rendered;
+---
+
+<BaseLayout title={`ブログ｜${post.data.title}`}>
+  <Article
+    title={post.data.title}
+    publishedAt={post.data.publishedAt}
+    categories={post.data.categories}
+    eyecatchUrl={post.data.eyecatchUrl}
+    eyecatchAlt={post.data.eyecatchAlt}
+    content={Content}
+    headings={headings}
+  />
+</BaseLayout>

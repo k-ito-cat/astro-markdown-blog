@@ -1,0 +1,131 @@
+---
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import Prose from "./Prose.astro";
+
+type Props = {
+  title: string;
+  publishedAt: Date;
+  categories?: string[];
+  eyecatchUrl?: string;
+  eyecatchAlt?: string;
+  content: AstroComponentFactory;
+  headings?: {
+    depth: number;
+    slug: string;
+    text: string;
+  }[];
+};
+
+const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt, content, headings = [] } = Astro.props;
+---
+
+<main class="relative mx-auto max-w-[1200px] bg-transparent px-4 py-8">
+  <a href="/"> 一覧に戻る </a>
+  <div class:list={[{
+		"grid gap-4 lg:grid-cols-[minmax(0,auto)_30%]": headings.length > 0
+	}]}>
+    {
+       headings.length > 0 && (
+        <nav class="bg-tag scroll sticky top-4 order-1 h-max max-h-[calc(100vh-32px)] overflow-scroll rounded-lg px-12 py-8 shadow-lg md:order-2">
+          <ul class="list-disc space-y-3">
+            {headings.map((heading) => (
+              <li class:list={{ "ml-4": heading.depth === 3 }}>
+                <a
+                  href={`#${heading.slug}`}
+                  class:list={{ "font-bold": heading.depth === 2 }}
+                  class="text-link hover:text-link-hover transition-colors"
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+
+    <article
+      class="bg-card grid grid-cols-1 rounded-lg p-8 shadow-[0_4px_15px_rgba(0,0,0,0.7)]"
+    >
+      <header class="mb-8">
+        <h1 class="text-heading-first mb-2 font-semibold">
+          {title}
+        </h1>
+        <div class="text-meta mb-6 flex gap-4 text-[0.9rem]">
+          <span class="text-meta text-[0.85rem]">
+            {publishedAt.toLocaleDateString()}
+          </span>
+        </div>
+
+        {
+          categories && categories.length > 0 && (
+            <div class="flex items-center gap-2 text-[0.9rem]">
+              <ul class="flex flex-wrap gap-2">
+                {categories.map((category: string) => {
+                  return (
+                    <li>
+                      <a
+                        href={`#${category}`}
+                        class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+                      >
+                        {category}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )
+        }
+
+        {
+          eyecatchUrl && (
+            <img
+              class="mt-4 block h-auto w-full rounded-md shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+              src={eyecatchUrl}
+              alt={eyecatchAlt}
+              width={1200}
+              height={600}
+            />
+          )
+        }
+      </header>
+
+			<Prose content={content} />
+
+      <footer class="border-tag mt-8 flex flex-col gap-4 border-t pt-4">
+        <div class="flex items-center gap-2 text-[0.9rem]">
+          <span>Share:</span>
+          <a
+            href="#twitter"
+            class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+          >
+            Twitter
+          </a>
+          <a
+            href="#facebook"
+            class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+          >
+            Facebook
+          </a>
+        </div>
+      </footer>
+    </article>
+  </div>
+</main>
+
+<style is:global>
+  h2,
+  h3 {
+    scroll-margin-top: 18px;
+  }
+
+  .scroll {
+    overflow: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>

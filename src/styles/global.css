@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@plugin '@tailwindcss/typography';
+
+:root {
+  /* primitive */
+  --color-white-100: #ffffff;
+  --color-gray-100: #dedede;
+  --color-gray-200: #cccccc;
+  --color-gray-300: #999999;
+  --color-gray-400: #555555;
+  --color-gray-500: #333333;
+  --color-blue-100: #81d4fa;
+  --color-blue-200: #4fc3f7;
+  --color-red-100: #ff6f61;
+  --bg-dark-100: #121212;
+  --bg-card-100: #1c1c1c;
+  --border-dark-100: #000000;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 24px;
+  --text-xl: 32px;
+  --text-2xl: 48px;
+}
+
+@theme {
+  --color-*: initial;
+  --color-primary: var(--color-white-100);
+  --color-secondary: var(--color-gray-100);
+  --color-link: var(--color-blue-100);
+  --color-link-hover: var(--color-blue-200);
+  --color-meta: var(--color-gray-300);
+  --color-code: var(--color-red-100);
+
+  --background-color-*: initial;
+  --background-color-base: var(--bg-dark-100);
+  --background-color-card: var(--bg-card-100);
+  --background-color-code: var(--bg-dark-100);
+  --background-color-tag: var(--color-gray-500);
+  --background-color-tag-hover: var(--color-gray-400);
+
+  --border-base: var(--border-dark-100);
+
+  --text-*: initial;
+  --text-small: var(--text-sm);
+  --text-content: var(--text-md);
+  --text-heading-first: var(--text-2xl);
+  --text-heading-second: var(--text-xl);
+  --text-heading-third: var(--text-lg);
+}
+
+html,
+body {
+  @apply text-primary bg-base;
+}
