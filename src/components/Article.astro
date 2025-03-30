@@ -16,16 +16,28 @@ type Props = {
   }[];
 };
 
-const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt, content, headings = [] } = Astro.props;
+const {
+  title,
+  publishedAt,
+  categories,
+  eyecatchUrl,
+  eyecatchAlt,
+  content,
+  headings = [],
+} = Astro.props;
 ---
 
 <main class="relative mx-auto max-w-[1200px] bg-transparent px-4 py-8">
   <a href="/"> 一覧に戻る </a>
-  <div class:list={[{
-		"grid gap-4 lg:grid-cols-[minmax(0,auto)_30%]": headings.length > 0
-	}]}>
+  <div
+    class:list={[
+      {
+        "grid gap-4 lg:grid-cols-[minmax(0,auto)_30%]": headings.length > 0,
+      },
+    ]}
+  >
     {
-       headings.length > 0 && (
+      headings.length > 0 && (
         <nav class="bg-tag scroll sticky top-4 order-1 h-max max-h-[calc(100vh-32px)] overflow-scroll rounded-lg px-12 py-8 shadow-lg md:order-2">
           <ul class="list-disc space-y-3">
             {headings.map((heading) => (
@@ -91,7 +103,7 @@ const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt, content, headi
         }
       </header>
 
-			<Prose content={content} />
+      <Prose content={content} />
 
       <footer class="border-tag mt-8 flex flex-col gap-4 border-t pt-4">
         <div class="flex items-center gap-2 text-[0.9rem]">
