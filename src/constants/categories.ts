@@ -1,2 +1,20 @@
-export const CATEGORIES = ["Astro", "Astro Markdown", "hygen"] as const;
+export const CATEGORIES = [
+  "HTML",
+  "CSS",
+  "JavaScript",
+  "TypeScript",
+  "AWS Amplify",
+  "Astro",
+  "Astro Markdown",
+  "hygen",
+  "React",
+  "React Native",
+  "Vue.js",
+  "Next.js",
+  "効率化",
+  "ツール",
+  "認証・認可",
+  "データベース",
+  "REST API",
+] as const;
 export type Category = (typeof CATEGORIES)[number];
