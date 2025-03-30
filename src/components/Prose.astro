@@ -51,7 +51,7 @@ const { content: Content } = Astro.props;
         timeoutId = setTimeout(() => {
           button.textContent = "copy";
           timeoutId = null;
-        }, 2000);
+        }, 2000) as unknown as number;
       } catch (err) {
         console.error("コピーに失敗しました", err);
       }
