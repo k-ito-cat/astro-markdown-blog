@@ -11,7 +11,7 @@ const posts = await getCollection("posts");
   >
     {
       posts.map((post) => {
-        const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt } =
+        const { title, publishedAt, categories, eyecatch } =
           post.data;
 
         if (post.id.startsWith("draft/")) return null;
@@ -20,11 +20,11 @@ const posts = await getCollection("posts");
           <li>
             <a href={`/blog/${post.slug}`}>
               <article class="ease flex flex-col overflow-hidden rounded-lg bg-[var(--background-color-card)] shadow-[0_4px_15px_rgba(0,0,0,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.8)]">
-                {eyecatchUrl && (
+                {eyecatch && (
                   <img
                     class="block h-auto w-full object-cover"
-                    src={eyecatchUrl}
-                    alt={eyecatchAlt || title}
+                    src={eyecatch.url}
+                    alt={eyecatch.alt || title}
                     width="1200"
                     height="630"
                   />

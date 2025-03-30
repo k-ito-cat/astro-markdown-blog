@@ -3,13 +3,17 @@ import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
 import type { Category } from "~/constants/categories";
+import GithubCard from "./GithubCard.astro";
 
 type Props = {
   title: string;
   publishedAt: Date;
   categories: Category[];
-  eyecatchUrl?: string;
-  eyecatchAlt?: string;
+  eyecatch?: {
+    url: string;
+    alt: string;
+  };
+  githubUrl?: string;
   content: AstroComponentFactory;
   headings?: {
     depth: number;
@@ -18,12 +22,12 @@ type Props = {
   }[];
 };
 
-const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt, content } =
+const { title, publishedAt, categories, eyecatch, githubUrl, content } =
   Astro.props;
 ---
 
 <article
-  class="bg-card grid grid-cols-1 rounded-lg p-8 shadow-[0_4px_15px_rgba(0,0,0,0.7)] lg:order-1 order-2"
+  class="bg-card order-2 grid grid-cols-1 rounded-lg p-8 shadow-[0_4px_15px_rgba(0,0,0,0.7)] lg:order-1"
 >
   <header class="mb-8">
     <h1 class="text-heading-first mb-2 font-semibold">
@@ -39,17 +43,19 @@ const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt, content } =
     <Categories categories={categories} />
 
     {
-      eyecatchUrl && (
+      eyecatch && (
         <img
           class="mt-4 block h-auto w-full rounded-md shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
-          src={eyecatchUrl}
-          alt={eyecatchAlt}
+          src={eyecatch.url}
+          alt={eyecatch.alt}
           width={1200}
           height={600}
         />
       )
     }
   </header>
+
+  {githubUrl && <GithubCard url={githubUrl} />}
 
   <Prose content={content} />
 

@@ -1,0 +1,46 @@
+---
+type Props = {
+  url: string;
+};
+const { url } = Astro.props;
+
+function extractRepoApiUrl(url: string): string {
+  const match = url.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)/);
+  if (!match) throw new Error("GitHubのURLではありません");
+  const [, owner, repo] = match;
+  return `https://api.github.com/repos/${owner}/${repo}`;
+}
+const apiUrl = extractRepoApiUrl(url);
+const res = await fetch(apiUrl, {
+  headers: {
+    Authorization: `Bearer ${import.meta.env.GITHUB_TOKEN}`,
+  },
+});
+
+if (!res.ok) {
+  throw new Error(String(res.status));
+}
+
+const repoInfo = await res.json();
+---
+
+<a
+  href={url}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="hover:bg-card-hover my-4 block rounded-lg border p-4 transition"
+>
+  <div class="flex items-center gap-3">
+    <img
+      src={repoInfo.owner.avatar_url}
+      alt="owner avatar"
+      class="h-6 w-6 rounded-full"
+    />
+    <h3 class="text-lg font-bold">{repoInfo.full_name}</h3>
+  </div>
+  {
+    repoInfo.description && (
+      <p class="my-2 text-sm text-gray-600">{repoInfo.description}</p>
+    )
+  }
+</a>

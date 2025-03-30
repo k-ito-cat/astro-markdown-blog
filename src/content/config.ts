@@ -1,4 +1,5 @@
 import { z, defineCollection } from "astro:content";
+import { object } from "astro:schema";
 import { CATEGORIES } from "~/constants/categories";
 
 const posts = defineCollection({
@@ -6,8 +7,13 @@ const posts = defineCollection({
     title: z.string(),
     publishedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
-    eyecatchUrl: z.string().optional(),
-    eyecatchAlt: z.string().optional(),
+    eyecatch: z
+      .object({
+        url: z.string(),
+        alt: z.string(),
+      })
+      .optional(),
+    githubUrl: z.string().optional(),
   }),
 });
 

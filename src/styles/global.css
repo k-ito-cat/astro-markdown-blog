@@ -37,6 +37,7 @@
   --background-color-code: var(--bg-dark-100);
   --background-color-tag: var(--color-gray-500);
   --background-color-tag-hover: var(--color-gray-400);
+  --background-color-card-hover: var(--color-gray-500);
 
   --border-base: var(--border-dark-100);
 
