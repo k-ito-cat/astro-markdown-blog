@@ -1,15 +1,18 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import { getCollection } from "astro:content";
+import BaseLayout from "~/layouts/BaseLayout.astro";
 
-const posts = await getCollection('posts');
+const posts = await getCollection("posts");
 ---
 
 <BaseLayout title="ブログ一覧">
-  <ul class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4">
+  <ul
+    class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4"
+  >
     {
       posts.map((post) => {
-        const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt } = post.data;
+        const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt } =
+          post.data;
 
         return (
           <li>
