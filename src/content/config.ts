@@ -6,7 +6,7 @@ const posts = defineCollection({
   schema: z.object({
     title: z.string(),
     publishedAt: z.coerce.date(),
-    categories: z.array(z.enum(CATEGORIES)),
+    categories: z.array(z.enum([...CATEGORIES])),
     eyecatchUrl: z.string().optional(),
     eyecatchAlt: z.string().optional(),
     publishedStatus: z.enum(PUBLISHED_STATUS),
