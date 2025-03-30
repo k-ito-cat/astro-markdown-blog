@@ -1,15 +1,14 @@
 ---
 title: "z-indexとスタッキングコンテキストを理解する"
 publishedAt: "2025-03-30"
-eyecatchUrl: ""
-eyecatchAlt: ""
+githubUrl: ""
 categories: ["CSS"]
 ---
 
+## z-indexとスタッキングコンテキスト
+
 z-indexを使用する中で、なかなか自分の思い通りにならずにデザインを実現するのに詰まることがあったので、
 これを機会にz-indexの理解を深めたいと思います。
-
-## z-indexとスタッキングコンテキスト
 
 ### スタッキングコンテキスト
 
@@ -310,7 +309,7 @@ g,hは位置指定要素ではありますがスタッキングコンテキス�
 以下はChromeで、検証ツールを開いて command + shift + p で「Layer」と打ってタブを出して確認しています。
 使ったことはないですが、Edgeの方が使いやすいらしいです。
 
-![](/public/images/image01.png)
+![](/images/image01.png)
 
 ## 参考
 
