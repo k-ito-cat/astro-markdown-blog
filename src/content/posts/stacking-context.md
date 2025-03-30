@@ -4,7 +4,6 @@ publishedAt: "2025-03-30"
 eyecatchUrl: ""
 eyecatchAlt: ""
 categories: ["CSS"]
-publishedStatus: "published"
 ---
 
 z-indexを使用する中で、なかなか自分の思い通りにならずにデザインを実現するのに詰まることがあったので、

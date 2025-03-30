@@ -1,5 +1,5 @@
 ---
-to: src/content/posts/<%= fileName %>.md
+to: src/content/posts/draft/<%= fileName %>.md
 ---
 
 ---
@@ -8,7 +8,6 @@ publishedAt: "<%= new Date().toISOString().split("T")[0] %>"
 eyecatchUrl: ""
 eyecatchAlt: ""
 categories: []
-publishedStatus: "draft"
 ---
 
 ここに本文を書く

@@ -11,16 +11,10 @@ const posts = await getCollection("posts");
   >
     {
       posts.map((post) => {
-        const {
-          title,
-          publishedAt,
-          categories,
-          eyecatchUrl,
-          eyecatchAlt,
-          publishedStatus,
-        } = post.data;
+        const { title, publishedAt, categories, eyecatchUrl, eyecatchAlt } =
+          post.data;
 
-        if (publishedStatus === "draft") return null;
+        if (post.id.startsWith("draft/")) return null;
 
         return (
           <li>
