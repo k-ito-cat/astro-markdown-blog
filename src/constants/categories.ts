@@ -16,5 +16,16 @@ export const CATEGORIES = [
   "認証・認可",
   "データベース",
   "REST API",
+  "headlessCMS",
+  "CI/CD",
+  "SEO",
+  "a11ty",
+  "microCMS",
+  "Netlify",
+  "Vercel",
+  "test",
+  "SSR",
+  "SSG",
+  "SPA",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
