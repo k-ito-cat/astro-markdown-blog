@@ -1,8 +1,8 @@
 import { z, defineCollection } from "astro:content";
-import { object } from "astro:schema";
 import { CATEGORIES } from "~/constants/categories";
 
 const posts = defineCollection({
+  type: "content",
   schema: z.object({
     title: z.string(),
     publishedAt: z.coerce.date(),
