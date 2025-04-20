@@ -21,7 +21,7 @@ const posts = await getCollection("posts");
               <article class="ease flex flex-col overflow-hidden rounded-lg bg-[var(--background-color-card)] shadow-[0_4px_15px_rgba(0,0,0,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.8)]">
                 {thumbnail && (
                   <img
-                    class="block h-auto max-h-[200px] w-full object-cover"
+                    class="block h-auto max-h-[300px] w-full object-cover lg:max-h-[200px]"
                     src={thumbnail.src}
                     alt={thumbnail.alt || title}
                     width="1200"
