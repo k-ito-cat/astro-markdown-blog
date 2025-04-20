@@ -11,7 +11,10 @@
   --color-gray-500: #333333;
   --color-blue-100: #81d4fa;
   --color-blue-200: #4fc3f7;
-  --color-red-100: #ff6f61;
+  --color-red-100: #ffab91;
+  --color-orange-100: #ffcc80;
+  --color-pink-100: #f48fb1;
+  --color-purple-100: #b39ddb;
   --bg-dark-100: #121212;
   --bg-card-100: #1c1c1c;
   --border-dark-100: #000000;
@@ -29,7 +32,7 @@
   --color-link: var(--color-blue-100);
   --color-link-hover: var(--color-blue-200);
   --color-meta: var(--color-gray-300);
-  --color-code: var(--color-red-100);
+  --color-code: var(--color-orange-100);
 
   --background-color-*: initial;
   --background-color-base: var(--bg-dark-100);
