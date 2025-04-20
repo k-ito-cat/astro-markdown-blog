@@ -7,9 +7,9 @@ const posts = defineCollection({
     title: z.string(),
     publishedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
-    eyecatch: z
+    thumbnail: z
       .object({
-        url: z.string(),
+        src: z.string(),
         alt: z.string(),
       })
       .optional(),

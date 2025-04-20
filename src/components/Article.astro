@@ -9,8 +9,8 @@ type Props = {
   title: string;
   publishedAt: Date;
   categories: Category[];
-  eyecatch?: {
-    url: string;
+  thumbnail?: {
+    src: string;
     alt: string;
   };
   githubUrl?: string;
@@ -22,7 +22,7 @@ type Props = {
   }[];
 };
 
-const { title, publishedAt, categories, eyecatch, githubUrl, content } =
+const { title, publishedAt, categories, thumbnail, githubUrl, content } =
   Astro.props;
 ---
 
@@ -43,11 +43,11 @@ const { title, publishedAt, categories, eyecatch, githubUrl, content } =
     <Categories categories={categories} />
 
     {
-      eyecatch && (
+      thumbnail && (
         <img
-          class="mt-4 block h-auto w-full rounded-md shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
-          src={eyecatch.url}
-          alt={eyecatch.alt}
+          class="mt-4 block h-auto max-h-[400px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          src={thumbnail.src}
+          alt={thumbnail.alt}
           width={1200}
           height={600}
         />

@@ -1,7 +1,7 @@
 ---
 title: "z-indexとスタッキングコンテキストを理解する"
 publishedAt: "2025-03-30"
-githubUrl: ""
+thumbnail: { src: "/images/thumbnail/stacking-context.png", alt: "" }
 categories: ["CSS"]
 ---
 

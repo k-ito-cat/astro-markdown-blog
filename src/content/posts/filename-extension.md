@@ -1,6 +1,7 @@
 ---
 title: "拡張子とは"
 publishedAt: "2025-04-20"
+thumbnail: { src: "/images/thumbnail/filename-extension.png", alt: "" }
 categories: ["IT基礎"]
 ---
 
