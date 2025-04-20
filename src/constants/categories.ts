@@ -33,5 +33,12 @@ export const CATEGORIES = [
   "SSR",
   "SSG",
   "SPA",
+  "PWA",
+  "Apple",
+  "Mac",
+  "ハードウェア",
+  "iOS",
+  "Android",
+  "IT基礎",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
