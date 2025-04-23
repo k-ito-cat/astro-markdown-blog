@@ -1,7 +1,7 @@
 ---
 title: "[WIP] cookie 同意"
 publishedAt: "2025-04-22"
-eyecatch: { url: "/images/thumbnail/noimage.png", alt: "cookie 同意" }
+thumbnail: { src: "/images/thumbnail/noimage.png", alt: "cookie 同意" }
 githubUrl: ""
 categories: ["Cookie", "Webセキュリティ"]
 ---
