@@ -40,5 +40,8 @@ export const CATEGORIES = [
   "iOS",
   "Android",
   "IT基礎",
+  "Cookie",
+  "Webセキュリティ",
+  "LocalStorage",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
