@@ -3,8 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "copy-images": "cpx \"src/content/posts/images/**/*\" public/images",
+    "dev": "npm run copy-images && astro dev",
+    "build": "npm run copy-images && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "new:post": "hygen generator new"
