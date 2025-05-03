@@ -1,6 +1,6 @@
 ## Decap CMS　でMarkdownの作成
 
-test
+TODO: 
 
 ## CLIでブログを作成する場合のブログテンプレートの作成
 
