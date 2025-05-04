@@ -3,7 +3,7 @@ backend:
   repo: k-ito-cat/blog-posts
   branch: main
   auth_type: pkce
-  app_id: Ov23li6l6BqpTea4MapD
+  client_id: Ov23li6l6BqpTea4MapD
   base_url: https://k-ito-blog.netlify.app
 
 media_folder: "src/content/posts/images/"
