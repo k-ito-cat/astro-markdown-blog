@@ -5,12 +5,10 @@ to: src/content/posts/draft/<%= fileName %>.md
 ---
 title: "<%= title %>"
 publishedAt: "<%= new Date().toISOString().split("T")[0] %>"
-thumbnail: {
-  src: "/images/thumbnail/noimage.png",
-  alt: "<%= title %>"
-}
+thumbnail: "/images/thumbnail/noimage.png"
 githubUrl: ""
 categories: []
+isPublished: false
 ---
 
 ここに本文を書く

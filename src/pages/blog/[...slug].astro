@@ -15,7 +15,7 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const post = await getEntry("posts", slug);
-if (!post || post.id.startsWith("draft/")) return Astro.redirect("/404");
+if (!post || !post.data.isPublished) return Astro.redirect("/404");
 
 const rendered = await post.render();
 const { Content, headings } = rendered;

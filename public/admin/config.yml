@@ -83,7 +83,11 @@ collections:
           - "Webセキュリティ"
           - "LocalStorage"
           - "プライバシー"
-
+      
+      - label: 公開ステータス
+        name: isPublished
+        widget: boolean
+        default: false
 
       - label: 本文
         name: body

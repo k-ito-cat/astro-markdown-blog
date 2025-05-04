@@ -11,6 +11,7 @@ const posts = defineCollection({
       .string()
       .optional(),
     githubUrl: z.string().optional(),
+    isPublished: z.boolean().default(false),
   }),
 });
 
