@@ -1,5 +1,5 @@
 ---
-to: src/content/posts/draft/<%= fileName %>.md
+to: src/content/posts/<%= fileName %>.md
 ---
 
 ---
