@@ -7,7 +7,7 @@ backend:
   base_url: https://k-ito-blog.netlify.app
   auth_endpoint: oauth
 
-media_folder: "src/content/posts/images/"
+media_folder: "/images/"
 public_folder: "/images/"
 
 collections:
