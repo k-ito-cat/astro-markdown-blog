@@ -1,9 +1,8 @@
-import { writeFileSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import "dotenv/config";
-  
+
 const auth = process.env.BASIC_AUTH;
-writeFileSync(
-  "_headers",
-  ["/admin/*", `  Basic-Auth: ${auth}`].join("\n"),
-);
-  
+
+const contents = ["/admin/*", `  Basic-Auth: ${auth}`].join("\n") + "\n";
+mkdirSync("public", { recursive: true });
+writeFileSync("public/_headers", contents);
