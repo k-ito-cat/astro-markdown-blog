@@ -22,8 +22,8 @@ const posts = await getCollection("posts");
                 {thumbnail && (
                   <img
                     class="block h-auto max-h-[300px] w-full object-cover lg:max-h-[200px]"
-                    src={thumbnail.src}
-                    alt={thumbnail.alt || title}
+                    src={thumbnail}
+                    alt={title}
                     width="1200"
                     height="630"
                   />

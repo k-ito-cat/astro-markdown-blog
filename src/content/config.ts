@@ -8,10 +8,7 @@ const posts = defineCollection({
     publishedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
     thumbnail: z
-      .object({
-        src: z.string(),
-        alt: z.string(),
-      })
+      .string()
       .optional(),
     githubUrl: z.string().optional(),
   }),
