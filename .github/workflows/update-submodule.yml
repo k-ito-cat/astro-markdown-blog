@@ -4,15 +4,16 @@ on:
   repository_dispatch:
     types: [submodule-updated]
   workflow_dispatch:
-    inputs:
-      dummy:
-        description: "Manual trigger"
 
 jobs:
   update:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Setup .netrc for private submodule access
+        run: |
+          echo -e "machine github.com\nlogin x-access-token\npassword ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
+
       - uses: actions/checkout@v4
         with:
           submodules: true
