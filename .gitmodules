@@ -1,3 +1,4 @@
 [submodule "src/content/posts"]
 	path = src/content/posts
 	url = https://github.com/k-ito-cat/blog-posts.git
+	branch = main
