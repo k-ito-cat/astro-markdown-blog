@@ -12,12 +12,12 @@ jobs:
     steps:
       - name: Setup .netrc for private submodule access
         run: |
-          echo -e "machine github.com\nlogin x-access-token\npassword ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
+          echo -e "machine github.com\nlogin x-access-token\npassword ${{ secrets.SUBMODULE_PAT }}" > ~/.netrc
 
       - uses: actions/checkout@v4
         with:
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Update submodule to latest commit
         run: |
