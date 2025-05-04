@@ -25,4 +25,7 @@ pnpm-debug.log*
 
 public/images/
 
+# アダプタ差分
 .netlify/
+# basic認証情報
+_headers
