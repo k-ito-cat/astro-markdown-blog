@@ -13,6 +13,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.0.17",
     "astro": "^5.5.4",
+    "astro-decap-cms-oauth": "^0.5.1",
     "decap-cms-app": "^3.6.2",
     "tailwindcss": "^4.0.17"
   },
