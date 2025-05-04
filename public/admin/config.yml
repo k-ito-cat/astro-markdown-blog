@@ -5,6 +5,7 @@ backend:
   auth_type: pkce
   client_id: Ov23li6l6BqpTea4MapD
   base_url: https://k-ito-blog.netlify.app
+  auth_endpoint: oauth
 
 media_folder: "src/content/posts/images/"
 public_folder: "/images/"
