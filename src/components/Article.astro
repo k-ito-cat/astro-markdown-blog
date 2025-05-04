@@ -36,7 +36,7 @@ const { title, publishedAt, categories, thumbnail, githubUrl, content } =
 
     <div class="text-meta mb-6 flex gap-4 text-[0.9rem]">
       <span class="text-meta text-[0.85rem]">
-        {publishedAt.toLocaleDateString()}
+        {publishedAt.toISOString().split("T")[0]}
       </span>
     </div>
 

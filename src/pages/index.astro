@@ -43,7 +43,7 @@ const posts = await getCollection("posts");
 
                   <div class="flex items-center justify-between">
                     <span class="text-[0.85rem] text-[#999999]">
-                      {new Date(publishedAt).toLocaleDateString()}
+                      {new Date(publishedAt).toISOString().split("T")[0]}
                     </span>
                   </div>
                 </div>
