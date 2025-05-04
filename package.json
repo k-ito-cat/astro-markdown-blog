@@ -8,7 +8,8 @@
     "build": "npm run copy-images && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "new:post": "hygen generator new"
+    "new:post": "hygen generator new",
+    "update": "git pull && git submodule update --remote src/content/posts"
   },
   "dependencies": {
     "@astrojs/netlify": "^6.3.2",
