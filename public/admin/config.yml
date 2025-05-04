@@ -35,8 +35,55 @@ collections:
 
       - label: カテゴリー
         name: categories
-        widget: list
-        default: []
+        widget: select
+        multiple: true
+        options:
+          - "HTML"
+          - "CSS"
+          - "JavaScript"
+          - "TypeScript"
+          - "AWS Amplify"
+          - "Astro"
+          - "Astro Markdown"
+          - "hygen"
+          - "React"
+          - "React Native"
+          - "Vue.js"
+          - "Next.js"
+          - "効率化"
+          - "ツール"
+          - "セキュリティ"
+          - "パフォーマンス"
+          - "UX"
+          - "UI"
+          - "アクセシビリティ"
+          - "デザインシステム"
+          - "認証・認可"
+          - "データベース"
+          - "REST API"
+          - "headlessCMS"
+          - "CI/CD"
+          - "SEO"
+          - "a11y"
+          - "microCMS"
+          - "Netlify"
+          - "Vercel"
+          - "test"
+          - "SSR"
+          - "SSG"
+          - "SPA"
+          - "PWA"
+          - "Apple"
+          - "Mac"
+          - "ハードウェア"
+          - "iOS"
+          - "Android"
+          - "IT基礎"
+          - "Cookie"
+          - "Webセキュリティ"
+          - "LocalStorage"
+          - "プライバシー"
+
 
       - label: 本文
         name: body
