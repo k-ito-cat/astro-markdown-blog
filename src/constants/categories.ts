@@ -13,6 +13,7 @@ export const CATEGORIES = [
   "React Native",
   "Vue.js",
   "Next.js",
+  "AI",
   "効率化",
   "ツール",
   "セキュリティ",
