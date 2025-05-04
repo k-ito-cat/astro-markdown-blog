@@ -13,7 +13,7 @@ public_folder: "/images/"
 collections:
   - name: "blog"
     label: "Blog"
-    folder: "/draft"
+    folder: ""
     create: true
     fields:
       - { label: タイトル, name: title, widget: string }
