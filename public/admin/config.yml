@@ -1,0 +1,36 @@
+backend:
+  name: github
+  repo: k-ito-cat/blog-posts
+  branch: main
+  auth_type: implicit
+  app_id: Ov23li6l6BqpTea4MapD
+  base_url: https://k-ito-blog.netlify.app/
+
+media_folder: "src/content/posts/images/"
+public_folder: "public/images/"
+
+collections:
+  - name: "blog"
+    label: "Blog"
+    folder: "posts/draft"
+    create: true
+    fields:
+      - { label: タイトル, name: title, widget: string }
+
+      - label: 公開日
+        name: publishedAt
+        widget: datetime
+        date_format: "YYYY-MM-DD"
+        time_format: false
+
+      - label: サムネイル
+        name: thumbnail
+        widget: string
+        default: '{ src: "/images/thumbnail/noimage.png", alt: "" }'
+
+      - { label: GitHub URL, name: githubUrl, widget: string, required: false }
+
+      - label: カテゴリー
+        name: categories
+        widget: list
+        default: []
