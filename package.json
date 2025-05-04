@@ -5,7 +5,6 @@
   "scripts": {
     "copy-images": "cpx \"src/content/posts/images/**/*\" public/images",
     "dev": "npm run copy-images && astro dev",
-    "prebuild": "node gen-headers.js",
     "build": "npm run copy-images && astro build",
     "preview": "astro preview",
     "astro": "astro",
