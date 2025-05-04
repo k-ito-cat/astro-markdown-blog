@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Setup .netrc for private submodule access
+        run: | 
+          echo -e "machine github.com\nlogin x-access-token\npassword ${{ secrets.SUBMODULE_PAT }}" > ~/.netrc
+          
       - uses: actions/checkout@v4
         with:
           submodules: true
