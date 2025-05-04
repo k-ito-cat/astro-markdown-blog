@@ -1,5 +1,4 @@
 [build]
-clone_depth = 0
 command = "git submodule update --init --recursive && npm ci --cache .npm --prefer-offline && npm run build"
 publish = "dist"
 
