@@ -37,3 +37,9 @@ collections:
         name: categories
         widget: list
         default: []
+
+      - label: 本文
+        name: body
+        widget: markdown
+        media_folder: "/images"
+        public_folder: "/images"
