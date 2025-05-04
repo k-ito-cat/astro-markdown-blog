@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 
 export async function getStaticPaths() {
   const posts = await getCollection("posts");
@@ -15,7 +16,9 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const post = await getEntry("posts", slug);
-if (!post || !post.data.isPublished) return Astro.redirect("/404");
+
+if (!post || post.data.status.includes(PUBLISHED_STATUS.PRIVATE))
+  return Astro.redirect("/404");
 
 const rendered = await post.render();
 const { Content, headings } = rendered;
@@ -40,6 +43,7 @@ const { Content, headings } = rendered;
         githubUrl={post.data.githubUrl}
         content={Content}
         headings={headings}
+        status={post.data.status}
       />
     </div>
   </main>

@@ -1,5 +1,6 @@
 import { z, defineCollection } from "astro:content";
 import { CATEGORIES } from "~/constants/categories";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 
 const posts = defineCollection({
   type: "content",
@@ -7,11 +8,15 @@ const posts = defineCollection({
     title: z.string(),
     publishedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
-    thumbnail: z
-      .string()
-      .optional(),
+    thumbnail: z.string().optional(),
     githubUrl: z.string().optional(),
-    isPublished: z.boolean().default(false),
+    status: z.array(
+      z.enum([
+        PUBLISHED_STATUS.PRIVATE,
+        PUBLISHED_STATUS.DRAFT,
+        PUBLISHED_STATUS.PUBLISHED,
+      ]),
+    ),
   }),
 });
 

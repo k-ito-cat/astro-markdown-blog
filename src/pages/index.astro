@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 
 const posts = await getCollection("posts");
@@ -11,9 +12,9 @@ const posts = await getCollection("posts");
   >
     {
       posts.map((post) => {
-        const { title, publishedAt, categories, thumbnail, isPublished } = post.data;
+        const { title, publishedAt, categories, thumbnail, status } = post.data;
 
-        if (!isPublished) return null;
+        if (status.includes(PUBLISHED_STATUS.PRIVATE)) return null;
 
         return (
           <li>

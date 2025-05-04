@@ -85,9 +85,13 @@ collections:
           - "プライバシー"
       
       - label: 公開ステータス
-        name: isPublished
-        widget: boolean
-        default: false
+        name: status
+        widget: select
+        options:
+          - "private"
+          - "draft"
+          - "published"
+        default: "private"
 
       - label: 本文
         name: body
