@@ -27,6 +27,8 @@ collections:
       - label: サムネイル
         name: thumbnail
         widget: string
+        media_folder: "/images/thumbnail"
+        public_folder: "/images/thumbnail"
         default: '{ src: "/images/thumbnail/noimage.png", alt: "" }'
 
       - { label: GitHub URL, name: githubUrl, widget: string, required: false }
