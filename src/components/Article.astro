@@ -40,6 +40,17 @@ const { title, publishedAt, categories, thumbnail, githubUrl, content } =
       </span>
     </div>
 
+    <div class="mb-4 flex items-center gap-2 text-[0.9rem]">
+      TODO:
+      <a
+        href="#github"
+        class="text-primary ease rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+      >
+        GitHub
+      </a>
+      ...
+    </div>
+
     <Categories categories={categories} />
 
     {
@@ -61,18 +72,12 @@ const { title, publishedAt, categories, thumbnail, githubUrl, content } =
 
   <footer class="border-tag mt-8 flex flex-col gap-4 border-t pt-4">
     <div class="flex items-center gap-2 text-[0.9rem]">
-      <span>Share:</span>
+      <span>シェア（TODO）:</span>
       <a
         href="#twitter"
         class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
       >
-        Twitter
-      </a>
-      <a
-        href="#facebook"
-        class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
-      >
-        Facebook
+        X
       </a>
     </div>
   </footer>
