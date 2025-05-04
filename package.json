@@ -11,6 +11,7 @@
     "new:post": "hygen generator new"
   },
   "dependencies": {
+    "@astrojs/netlify": "^6.3.2",
     "@tailwindcss/vite": "^4.0.17",
     "astro": "^5.5.4",
     "astro-decap-cms-oauth": "^0.5.1",
