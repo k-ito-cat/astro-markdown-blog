@@ -54,5 +54,5 @@
 
 html,
 body {
-  @apply text-primary bg-base font-[Noto_Sans_JP];
+  @apply text-primary bg-base scroll-smooth font-[Noto_Sans_JP];
 }
