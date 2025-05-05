@@ -96,6 +96,8 @@ collections:
       - label: 公開ステータス
         name: status
         widget: select
+        # TODO: 単一にしてスキーマをstringに変更する
+        multiple: true 
         options:
           - "private"
           - "draft"
