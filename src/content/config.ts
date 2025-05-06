@@ -10,13 +10,11 @@ const posts = defineCollection({
     categories: z.array(z.enum([...CATEGORIES])),
     thumbnail: z.string().optional(),
     githubUrl: z.string().optional(),
-    status: z.array(
-      z.enum([
-        PUBLISHED_STATUS.PRIVATE,
-        PUBLISHED_STATUS.DRAFT,
-        PUBLISHED_STATUS.PUBLISHED,
-      ]),
-    ),
+    status: z.enum([
+      PUBLISHED_STATUS.PRIVATE,
+      PUBLISHED_STATUS.DRAFT,
+      PUBLISHED_STATUS.PUBLISHED,
+    ]),
   }),
 });
 
