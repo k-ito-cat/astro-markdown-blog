@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 import decapCmsOauth from "astro-decap-cms-oauth";
 import netlify from "@astrojs/netlify";
+import icon from "astro-icon";
 
 // https://astro.build/config
 export default defineConfig({
@@ -14,5 +15,5 @@ export default defineConfig({
   experimental: {
     session: true,
   },
-  integrations: [decapCmsOauth()],
+  integrations: [decapCmsOauth(),icon()],
 });

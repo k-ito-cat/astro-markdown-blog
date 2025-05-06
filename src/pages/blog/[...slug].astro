@@ -4,6 +4,7 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import { Icon } from "astro-icon/components";
 
 export async function getStaticPaths() {
   const posts = await getCollection("posts");
@@ -25,8 +26,14 @@ const { Content, headings } = rendered;
 ---
 
 <BaseLayout title={`ブログ｜${post.data.title}`}>
-  <main class="relative mx-auto max-w-[1200px] bg-transparent px-4 py-8">
-    <a href="/"> 一覧に戻る </a>
+  <main class="mx-auto max-w-[1440px] bg-transparent px-4 py-8">
+    <a
+      class="mb-2 flex w-max items-center duration-200 hover:opacity-70"
+      href="/"
+    >
+      <Icon name="stash--chevron-left-light" width={24} height={24} />
+      <span class="text-small">戻る</span>
+    </a>
     {
       post.data.status.includes(PUBLISHED_STATUS.DRAFT) ? (
         <Article
@@ -63,4 +70,44 @@ const { Content, headings } = rendered;
       )
     }
   </main>
+  <button
+    id="scroll-to-top-btn"
+    type="button"
+    class="border-primary fixed right-4 bottom-4 z-10 h-12 w-12 translate-y-[150%] items-center justify-center rounded-full border text-white duration-300 hover:opacity-70"
+  >
+    <Icon
+      class="rotate-90"
+      name="stash--chevron-left-light"
+      width={45}
+      height={45}
+    />
+  </button>
 </BaseLayout>
+
+<script>
+  const btn = document.getElementById("scroll-to-top-btn");
+
+  if (!btn) return;
+  /**
+   * document body の最下部付近に到達したら、
+   * フローティングボタンを表示する
+   */
+  window.addEventListener("scroll", () => {
+    const bottom = window.scrollY + window.innerHeight;
+    const pageHeight = document.body.scrollHeight;
+
+    if (bottom >= pageHeight - 500) {
+      btn.classList.remove("translate-y-[150%]");
+    } else {
+      btn.classList.add("translate-y-[150%]");
+    }
+  });
+
+  /**
+   * フローティングボタンをクリックしたら、
+   * ページの最上部にスクロールする
+   */
+  btn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+</script>
