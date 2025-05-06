@@ -8,6 +8,7 @@ import {
   PUBLISHED_STATUS,
   type PublishedStatus,
 } from "~/constants/publishedStatus";
+import { Icon } from "astro-icon/components";
 
 type Props = {
   title: string;
@@ -53,14 +54,12 @@ const {
     </div>
 
     <div class="mb-4 flex items-center gap-2 text-[0.9rem]">
-      TODO:
       <a
-        href="#github"
+        href="https://github.com/k-ito-cat"
         class="text-primary ease rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
       >
-        GitHub
+        <Icon name="octicon:mark-github-16" width="24" height="24" />
       </a>
-      ...
     </div>
 
     <Categories categories={categories} />
@@ -68,7 +67,7 @@ const {
     {
       thumbnail && (
         <img
-          class="mt-4 block h-auto max-h-[400px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          class="mt-4 block h-auto max-h-[600px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
           src={thumbnail}
           alt={title}
           width={1200}
