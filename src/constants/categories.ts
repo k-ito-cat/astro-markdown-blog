@@ -55,5 +55,12 @@ export const CATEGORIES = [
   "Webセキュリティ",
   "LocalStorage",
   "プライバシー",
+  "WebView",
+  "iOS Safari",
+  "Safari",
+  "Chrome",
+  "Firefox",
+  "Edge",
+  "ブラウザ",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];

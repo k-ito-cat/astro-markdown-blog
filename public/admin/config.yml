@@ -92,6 +92,14 @@ collections:
           - "Webセキュリティ"
           - "LocalStorage"
           - "プライバシー"
+          - "WebView"
+          - "iOS Safari"
+          - "Safari"
+          - "Chrome"
+          - "Firefox"
+          - "Edge"
+          - "ブラウザ"
+        
 
       - label: 公開ステータス
         name: status
