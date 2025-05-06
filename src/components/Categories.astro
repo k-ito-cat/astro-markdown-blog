@@ -1,5 +1,5 @@
 ---
-import type { Category } from '~/constants/categories';
+import type { Category } from "~/constants/categories";
 
 type Props = {
   categories: Category[];
@@ -10,7 +10,7 @@ const { categories } = Astro.props;
 {
   categories && categories.length > 0 && (
     <div class="flex items-center gap-2 text-[0.9rem]">
-      <ul class="flex flex-wrap gap-2">
+      <ul class="flex flex-wrap gap-x-2 gap-y-4">
         {categories.map((category: Category) => {
           return (
             <li>
