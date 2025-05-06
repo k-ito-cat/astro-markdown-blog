@@ -42,7 +42,9 @@ collections:
           - "CSS"
           - "JavaScript"
           - "TypeScript"
+          - "AWS"
           - "AWS Amplify"
+          - "AWS Lambda"
           - "Astro"
           - "Astro Content collections"
           - "hygen"
@@ -99,6 +101,10 @@ collections:
           - "Firefox"
           - "Edge"
           - "ブラウザ"
+          - "フロントエンド"
+          - "バックエンド"
+          - "JWT"
+          - "アーキテクチャ"
         
 
       - label: 公開ステータス

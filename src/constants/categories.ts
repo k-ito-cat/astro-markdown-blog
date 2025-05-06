@@ -5,7 +5,9 @@ export const CATEGORIES = [
   "CSS",
   "JavaScript",
   "TypeScript",
+  "AWS",
   "AWS Amplify",
+  "AWS Lambda",
   "Astro",
   "Astro Content collections",
   "hygen",
@@ -62,5 +64,9 @@ export const CATEGORIES = [
   "Firefox",
   "Edge",
   "ブラウザ",
+  "フロントエンド",
+  "バックエンド",
+  "JWT",
+  "アーキテクチャ"
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
