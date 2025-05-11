@@ -105,7 +105,8 @@ collections:
           - "バックエンド"
           - "JWT"
           - "アーキテクチャ"
-        
+          - "MCP"
+          - "Notion"
 
       - label: 公開ステータス
         name: status

@@ -67,6 +67,8 @@ export const CATEGORIES = [
   "フロントエンド",
   "バックエンド",
   "JWT",
-  "アーキテクチャ"
+  "アーキテクチャ",
+  "MCP",
+  "Notion",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
