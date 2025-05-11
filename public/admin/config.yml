@@ -108,6 +108,8 @@ collections:
           - "MCP"
           - "Notion"
           - "Cursor"
+          - "Web"
+          - "zod"
 
       - label: 公開ステータス
         name: status

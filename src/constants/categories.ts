@@ -72,5 +72,7 @@ export const CATEGORIES = [
   "MCP",
   "Notion",
   "Cursor",
+  "Web",
+  "zod",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
