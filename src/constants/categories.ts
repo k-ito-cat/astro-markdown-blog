@@ -1,6 +1,7 @@
 // MEMO: public/admin/config.yml で管理画面上で選択できるカテゴリを記述しているので、
 // あまりやりたくないが二重管理する（このファイルのカテゴリはスキーマに適用するための定数なので管理画面で表示されるものとは関係ない）
 export const CATEGORIES = [
+  "すべて",
   "HTML",
   "CSS",
   "JavaScript",

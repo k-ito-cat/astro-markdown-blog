@@ -3,43 +3,69 @@ import { getCollection } from "astro:content";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Card from "~/components/Card.astro";
+import { type Category } from "~/constants/categories";
+// import Categories from "~/components/Categories.astro";
+
+const category = Astro.url.searchParams.get("category") as Category;
 
 /**
  * 公開または下書きのpostだけを取得
  */
 const posts = await getCollection("posts", ({ data }) => {
-  return data.status !== PUBLISHED_STATUS.PRIVATE;
+  if (!category) {
+    return data.status !== PUBLISHED_STATUS.PRIVATE;
+  } else {
+    return (
+      data.status !== PUBLISHED_STATUS.PRIVATE &&
+      data.categories.includes(category)
+    );
+  }
 });
 
 /**
  * 公開日時が新しい順でソート
  */
 const sortedPosts = posts.sort((a, b) => {
-  return new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime();
+  return (
+    new Date(b.data.publishedAt).getTime() -
+    new Date(a.data.publishedAt).getTime()
+  );
 });
 ---
 
 <BaseLayout title="ブログ一覧">
-  <ul
-    class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4"
-  >
-    {
-      sortedPosts.map((post) => {
-        const { title, publishedAt, categories, thumbnail, status } = post.data;
+  <!-- TODO: PCはサイドにタグ一覧を表示、SPはハンバーガーメニューに格納 -->
+  <!-- タグを実装するまでは「すべて」を単体で出力しておく -->
+  <!-- <Categories categories={[...CATEGORIES]} /> -->
+  <div class="h-auto w-full">
+    <a
+      href="/"
+      class="text-primary bg-tag ease hover:bg-tag-hover mx-4 mt-4 inline-block rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+    >
+      すべて
+    </a>
+    <ul
+      class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4"
+    >
+      {
+        sortedPosts.map((post) => {
+          const { title, publishedAt, categories, thumbnail, status } =
+            post.data;
 
-        return (
-          <li>
-            <Card
-              slug={post.slug}
-              title={title}
-              publishedAt={publishedAt}
-              categories={categories}
-              thumbnail={thumbnail}
-              status={status}
-            />
-          </li>
-        );
-      })
-    }
-  </ul>
+          return (
+            <li>
+              <Card
+                slug={post.slug}
+                title={title}
+                publishedAt={publishedAt}
+                categories={categories}
+                thumbnail={thumbnail}
+                status={status}
+              />
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
 </BaseLayout>

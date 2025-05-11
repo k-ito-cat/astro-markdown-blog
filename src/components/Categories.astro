@@ -5,18 +5,23 @@ type Props = {
   categories: Category[];
 };
 const { categories } = Astro.props;
+
+const searchCategory = Astro.url.searchParams.get("category");
 ---
 
 {
   categories && categories.length > 0 && (
     <div class="flex items-center gap-2 text-[0.9rem]">
-      <ul class="flex flex-wrap gap-x-2 gap-y-4">
+      <ul class="flex flex-wrap gap-2">
         {categories.map((category: Category) => {
           return (
             <li>
               <a
-                href={`#${category}`}
-                class="text-primary bg-tag ease hover:bg-tag-hover rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+                href={category === "すべて" ? "/" : `/?category=${category}`}
+                class:list={[
+                  "ease hover:bg-tag-hover inline-block rounded px-3 py-2 leading-none no-underline transition-colors duration-300",
+                  category === searchCategory ? "text-link-active font-bold bg-primary" : "text-primary bg-tag",
+                ]}
               >
                 {category}
               </a>
