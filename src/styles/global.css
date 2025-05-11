@@ -11,6 +11,8 @@
   --color-gray-500: #333333;
   --color-blue-100: #81d4fa;
   --color-blue-200: #4fc3f7;
+  --color-blue-300: #29b6f6;
+  --color-blue-400: #03a9f4;
   --color-red-100: #ffab91;
   --color-orange-100: #ffcc80;
   --color-pink-100: #f48fb1;
@@ -31,6 +33,7 @@
   --color-secondary: var(--color-gray-100);
   --color-link: var(--color-blue-100);
   --color-link-hover: var(--color-blue-200);
+  --color-link-active: var(--color-blue-400);
   --color-meta: var(--color-gray-300);
   --color-code: var(--color-orange-100);
 
