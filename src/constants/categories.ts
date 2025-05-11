@@ -70,5 +70,6 @@ export const CATEGORIES = [
   "アーキテクチャ",
   "MCP",
   "Notion",
+  "Cursor",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];

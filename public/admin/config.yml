@@ -107,6 +107,7 @@ collections:
           - "アーキテクチャ"
           - "MCP"
           - "Notion"
+          - "Cursor"
 
       - label: 公開ステータス
         name: status
