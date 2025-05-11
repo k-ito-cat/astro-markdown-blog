@@ -7,7 +7,12 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { Icon } from "astro-icon/components";
 
 export async function getStaticPaths() {
-  const posts = await getCollection("posts");
+  /**
+   * 公開または下書きのpostだけを取得
+   */
+  const posts = await getCollection("posts", ({ data }) => {
+    return data.status !== PUBLISHED_STATUS.PRIVATE;
+  });
   return posts.map((post) => {
     return {
       params: { slug: post.slug },
@@ -18,8 +23,7 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 const post = await getEntry("posts", slug);
 
-if (!post || post.data.status.includes(PUBLISHED_STATUS.PRIVATE))
-  return Astro.redirect("/404");
+if (!post) return Astro.redirect("/404");
 
 const rendered = await post.render();
 const { Content, headings } = rendered;

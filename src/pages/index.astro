@@ -4,7 +4,19 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Card from "~/components/Card.astro";
 
-const posts = await getCollection("posts");
+/**
+ * 公開または下書きのpostだけを取得
+ */
+const posts = await getCollection("posts", ({ data }) => {
+  return data.status !== PUBLISHED_STATUS.PRIVATE;
+});
+
+/**
+ * 公開日時が新しい順でソート
+ */
+const sortedPosts = posts.sort((a, b) => {
+  return new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime();
+});
 ---
 
 <BaseLayout title="ブログ一覧">
@@ -12,10 +24,8 @@ const posts = await getCollection("posts");
     class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4"
   >
     {
-      posts.map((post) => {
+      sortedPosts.map((post) => {
         const { title, publishedAt, categories, thumbnail, status } = post.data;
-
-        if (status.includes(PUBLISHED_STATUS.PRIVATE)) return null;
 
         return (
           <li>
