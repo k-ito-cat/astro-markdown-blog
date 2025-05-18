@@ -55,8 +55,8 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 ## 画像管理
 
-- 画像は [src/content/posts/images](src/content/posts/images) に配置
-- ビルド時に [public/images](public/images) に自動コピー
+- DecapCMSでuploadした画像は [src/content/posts/images](src/content/posts/images) に配置される（配置場所は/admin/config.yml参照）
+- ビルド前に [src/content/posts/images](src/content/posts/images) の内容が [public/images](public/images) にコピーされるようにコマンドを実行してあるので、publicへの配置は意識しなくていい
 
 ## メンテナンス
 
