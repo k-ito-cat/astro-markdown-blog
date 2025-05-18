@@ -1,4 +1,5 @@
 backend:
+  # ローカルで管理画面を確認するときは test-repo
   name: github
   repo: k-ito-cat/blog-posts
   branch: main
@@ -17,7 +18,7 @@ collections:
     create: true
     fields:
       - { label: タイトル, name: "title", widget: string }
-
+      - { label: "スラッグ", name: "slug", widget: string, hint: "例: my-post" }
       - label: 公開日
         name: "publishedAt"
         widget: datetime
