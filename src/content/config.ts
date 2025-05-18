@@ -6,7 +6,8 @@ const posts = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    slug: z.string(),
+    // FIXME: 必須にしたいが、optionalにしないとすべてのフロントマターslugを入力していてもバリエーションエラーになってしまうので一時的にoptionalにする
+    slug: z.string().optional(),
     publishedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
     thumbnail: z.string().optional(),
