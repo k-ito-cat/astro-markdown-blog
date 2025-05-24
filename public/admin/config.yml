@@ -1,12 +1,9 @@
 backend:
-  # ローカルで管理画面を確認するときは test-repo
   name: github
   repo: k-ito-cat/blog-posts
   branch: main
-  auth_type: pkce
-  client_id: Ov23li6l6BqpTea4MapD
-  base_url: https://k-ito-blog.netlify.app
-  auth_endpoint: oauth
+# ローカル開発用の設定（本番では自動的に無視）
+local_backend: true
 
 media_folder: "/images/"
 public_folder: "/images/"
