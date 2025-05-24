@@ -16,7 +16,6 @@
     "@tailwindcss/vite": "^4.0.17",
     "astro": "^5.5.4",
     "astro-icon": "^1.1.5",
-    "decap-cms-app": "^3.6.2",
     "tailwindcss": "^4.0.17"
   },
   "devDependencies": {
