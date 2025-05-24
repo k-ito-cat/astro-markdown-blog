@@ -2,7 +2,7 @@
 
 Astro Content Collections を使用した Markdown 形式のブログ
 
-管理画面（Decap CMS）もしくは直接markdownファイルを作成して記事の作成が可能
+管理画面（Sveltia CMS）もしくは直接markdownファイルを作成して記事の作成が可能
 
 ## リポジトリの構成
 
@@ -14,7 +14,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 ## 主要設定ファイル
 
 - [astro.config.mjs](astro.config.mjs) - Astro の設定ファイル
-- [public/admin/config.yml](public/admin/config.yml) - Decap CMS の設定ファイル（リポジトリ連携、コンテンツモデル定義）
+- [public/admin/config.yml](public/admin/config.yml) - Sveltia CMS の設定ファイル（リポジトリ連携、コンテンツモデル定義）
 - [netlify.toml](netlify.toml) - Netlify ビルド設定など
 - [.gitmodules](.gitmodules) - Git サブモジュール設定
 - [src/content/config.ts](src/content/config.ts) - Astro Content Collections のスキーマ定義
@@ -38,7 +38,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 2. 生成されたファイルを編集
 3. 変更を commit して push
 
-### 2. 管理画面（Decap CMS）から編集
+### 2. 管理画面（Sveltia CMS）から編集
 
 1. `/admin` にアクセス
 2. GitHub OAuth 認証
@@ -55,20 +55,22 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 ## 画像管理
 
-- DecapCMSでuploadした画像は [src/content/posts/images](src/content/posts/images) に配置される（配置場所は/admin/config.yml参照）
+- SveltiaCMSでuploadした画像は [src/content/posts/images](src/content/posts/images) に配置される（配置場所は/admin/config.yml参照）
 - ビルド前に [src/content/posts/images](src/content/posts/images) の内容が [public/images](public/images) にコピーされるようにコマンドを実行してあるので、publicへの配置は意識しなくていい
 
 ## メンテナンス
 
 ### カテゴリを追加したいとき
+- [src/constants/categories.ts](src/constants/categories.ts) - フロントマターでのバリデーションで使われる（主にエディタ編集時に活用）
 
-  - [src/constants/categories.ts](src/constants/categories.ts)
-  - [public/admin/config.yml](public/admin/config.yml)
+- [public/admin/config.yml](public/admin/config.yml) - 管理画面でカテゴリ選択時のサジェスト
 
 ### フロントマターを変更するとき
-  - [public/admin/config.yml](public/admin/config.yml) - 管理画面カスタマイズ
-  - [src/content/config.ts](src/content/config.ts) - スキーマ
-  - [\_templates/generator/new/index.ejs.t](_templates/generator/new/index.ejs.t) - hygenによって生成するmdファイルのテンプレート（主にフロントマター部分）
+
+- [public/admin/config.yml](public/admin/config.yml) - 管理画面カスタマイズ
+- [src/content/config.ts](src/content/config.ts) - スキーマ
+- [\_templates/generator/new/index.ejs.t](_templates/generator/new/index.ejs.t) - hygenによって生成するmdファイルのテンプレート（主にフロントマター部分）
 
 場合によっては定数の追加
-  - [src/constants/](src/constants/) - 定数
+
+- [src/constants/](src/constants/)
