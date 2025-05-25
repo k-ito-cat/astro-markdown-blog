@@ -9,7 +9,8 @@ public_folder: "/images/"
 collections:
   - name: "blog"
     label: "Blog"
-    folder: "/"
+    folder: "posts"
+    slug: "{{slug}}"
     create: true
     fields:
       - { label: タイトル, name: "title", widget: string }
