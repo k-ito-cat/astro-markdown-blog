@@ -61,6 +61,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 ## メンテナンス
 
 ### カテゴリを追加したいとき
+
 - [src/constants/categories.ts](src/constants/categories.ts) - フロントマターでのバリデーションで使われる（主にエディタ編集時に活用）
 
 - [public/admin/config.yml](public/admin/config.yml) - 管理画面でカテゴリ選択時のサジェスト
@@ -74,3 +75,21 @@ Astro Content Collections を使用した Markdown 形式のブログ
 場合によっては定数の追加
 
 - [src/constants/](src/constants/)
+
+## remark
+マークダウンで以下の形で書くことでコールアウトを生成する
+
+> [!WARNING]
+> これは警告メッセージです
+
+> [!NOTE]
+> これは情報メッセージです
+
+> [!CAUTION]
+> これは危険メッセージです
+
+> [!TIP]
+> これは便利なヒントです
+
+> [!IMPORTANT]
+> これは重要な情報です
