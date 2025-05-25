@@ -2,7 +2,7 @@
 @plugin '@tailwindcss/typography';
 
 :root {
-  /* primitive */
+  /* primitive colors */
   --color-white-100: #ffffff;
   --color-gray-100: #dedede;
   --color-gray-200: #cccccc;
@@ -17,9 +17,24 @@
   --color-orange-100: #ffcc80;
   --color-pink-100: #f48fb1;
   --color-purple-100: #b39ddb;
+
+  --color-info-100: #3451b2;
+  --color-info-50: #e7f3ff;
+  --color-tip-100: #16a085;
+  --color-tip-50: #f0f9ff;
+  --color-warning-100: #e6a700;
+  --color-warning-50: #fff8e1;
+  --color-danger-100: #e74c3c;
+  --color-danger-50: #ffebee;
+  --color-note-100: #5b7fa8;
+  --color-note-50: #f6f8fa;
+
+  /* layout colors */
   --bg-dark-100: #121212;
   --bg-card-100: #1c1c1c;
   --border-dark-100: #000000;
+
+  /* typography */
   --text-sm: 14px;
   --text-md: 16px;
   --text-lg: 24px;
@@ -36,6 +51,22 @@
   --color-link-active: var(--color-blue-400);
   --color-meta: var(--color-gray-300);
   --color-code: var(--color-orange-100);
+
+  --color-info: var(--color-info-100);
+  --color-info-bg: var(--color-info-50);
+  --color-info-text: var(--color-info-100);
+  --color-note: var(--color-note-100);
+  --color-note-bg: var(--color-note-50);
+  --color-note-text: var(--color-note-100);
+  --color-tip: var(--color-tip-100);
+  --color-tip-bg: var(--color-tip-50);
+  --color-tip-text: var(--color-tip-100);
+  --color-warning: var(--color-warning-100);
+  --color-warning-bg: var(--color-warning-50);
+  --color-warning-text: var(--color-warning-100);
+  --color-danger: var(--color-danger-100);
+  --color-danger-bg: var(--color-danger-50);
+  --color-danger-text: var(--color-danger-100);
 
   --background-color-*: initial;
   --background-color-base: var(--bg-dark-100);

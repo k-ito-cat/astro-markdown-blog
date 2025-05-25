@@ -9,7 +9,7 @@ const { content: Content } = Astro.props;
 ---
 
 <div
-  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-code:px-2 prose-h2:text-[24px] w-full max-w-full prose-h4:text-primary"
+  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-code:px-2 prose-h2:text-[24px] prose-h4:text-primary w-full max-w-full"
 >
   <Content />
 </div>
@@ -148,5 +148,98 @@ const { content: Content } = Astro.props;
   .prose code::after {
     content: none;
     display: none;
+  }
+
+  .prose .markdown-alert {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-left: 4px solid;
+  }
+  .prose .markdown-alert:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  /* NOTE */
+  .prose .markdown-alert-note {
+    background: var(--background-color-tag);
+    border-color: var(--color-note);
+    box-shadow: 0 4px 12px rgba(71, 101, 130, 0.15);
+  }
+  .prose .markdown-alert-note .markdown-alert-title {
+    color: var(--color-note-text);
+  }
+  .prose .markdown-alert-note p {
+    color: var(--color-note-text);
+  }
+  .prose .markdown-alert-note svg {
+    color: var(--color-note);
+    fill: var(--color-note);
+  }
+  /* TIP */
+  .prose .markdown-alert-tip {
+    background: var(--background-color-tag);
+    border-color: var(--color-tip);
+    box-shadow: 0 4px 12px rgba(0, 168, 107, 0.15);
+  }
+  .prose .markdown-alert-tip .markdown-alert-title {
+    color: var(--color-tip-text);
+  }
+  .prose .markdown-alert-tip p {
+    color: var(--color-tip-text);
+  }
+  .prose .markdown-alert-tip svg {
+    color: var(--color-tip);
+    fill: var(--color-tip);
+  }
+  /* WARNING */
+  .prose .markdown-alert-warning {
+    background: var(--background-color-tag);
+    border-color: var(--color-warning);
+    box-shadow: 0 4px 12px rgba(230, 167, 0, 0.15);
+  }
+  .prose .markdown-alert-warning .markdown-alert-title {
+    color: var(--color-warning-text);
+  }
+  .prose .markdown-alert-warning p {
+    color: var(--color-warning-text);
+  }
+  .prose .markdown-alert-warning svg {
+    color: var(--color-warning);
+    fill: var(--color-warning);
+  }
+  /* CAUTION & IMPORTANT */
+  .prose .markdown-alert-caution,
+  .prose .markdown-alert-important {
+    background: var(--background-color-tag);
+    border-color: var(--color-danger);
+    box-shadow: 0 4px 12px rgba(215, 58, 73, 0.15);
+  }
+  .prose .markdown-alert-caution .markdown-alert-title,
+  .prose .markdown-alert-important .markdown-alert-title {
+    color: var(--color-danger-text);
+  }
+  .prose .markdown-alert-caution p,
+  .prose .markdown-alert-important p {
+    color: var(--color-danger-text);
+  }
+  .prose .markdown-alert-caution svg,
+  .prose .markdown-alert-important svg {
+    color: var(--color-danger);
+    fill: var(--color-danger);
+  }
+  /* タイトル共通スタイル */
+  .prose .markdown-alert-title {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 15px;
+  }
+  /* 本文共通スタイル */
+  .prose .markdown-alert p {
+    line-height: 1.7;
+    margin: 0;
+    font-size: 15px;
   }
 </style>
