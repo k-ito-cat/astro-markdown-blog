@@ -12,14 +12,21 @@ const { headings } = Astro.props;
 
 {
   headings.length > 0 && (
-    <nav class="bg-tag scroll top-4 order-1 h-max max-h-[calc(100vh-32px)] overflow-scroll rounded-lg px-10 py-8 shadow-lg md:order-2 lg:sticky lg:order-2 lg:px-12">
-      <ul class="list-disc space-y-2">
+    <nav class="navigation-container">
+      <ul class="navigation-list">
         {headings.map((heading) => (
-          <li class:list={{ "ml-4": heading.depth === 3 }}>
+          <li
+            class:list={{
+              "navigation-item": true,
+              "navigation-item-sub": heading.depth === 3,
+            }}
+          >
             <a
               href={`#${heading.slug}`}
-              class:list={{ "font-bold": heading.depth === 2 }}
-              class="text-link hover:text-link-hover transition-colors"
+              class:list={{
+                "navigation-link": true,
+                "navigation-link-main": heading.depth === 2,
+              }}
             >
               {heading.text}
             </a>
@@ -29,3 +36,80 @@ const { headings } = Astro.props;
     </nav>
   )
 }
+
+<style>
+  .navigation-container {
+    position: sticky;
+    top: 16px;
+    order: 1;
+    height: max-content;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--background-color-tag);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(91, 127, 168, 0.15);
+    transition: all 0.2s ease;
+  }
+
+  .navigation-container:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .navigation-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .navigation-item {
+    position: relative;
+  }
+
+  .navigation-item-sub {
+    margin-left: 16px;
+  }
+
+  .navigation-link {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--color-note-text);
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+
+  .navigation-link:hover {
+    background: rgba(91, 127, 168, 0.1);
+    border-color: var(--color-note);
+    transform: translateX(2px);
+  }
+
+  .navigation-link-main {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .navigation-link-main:hover {
+    background: rgba(91, 127, 168, 0.15);
+  }
+
+  @media (min-width: 768px) {
+    .navigation-container {
+      order: 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .navigation-container {
+      order: 2;
+      padding: 24px;
+    }
+  }
+</style>
