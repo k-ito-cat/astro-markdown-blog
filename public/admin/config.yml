@@ -2,8 +2,6 @@ backend:
   name: github
   repo: k-ito-cat/blog-posts
   branch: main
-# ローカル開発用の設定（本番では自動的に無視）
-local_backend: true
 
 media_folder: "/images/"
 public_folder: "/images/"
