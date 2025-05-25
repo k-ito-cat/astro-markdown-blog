@@ -58,4 +58,7 @@
 html,
 body {
   @apply text-primary bg-base scroll-smooth font-[Noto_Sans_JP];
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
