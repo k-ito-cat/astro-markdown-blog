@@ -12,7 +12,7 @@ const { headings } = Astro.props;
 
 {
   headings.length > 0 && (
-    <nav class="bg-tag scroll top-4 order-1 h-max max-h-[calc(100vh-32px)] overflow-scroll rounded-lg px-12 py-8 shadow-lg md:order-2 lg:sticky lg:order-2">
+    <nav class="bg-tag scroll top-4 order-1 h-max max-h-[calc(100vh-32px)] overflow-scroll rounded-lg px-10 py-8 shadow-lg md:order-2 lg:sticky lg:order-2 lg:px-12">
       <ul class="list-disc space-y-2">
         {headings.map((heading) => (
           <li class:list={{ "ml-4": heading.depth === 3 }}>
