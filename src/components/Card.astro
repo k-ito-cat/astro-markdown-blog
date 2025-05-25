@@ -3,7 +3,6 @@ import {
   PUBLISHED_STATUS,
   type PublishedStatus,
 } from "~/constants/publishedStatus";
-import Categories from "./Categories.astro";
 import type { Category } from "~/constants/categories";
 
 interface Props {
@@ -15,11 +14,11 @@ interface Props {
   status: PublishedStatus;
 }
 
-const { slug, title, thumbnail, categories, publishedAt, status } = Astro.props;
+const { slug, title, thumbnail, publishedAt, status } = Astro.props;
 ---
 
 <article
-  class="ease relative flex flex-col overflow-hidden rounded-lg bg-[var(--background-color-card)] shadow-[0_4px_15px_rgba(0,0,0,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.8)]"
+  class="ease relative flex h-full flex-col overflow-hidden rounded-lg bg-[var(--background-color-card)] shadow-[0_4px_15px_rgba(0,0,0,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.8)]"
 >
   <a href={`/blog/${slug}`}>
     {
@@ -41,12 +40,10 @@ const { slug, title, thumbnail, categories, publishedAt, status } = Astro.props;
       )
     }
   </a>
-  <div class="flex flex-col gap-2 p-4 text-[#f0f0f0]">
-    <a href={`/blog/${slug}`}>
+  <div class="flex h-full flex-col justify-between gap-2 p-4 text-[#f0f0f0]">
+    <a class="h-full" href={`/blog/${slug}`}>
       <h2 class="m-0 text-[1.2rem] font-semibold">{title}</h2>
     </a>
-
-    <Categories categories={categories} />
 
     <div class="flex items-center justify-between">
       <span class="text-[0.85rem] text-[#999999]">

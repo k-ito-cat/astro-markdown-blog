@@ -5,8 +5,6 @@ type Props = {
   categories: Category[];
 };
 const { categories } = Astro.props;
-
-const searchCategory = Astro.url.searchParams.get("category");
 ---
 
 {
@@ -19,8 +17,7 @@ const searchCategory = Astro.url.searchParams.get("category");
               <a
                 href={category === "すべて" ? "/" : `/?category=${category}`}
                 class:list={[
-                  "ease hover:bg-tag-hover inline-block rounded px-3 py-2 leading-none no-underline transition-colors duration-300",
-                  category === searchCategory ? "text-link-active font-bold bg-primary" : "text-primary bg-tag",
+                  "ease hover:bg-tag-hover text-primary border-primary inline-block rounded border px-3 py-2 leading-none no-underline transition-colors duration-300",
                 ]}
               >
                 {category}
