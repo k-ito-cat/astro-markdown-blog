@@ -22,7 +22,6 @@ const { content: Content } = Astro.props;
 
     if (!code) return; // preタグしかないときは後続の処理をしない（ボタンを生成したくない）
     const button = document.createElement("button");
-
     button.textContent = "copy";
     button.classList.add(
       "absolute",
@@ -31,9 +30,21 @@ const { content: Content } = Astro.props;
       "bg-tag",
       "cursor-pointer",
       "px-2",
+      "pb-1",
+      "rounded-tr-md",
+      "inline-block",
       "text-white",
       "text-[12px]",
     );
+
+    // preタグをラップするコンテナを作成
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("relative");
+
+    // preタグの親要素に挿入
+    el.parentNode?.insertBefore(wrapper, el);
+    wrapper.appendChild(el);
+    wrapper.appendChild(button);
 
     let timeoutId: number | null = null;
 
@@ -56,8 +67,6 @@ const { content: Content } = Astro.props;
         console.error("コピーに失敗しました", err);
       }
     });
-
-    el.appendChild(button);
   });
 </script>
 
@@ -88,6 +97,7 @@ const { content: Content } = Astro.props;
 
   .prose pre {
     position: relative;
+    overflow-x: auto;
   }
 
   /* コードの前後の擬似要素（コードブロック作成時の 「` `」 これ）を非表示にする */
