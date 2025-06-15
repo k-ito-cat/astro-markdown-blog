@@ -4,19 +4,19 @@
 :root {
   /* primitive colors */
   --color-white-100: #ffffff;
-  --color-gray-100: #dedede;
-  --color-gray-200: #cccccc;
-  --color-gray-300: #999999;
-  --color-gray-400: #555555;
-  --color-gray-500: #333333;
-  --color-blue-100: #81d4fa;
-  --color-blue-200: #4fc3f7;
-  --color-blue-300: #29b6f6;
-  --color-blue-400: #03a9f4;
-  --color-red-100: #ffab91;
-  --color-orange-100: #ffcc80;
-  --color-pink-100: #f48fb1;
-  --color-purple-100: #b39ddb;
+  --color-gray-100: #c9d1d9;
+  --color-gray-200: #8b949e;
+  --color-gray-300: #6e7681;
+  --color-gray-400: #484f58;
+  --color-gray-500: #30363d;
+  --color-blue-100: #646cff;
+  --color-blue-200: #747bff;
+  --color-blue-300: #5865f2;
+  --color-blue-400: #4f46e5;
+  --color-red-100: #f87171;
+  --color-orange-100: #fb923c;
+  --color-pink-100: #f472b6;
+  --color-purple-100: #a78bfa;
 
   --color-info-100: #3451b2;
   --color-info-50: #e7f3ff;
@@ -29,10 +29,10 @@
   --color-note-100: #5b7fa8;
   --color-note-50: #f6f8fa;
 
-  /* layout colors */
-  --bg-dark-100: #121212;
-  --bg-card-100: #1c1c1c;
-  --border-dark-100: #000000;
+  --bg-dark-100: #1b1b1f;
+  --bg-card-100: #161618;
+  --bg-code-100: #2a2a2e;
+  --border-dark-100: #2e2e32;
 
   /* typography */
   --text-sm: 14px;
@@ -49,8 +49,8 @@
   --color-link: var(--color-blue-100);
   --color-link-hover: var(--color-blue-200);
   --color-link-active: var(--color-blue-400);
-  --color-meta: var(--color-gray-300);
-  --color-code: var(--color-orange-100);
+  --color-meta: var(--color-gray-200);
+  --color-code: var(--color-blue-100);
 
   --color-info: var(--color-info-100);
   --color-info-bg: var(--color-info-50);
@@ -71,7 +71,7 @@
   --background-color-*: initial;
   --background-color-base: var(--bg-dark-100);
   --background-color-card: var(--bg-card-100);
-  --background-color-code: var(--bg-dark-100);
+  --background-color-code: var(--bg-code-100);
   --background-color-tag: var(--color-gray-500);
   --background-color-tag-hover: var(--color-gray-400);
   --background-color-card-hover: var(--color-gray-500);
