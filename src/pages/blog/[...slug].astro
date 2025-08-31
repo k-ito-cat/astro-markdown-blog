@@ -34,7 +34,9 @@ const { Content, headings } = rendered;
 ---
 
 <BaseLayout title={`記事｜${post.data.title}`}>
-  <main class="mx-auto max-w-[1440px] bg-transparent px-2 py-8 lg:px-4">
+  <main
+    class="mx-auto max-w-[var(--max-width-pc)] bg-transparent px-2 py-8 lg:px-4"
+  >
     <a
       class="mb-2 flex w-max items-center duration-200 hover:opacity-70"
       href="/"

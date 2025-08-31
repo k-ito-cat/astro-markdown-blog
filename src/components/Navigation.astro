@@ -10,110 +10,97 @@ type Props = {
 const { headings } = Astro.props;
 ---
 
+<div class="relative lg:order-2">
 {
   headings.length > 0 && (
-    <nav class="navigation-container">
-      <ul class="navigation-list">
-        {headings.map((heading) => (
-          <li
-            class:list={{
-              "navigation-item": true,
-              "navigation-item-sub": heading.depth === 3,
-            }}
-          >
-            <a
-              href={`#${heading.slug}`}
+    <nav class="bg-tag scrollbar-hide relative order-1 h-max overflow-hidden rounded-lg p-5 shadow-lg transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-xl lg:top-4 lg:sticky  lg:overflow-y-auto lg:p-6">
+      <div
+        id="navigation-content"
+        class="max-h-[200px] lg:max-h-none transform transition-all duration-200 ease-in-out"
+      >
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          {headings.map((heading) => (
+            <li
               class:list={{
-                "navigation-link": true,
-                "navigation-link-main": heading.depth === 2,
+                relative: true,
+                "ml-4": heading.depth === 3,
               }}
             >
-              {heading.text}
-            </a>
-          </li>
-        ))}
-      </ul>
+              <a
+                href={`#${heading.slug}`}
+                class:list={{
+                  "text-note-text hover:bg-note/10 hover:border-note block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
+                  "hover:bg-note/15 text-[15px] font-semibold":
+                    heading.depth === 2,
+                }}
+              >
+                {heading.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+    
     </nav>
-  )
+      <div
+        id="gradient-overlay"
+        class="from-primary/20 via-primary/10 cursor-pointer absolute right-0 bottom-0 left-0 h-12 bg-gradient-to-t to-transparent transition-opacity duration-200 ease-in-out"
+      />
+
+      <button
+        id="show-more-button"
+        type="button"
+        class="text-primary hover:text-secondary absolute bottom-1 left-1/2 -translate-x-1/2 cursor-pointer px-4 py-2 text-sm font-medium transition-all duration-200 ease-in-out"
+      >
+        もっと見る
+      </button>
+    )
+ 
 }
+</div>
 
-<style>
-  .navigation-container {
-    position: static;
-    order: 1;
-    height: max-content;
-    max-height: none;
-    overflow-y: visible;
-    background: var(--background-color-tag);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(91, 127, 168, 0.15);
-    transition: all 0.2s ease;
+<script is:inline>
+  document.addEventListener("DOMContentLoaded", () => {
+    const button = document.querySelector("#show-more-button");
+    const navigationContent = document.querySelector("#navigation-content");
+    if (!button || !navigationContent) return;
+
+    const gradientOverlay = document.querySelector("#gradient-overlay");
+
+    button.addEventListener("click", () => {
+      const isExpanded = !navigationContent.classList.contains("max-h-[200px]");
+
+      if (isExpanded) {
+        // 閉じる
+        button.innerHTML = "もっと見る";
+        navigationContent.classList.remove("max-h-auto");
+        navigationContent.classList.add("max-h-[200px]");
+        gradientOverlay.classList.remove("opacity-0");
+      } else {
+        // 開く
+        button.innerHTML = "閉じる";
+        navigationContent.classList.remove("max-h-[200px]");
+        navigationContent.classList.add("max-h-auto");
+        navigationContent.classList.add("pb-8");
+        gradientOverlay.classList.add("opacity-0");
+      }
+    });
+  });
+</script>
+
+<style is:inline>
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-
-  .navigation-container:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
-
-  .navigation-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .scrollbar-width-0 {
+    scrollbar-width: 0;
   }
-
-  .navigation-item {
-    position: relative;
-  }
-
-  .navigation-item-sub {
-    margin-left: 16px;
-  }
-
-  .navigation-link {
-    display: block;
-    padding: 8px 12px;
-    border-radius: 6px;
-    text-decoration: none;
-    color: var(--color-note-text);
-    font-size: 14px;
-    line-height: 1.4;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-  }
-
-  .navigation-link:hover {
-    background: rgba(91, 127, 168, 0.1);
-    border-color: var(--color-note);
-    transform: translateX(2px);
-  }
-
-  .navigation-link-main {
-    font-weight: 600;
-    font-size: 15px;
-  }
-
-  .navigation-link-main:hover {
-    background: rgba(91, 127, 168, 0.15);
-  }
-
-  @media (min-width: 768px) {
-    .navigation-container {
-      position: sticky;
-      top: 16px;
-      order: 2;
-      max-height: calc(100vh - 32px);
-      overflow-y: auto;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .navigation-container {
-      order: 2;
-      padding: 24px;
-    }
+  .scrollbar-color-transparent-gray-100 {
+    scrollbar-color: transparent transparent;
   }
 </style>

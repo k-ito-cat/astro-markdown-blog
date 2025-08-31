@@ -40,6 +40,8 @@
   --text-lg: 24px;
   --text-xl: 32px;
   --text-2xl: 48px;
+
+  --max-width-pc: 1440px;
 }
 
 @theme {
