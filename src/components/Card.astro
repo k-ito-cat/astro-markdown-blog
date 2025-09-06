@@ -18,13 +18,16 @@ const { slug, title, thumbnail, publishedAt, status } = Astro.props;
 ---
 
 <article
-  class="ease relative flex h-full flex-col overflow-hidden transition duration-300 hover:translate-y-[-2px] hover:shadow-lg"
+  class:list={[
+    "ease relative flex h-full flex-col overflow-hidden transition duration-300 hover:translate-y-[-2px] hover:shadow-lg",
+    { "opacity-50": status.includes(PUBLISHED_STATUS.DRAFT) },
+  ]}
 >
   <a href={`/blog/${slug}`}>
     {
       status.includes(PUBLISHED_STATUS.DRAFT) && (
-        <div class="bg-base text-small absolute top-0 right-0 z-10 px-2 py-1 text-white">
-          下書き
+        <div class="text-small absolute top-0 right-0 z-10 px-2 py-1 text-white">
+          Draft
         </div>
       )
     }
