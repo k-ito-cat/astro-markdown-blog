@@ -1,0 +1,13 @@
+---
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<div
+  id={id}
+  class="pointer-events-none fixed inset-0 z-30 bg-black/50 opacity-0 transition-opacity duration-300 lg:hidden"
+>
+</div>

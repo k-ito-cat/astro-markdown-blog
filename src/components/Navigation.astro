@@ -1,4 +1,7 @@
 ---
+import { Icon } from "astro-icon/components";
+import { HEADING_LEVEL } from "~/constants/headingLevel";
+
 type Props = {
   headings: {
     depth: number;
@@ -8,14 +11,34 @@ type Props = {
 };
 
 const { headings } = Astro.props;
-const buttonText = "もっと見る";
 ---
 
-<div class="relative lg:order-2">
-  {
-    headings.length > 0 && (
-      <>
-        <nav class="scrollbar-hide relative order-1 h-max overflow-hidden rounded-lg p-5 transition-all duration-200 ease-in-out lg:sticky lg:top-4 lg:overflow-y-auto lg:px-6">
+{
+  headings.length > 0 && (
+    <>
+      <button
+        id="hamburger-button"
+        type="button"
+        class="fixed top-4 right-4 z-50 flex h-6 w-6 items-center justify-center transition-all duration-200 ease-in-out lg:hidden"
+        aria-label="ナビゲーションを開く"
+      >
+        <Icon
+          name="mdi:menu"
+          class="text-primary h-6 w-6"
+          id="hamburger-icon"
+        />
+        <Icon
+          name="mdi:close"
+          class="text-primary hidden h-6 w-6"
+          id="close-icon"
+        />
+      </button>
+
+      <div class="relative lg:order-2">
+        <nav
+          id="navigation"
+          class="scrollbar-hide bg-tag fixed top-0 right-0 z-40 h-full w-80 translate-x-full overflow-hidden overflow-y-scroll p-6 pt-12 transition-transform duration-300 ease-in-out lg:sticky lg:top-4 lg:order-1 lg:h-max lg:w-auto lg:translate-x-0 lg:overflow-y-auto lg:bg-transparent lg:px-0 lg:py-5"
+        >
           <div
             id="navigation-content"
             class="transform transition-all duration-200 ease-in-out lg:max-h-none"
@@ -25,15 +48,15 @@ const buttonText = "もっと見る";
                 <li
                   class:list={{
                     relative: true,
-                    "ml-4": heading.depth === 3,
+                    "ml-4": heading.depth === HEADING_LEVEL.THREE,
                   }}
                 >
                   <a
                     href={`#${heading.slug}`}
                     class:list={{
-                      "text-note-text hover:bg-note/10 hover:border-note block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
+                      "text-note-text hover:bg-note/10 hover:border-note navigation-link block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
                       "hover:bg-note/15 text-[15px] font-semibold":
-                        heading.depth === 2,
+                        heading.depth === HEADING_LEVEL.TWO,
                     }}
                   >
                     {heading.text}
@@ -43,62 +66,59 @@ const buttonText = "もっと見る";
             </ul>
           </div>
         </nav>
+      </div>
+    </>
+  )
+}
 
-        <div
-          id="gradient-overlay"
-          class="from-primary/20 via-primary/10 absolute right-0 bottom-0 left-0 h-12 cursor-pointer rounded-b-lg bg-gradient-to-t to-transparent transition-opacity duration-200 ease-in-out"
-        />
-        <button
-          id="show-more-button"
-          type="button"
-          class="text-primary hover:text-secondary absolute bottom-1 left-1/2 -translate-x-1/2 cursor-pointer px-4 py-2 text-sm font-medium transition-all duration-200 ease-in-out"
-        >
-          {buttonText}
-        </button>
-      </>
-    )
-  }
-</div>
-
-<script is:inline define:vars={{ buttonText }}>
+<script is:inline>
   document.addEventListener("DOMContentLoaded", () => {
-    const button = document.querySelector("#show-more-button");
-    const navigationContent = document.querySelector("#navigation-content");
-    const ul = navigationContent.querySelector("ul");
-    if (!button || !navigationContent || !ul) return;
+    const hamburgerButton = document.querySelector("#hamburger-button");
+    const navigation = document.querySelector("#navigation");
+    const overlay = document.querySelector("#mobile-overlay");
+    const hamburgerIcon = document.querySelector("#hamburger-icon");
+    const closeIcon = document.querySelector("#close-icon");
+    const navigationLinks = document.querySelectorAll(".navigation-link");
 
-    const gradientOverlay = document.querySelector("#gradient-overlay");
+    let isMenuOpen = false;
 
-    const ulHeight = ul.scrollHeight;
-    const maxHeight40 = Math.floor(ulHeight * 0.4);
+    const toggleMenu = () => {
+      isMenuOpen = !isMenuOpen;
 
-    // SPの時のみmax-heightを設定
-    document.addEventListener("resize", () => {
-      if (window.matchMedia("(min-width: 1024px)").matches) {
-        navigationContent.style.maxHeight = `${maxHeight40}px`;
-      }
-    });
-
-    button.addEventListener("click", () => {
-      if (navigationContent.classList.contains("max-h-auto")) {
-        // 閉じる: ulの4割の高さに戻す
-        button.innerHTML = buttonText;
-        navigationContent.classList.remove("max-h-auto", "pb-8");
-        navigationContent.style.maxHeight = `${maxHeight40}px`;
-        gradientOverlay.classList.remove("opacity-0");
+      if (isMenuOpen) {
+        // メニューを開く
+        navigation.classList.remove("translate-x-full");
+        overlay.classList.remove("opacity-0", "pointer-events-none");
+        hamburgerIcon.classList.add("hidden");
+        closeIcon.classList.remove("hidden");
+        document.body.style.overflow = "hidden";
       } else {
-        // 開く: max-h-autoに設定
-        button.innerHTML = "閉じる";
-        navigationContent.style.maxHeight = "none";
-        navigationContent.classList.add("max-h-auto", "pb-8");
-        gradientOverlay.classList.add("opacity-0");
+        // メニューを閉じる
+        navigation.classList.add("translate-x-full");
+        overlay.classList.add("opacity-0", "pointer-events-none");
+        hamburgerIcon.classList.remove("hidden");
+        closeIcon.classList.add("hidden");
+        document.body.style.overflow = "";
       }
+    };
+
+    hamburgerButton?.addEventListener("click", toggleMenu);
+
+    overlay?.addEventListener("click", () => {
+      if (isMenuOpen) toggleMenu();
     });
 
-    if (ulHeight <= maxHeight40) {
-      button.style.display = "none";
-      gradientOverlay.style.display = "none";
-    }
+    navigationLinks.forEach((link) => {
+      link.addEventListener("click", () => {
+        if (isMenuOpen) toggleMenu();
+      });
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && isMenuOpen) {
+        toggleMenu();
+      }
+    });
   });
 </script>
 

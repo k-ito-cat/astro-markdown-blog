@@ -48,6 +48,8 @@
 
 @theme {
   --color-*: initial;
+  --color-black: #000000;
+  --color-white: #ffffff;
   --color-primary: var(--color-white-100);
   --color-secondary: var(--color-gray-100);
   --color-link: var(--color-blue-100);

@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
+import Overlay from "~/components/Overlay.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { Icon } from "astro-icon/components";
 
@@ -80,6 +81,7 @@ const { Content, headings } = rendered;
       )
     }
   </main>
+  <Overlay id="mobile-overlay" />
   <button
     id="scroll-to-top-btn"
     type="button"
