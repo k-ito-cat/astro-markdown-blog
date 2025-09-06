@@ -36,27 +36,23 @@ const {
 } = Astro.props;
 ---
 
-<article
-  class="bg-card order-2 grid grid-cols-1 rounded-lg p-4 shadow-[0_4px_15px_rgba(0,0,0,0.7)] lg:order-1 lg:p-8"
->
-  <header class="mb-8">
+<article class="order-2 grid grid-cols-1 p-4 lg:order-1 lg:p-8">
+  <header class="mb-8 space-y-4">
     <h1
-      class="lg:text-heading-first mb-2 text-[28px] font-semibold"
+      class="lg:text-heading-first text-[28px] font-semibold"
       style="word-break: auto-phrase;"
     >
       {title}
     </h1>
 
-    <div class="text-meta mb-6 flex gap-4 text-[0.9rem]">
-      <span class="text-meta text-[0.85rem]">
-        {publishedAt.toISOString().split("T")[0]}
-      </span>
-    </div>
+    <span class="text-meta text-small inline-block">
+      {publishedAt.toISOString().split("T")[0]}
+    </span>
 
-    <div class="mb-4 flex items-center gap-2 text-[0.9rem]">
+    <div class="flex items-center gap-2 space-x-2">
       <a
         href="https://github.com/k-ito-cat"
-        class="text-primary ease rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
+        class="text-primary ease rounded no-underline transition-colors duration-300"
       >
         <Icon name="octicon:mark-github-16" width="24" height="24" />
       </a>
@@ -67,7 +63,7 @@ const {
     {
       thumbnail && (
         <img
-          class="mt-4 block h-auto max-h-[600px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          class="block h-auto max-h-[600px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
           src={thumbnail}
           alt={title}
           width={1200}

@@ -9,6 +9,8 @@
   --color-gray-300: #6e7681;
   --color-gray-400: #484f58;
   --color-gray-500: #30363d;
+  --color-gray-600: #f0f0f0;
+  --color-gray-700: #999999;
   --color-blue-100: #646cff;
   --color-blue-200: #747bff;
   --color-blue-300: #5865f2;
@@ -53,6 +55,8 @@
   --color-link-active: var(--color-blue-400);
   --color-meta: var(--color-gray-200);
   --color-code: var(--color-blue-100);
+  --color-text-light: var(--color-gray-600);
+  --color-text-muted: var(--color-gray-700);
 
   --color-info: var(--color-info-100);
   --color-info-bg: var(--color-info-50);
