@@ -54,7 +54,7 @@ const { headings } = Astro.props;
                   <a
                     href={`#${heading.slug}`}
                     class:list={{
-                      "text-note-text hover:bg-note/10 hover:border-note navigation-link block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
+                      "text-note-text hover:bg-note/10 hover:border-note navigation-link block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out": true,
                       "hover:bg-note/15 text-[15px] font-semibold":
                         heading.depth === HEADING_LEVEL.TWO,
                     }}
@@ -119,6 +119,20 @@ const { headings } = Astro.props;
         toggleMenu();
       }
     });
+
+    const setActiveByHash = () => {
+      const hash = decodeURIComponent(location.hash || "");
+      navigationLinks.forEach((link) => link.classList.remove("bg-note/15"));
+      if (!hash) return;
+      const target = Array.from(navigationLinks).find(
+        (LinkItem) => LinkItem.getAttribute("href") === hash,
+      );
+      if (target) {
+        target.classList.add("bg-note/15");
+      }
+    };
+    window.addEventListener("hashchange", setActiveByHash);
+    setActiveByHash();
   });
 </script>
 

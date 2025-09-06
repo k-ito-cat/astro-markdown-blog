@@ -9,7 +9,7 @@ const { content: Content } = Astro.props;
 ---
 
 <div
-  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary w-full max-w-full"
+  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary prose-h2:border-b prose-h2:pb-2 w-full max-w-full"
 >
   <Content />
 </div>
@@ -98,6 +98,23 @@ const { content: Content } = Astro.props;
       img.addEventListener("click", () => lightbox.openAt(idx));
       (img as HTMLImageElement).style.cursor = "zoom-in";
     });
+  });
+
+  // 見出し(h2/h3/h4)をリンク化
+  const headingEls = document.querySelectorAll(
+    ".prose h2[id], .prose h3[id], .prose h4[id]",
+  );
+  headingEls.forEach((headingEl) => {
+    const id = (headingEl as HTMLElement).id;
+    if (!id) return;
+    if (headingEl.querySelector("a.heading-self-link")) return;
+
+    const navLink = document.createElement("a");
+    navLink.href = `#${id}`;
+    navLink.classList.add("heading-self-link");
+    // 既存の子要素をリンク内へ移動
+    while (headingEl.firstChild) navLink.appendChild(headingEl.firstChild);
+    headingEl.appendChild(navLink);
   });
 </script>
 
@@ -245,5 +262,11 @@ const { content: Content } = Astro.props;
   /* markdown-alert内のcodeの背景色を無くす */
   .prose .markdown-alert code {
     background-color: transparent;
+  }
+
+  /* 見出し自己リンクのスタイル */
+  .prose .heading-self-link {
+    color: inherit;
+    text-decoration: none;
   }
 </style>
