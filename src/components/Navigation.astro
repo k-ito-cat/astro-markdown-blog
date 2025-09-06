@@ -8,84 +8,97 @@ type Props = {
 };
 
 const { headings } = Astro.props;
+const buttonText = "もっと見る";
 ---
 
 <div class="relative lg:order-2">
-{
-  headings.length > 0 && (
-    <nav class="bg-tag scrollbar-hide relative order-1 h-max overflow-hidden rounded-lg p-5 shadow-lg transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-xl lg:top-4 lg:sticky  lg:overflow-y-auto lg:p-6">
-      <div
-        id="navigation-content"
-        class="max-h-[200px] lg:max-h-none transform transition-all duration-200 ease-in-out"
-      >
-        <ul class="m-0 flex list-none flex-col gap-2 p-0">
-          {headings.map((heading) => (
-            <li
-              class:list={{
-                relative: true,
-                "ml-4": heading.depth === 3,
-              }}
-            >
-              <a
-                href={`#${heading.slug}`}
-                class:list={{
-                  "text-note-text hover:bg-note/10 hover:border-note block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
-                  "hover:bg-note/15 text-[15px] font-semibold":
-                    heading.depth === 2,
-                }}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+  {
+    headings.length > 0 && (
+      <>
+        <nav class="scrollbar-hide relative order-1 h-max overflow-hidden rounded-lg p-5 transition-all duration-200 ease-in-out lg:sticky lg:top-4 lg:overflow-y-auto lg:px-6">
+          <div
+            id="navigation-content"
+            class="transform transition-all duration-200 ease-in-out lg:max-h-none"
+          >
+            <ul class="m-0 flex list-none flex-col gap-2 p-0">
+              {headings.map((heading) => (
+                <li
+                  class:list={{
+                    relative: true,
+                    "ml-4": heading.depth === 3,
+                  }}
+                >
+                  <a
+                    href={`#${heading.slug}`}
+                    class:list={{
+                      "text-note-text hover:bg-note/10 hover:border-note block border-b border-transparent px-3 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out hover:translate-x-0.5": true,
+                      "hover:bg-note/15 text-[15px] font-semibold":
+                        heading.depth === 2,
+                    }}
+                  >
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
 
-    
-    </nav>
-      <div
-        id="gradient-overlay"
-        class="from-primary/20 via-primary/10 cursor-pointer absolute right-0 bottom-0 left-0 h-12 bg-gradient-to-t to-transparent transition-opacity duration-200 ease-in-out"
-      />
-
-      <button
-        id="show-more-button"
-        type="button"
-        class="text-primary hover:text-secondary absolute bottom-1 left-1/2 -translate-x-1/2 cursor-pointer px-4 py-2 text-sm font-medium transition-all duration-200 ease-in-out"
-      >
-        もっと見る
-      </button>
+        <div
+          id="gradient-overlay"
+          class="from-primary/20 via-primary/10 absolute right-0 bottom-0 left-0 h-12 cursor-pointer rounded-b-lg bg-gradient-to-t to-transparent transition-opacity duration-200 ease-in-out"
+        />
+        <button
+          id="show-more-button"
+          type="button"
+          class="text-primary hover:text-secondary absolute bottom-1 left-1/2 -translate-x-1/2 cursor-pointer px-4 py-2 text-sm font-medium transition-all duration-200 ease-in-out"
+        >
+          {buttonText}
+        </button>
+      </>
     )
- 
-}
+  }
 </div>
 
-<script is:inline>
+<script is:inline define:vars={{ buttonText }}>
   document.addEventListener("DOMContentLoaded", () => {
     const button = document.querySelector("#show-more-button");
     const navigationContent = document.querySelector("#navigation-content");
-    if (!button || !navigationContent) return;
+    const ul = navigationContent.querySelector("ul");
+    if (!button || !navigationContent || !ul) return;
 
     const gradientOverlay = document.querySelector("#gradient-overlay");
 
-    button.addEventListener("click", () => {
-      const isExpanded = !navigationContent.classList.contains("max-h-[200px]");
+    const ulHeight = ul.scrollHeight;
+    const maxHeight40 = Math.floor(ulHeight * 0.4);
 
-      if (isExpanded) {
-        // 閉じる
-        button.innerHTML = "もっと見る";
-        navigationContent.classList.remove("max-h-auto");
-        navigationContent.classList.add("max-h-[200px]");
+    // SPの時のみmax-heightを設定
+    document.addEventListener("resize", () => {
+      if (window.matchMedia("(min-width: 1024px)").matches) {
+        navigationContent.style.maxHeight = `${maxHeight40}px`;
+      }
+    });
+
+    button.addEventListener("click", () => {
+      if (navigationContent.classList.contains("max-h-auto")) {
+        // 閉じる: ulの4割の高さに戻す
+        button.innerHTML = buttonText;
+        navigationContent.classList.remove("max-h-auto", "pb-8");
+        navigationContent.style.maxHeight = `${maxHeight40}px`;
         gradientOverlay.classList.remove("opacity-0");
       } else {
-        // 開く
+        // 開く: max-h-autoに設定
         button.innerHTML = "閉じる";
-        navigationContent.classList.remove("max-h-[200px]");
-        navigationContent.classList.add("max-h-auto");
-        navigationContent.classList.add("pb-8");
+        navigationContent.style.maxHeight = "none";
+        navigationContent.classList.add("max-h-auto", "pb-8");
         gradientOverlay.classList.add("opacity-0");
       }
     });
+
+    if (ulHeight <= maxHeight40) {
+      button.style.display = "none";
+      gradientOverlay.style.display = "none";
+    }
   });
 </script>
 
