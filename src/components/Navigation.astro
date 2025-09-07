@@ -48,7 +48,7 @@ const { headings } = Astro.props;
   )
 }
 
-<script is:inline>
+<script>
   document.addEventListener("DOMContentLoaded", () => {
     const hamburgerButton = document.querySelector("#hamburger-button");
     const navigation = document.querySelector("#navigation");
@@ -56,6 +56,16 @@ const { headings } = Astro.props;
     const hamburgerIcon = document.querySelector("#hamburger-icon");
     const closeIcon = document.querySelector("#close-icon");
     const navigationLinks = document.querySelectorAll(".navigation-link");
+
+    if (
+      !hamburgerButton ||
+      !navigation ||
+      !overlay ||
+      !hamburgerIcon ||
+      !closeIcon ||
+      !navigationLinks
+    )
+      return;
 
     let isMenuOpen = false;
 
@@ -144,6 +154,8 @@ const { headings } = Astro.props;
           }
 
           const nowVisible = Array.from(visibleHeadings).map((headingEl) => {
+            if (!(headingEl instanceof HTMLElement)) return "";
+
             return (
               headingEl.id ||
               (headingEl.textContent ? headingEl.textContent.trim() : "")

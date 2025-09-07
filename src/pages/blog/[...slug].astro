@@ -152,7 +152,7 @@ const { Content, headings } = rendered;
      * 上スクロールがある程度発生したらヘッダーを画面内へ戻す
      */
     const HEADER_HIDE_THRESHOLD = 4;
-    const header = document.querySelector("header") as HTMLElement | null;
+    const header = document.querySelector("header");
     if (!header) return;
     let lastY = window.scrollY;
     let acc = 0;
