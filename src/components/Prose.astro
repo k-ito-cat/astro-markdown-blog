@@ -141,8 +141,13 @@ const { content: Content } = Astro.props;
   .prose pre code {
     color: var(--color-primary);
     background-color: transparent;
+    padding-inline: 0;
+    margin-inline: 0;
   }
-
+  .prose code {
+    margin-inline: 4px;
+    padding-inline: 8px;
+  }
   .prose pre {
     position: relative;
     overflow-x: auto;
