@@ -57,15 +57,7 @@ const { headings } = Astro.props;
     const closeIcon = document.querySelector("#close-icon");
     const navigationLinks = document.querySelectorAll(".navigation-link");
 
-    if (
-      !hamburgerButton ||
-      !navigation ||
-      !overlay ||
-      !hamburgerIcon ||
-      !closeIcon ||
-      !navigationLinks
-    )
-      return;
+    if (!navigation) return;
 
     let isMenuOpen = false;
 
@@ -75,36 +67,33 @@ const { headings } = Astro.props;
       if (isMenuOpen) {
         // メニューを開く
         navigation.classList.remove("translate-x-full");
-        overlay.classList.remove("opacity-0", "pointer-events-none");
-        hamburgerIcon.classList.add("hidden");
-        closeIcon.classList.remove("hidden");
+        overlay?.classList.remove("opacity-0", "pointer-events-none");
+        hamburgerIcon?.classList.add("hidden");
+        closeIcon?.classList.remove("hidden");
         document.body.style.overflow = "hidden";
       } else {
         // メニューを閉じる
         navigation.classList.add("translate-x-full");
-        overlay.classList.add("opacity-0", "pointer-events-none");
-        hamburgerIcon.classList.remove("hidden");
-        closeIcon.classList.add("hidden");
+        overlay?.classList.add("opacity-0", "pointer-events-none");
+        hamburgerIcon?.classList.remove("hidden");
+        closeIcon?.classList.add("hidden");
         document.body.style.overflow = "";
       }
     };
 
-    hamburgerButton?.addEventListener("click", toggleMenu);
-
-    overlay?.addEventListener("click", () => {
-      if (isMenuOpen) toggleMenu();
-    });
-
+    if (hamburgerButton) {
+      hamburgerButton.addEventListener("click", toggleMenu);
+      overlay?.addEventListener("click", () => {
+        if (isMenuOpen) toggleMenu();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && isMenuOpen) toggleMenu();
+      });
+    }
     navigationLinks.forEach((link) => {
       link.addEventListener("click", () => {
         if (isMenuOpen) toggleMenu();
       });
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && isMenuOpen) {
-        toggleMenu();
-      }
     });
 
     /**
@@ -149,19 +138,20 @@ const { headings } = Astro.props;
               visibleHeadings.add(entry.target);
             } else {
               visibleHeadings.delete(entry.target);
-              return;
             }
           }
 
           const nowVisible = Array.from(visibleHeadings).map((headingEl) => {
             if (!(headingEl instanceof HTMLElement)) return "";
-
             return (
               headingEl.id ||
               (headingEl.textContent ? headingEl.textContent.trim() : "")
             );
           });
-          location.hash = nowVisible[nowVisible.length - 1];
+          const last = nowVisible[nowVisible.length - 1];
+          if (last && `#${last}` !== location.hash) {
+            location.hash = last.startsWith("#") ? last : `#${last}`;
+          }
         },
         {
           root: null,
