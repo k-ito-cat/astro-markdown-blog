@@ -18,6 +18,7 @@ export async function getStaticPaths() {
     return {
       /**
        * getCollectionのslugは基本ファイル名だが、フロントマターに"slug"プロパティがあればオーバーライドが可能
+       * また、Sveltia CMSではslug編集機能がデフォルトで備わっており、slugの変更(Markdownファイル名の変更)が可能
        * @see https://docs.astro.build/en/guides/content-collections/#defining-custom-ids
        */
       params: { slug: post.slug },
