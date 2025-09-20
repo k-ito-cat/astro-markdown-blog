@@ -76,6 +76,11 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 - [src/constants/](src/constants/)
 
+### posts配下の変更後
+- 修正したMarkdownファイルをサブモジュール側でコミット
+- プロジェクト側でポインタをコミット
+- push
+
 ## remark
 
 マークダウンで以下の形で書くことでコールアウトを生成する
