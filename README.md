@@ -77,9 +77,17 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - [src/constants/](src/constants/)
 
 ### posts配下の変更後
-- 修正したMarkdownファイルをサブモジュール側でコミット
-- プロジェクト側でポインタをコミット
-- push
+
+1. サブモジュール側（posts）のmainブランチ上で修正したMarkdownをコミット
+2. サブモジュール側でpush（origin/main に紐付いている状態で）
+3. スーパープロジェクト側でサブモジュールポインタをコミット
+4. スーパープロジェクト側でpush
+
+> [!warning]
+>
+> VSCodeまたはCursorでサブモジュールのファイルを選択すると左下のプロジェクト名が「posts」になる。その隣がコミットハッシュ表示＝detached HEAD(ブランチを指してない状態)のときは、mainブランチへ切り替えてからコミット・pushを行う。
+>
+> 既にdetached HEADでコミットしてしまった場合は、ブランチに載せ替えてからpushするか、`git push origin HEAD:main` でリモートのmainへ反映する。
 
 ## remark
 
@@ -89,29 +97,38 @@ Astro Content Collections を使用した Markdown 形式のブログ
 > [!WARNING]
 > これは警告メッセージです
 ```
+
 > [!WARNING]
 > これは警告メッセージです
+
 ```
 > [!NOTE]
 > これは情報メッセージです
 ```
+
 > [!NOTE]
 > これは情報メッセージです
+
 ```
 > [!CAUTION]
 > これは危険メッセージです
 ```
+
 > [!CAUTION]
 > これは危険メッセージです
+
 ```
 > [!TIP]
 > これは便利なヒントです
 ```
+
 > [!TIP]
 > これは便利なヒントです
+
 ```
 > [!IMPORTANT]
 > これは重要な情報です
 ```
+
 > [!IMPORTANT]
 > これは重要な情報です
