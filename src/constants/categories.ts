@@ -28,7 +28,7 @@ export const CATEGORIES = [
   "認証・認可",
   "データベース",
   "REST API",
-  "headlessCMS",
+  "Headless CMS",
   "CI/CD",
   "SEO",
   "a11ty",
