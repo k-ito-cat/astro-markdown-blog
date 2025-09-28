@@ -35,7 +35,11 @@ const rendered = await post.render();
 const { Content, headings } = rendered;
 ---
 
-<BaseLayout title={`記事｜${post.data.title}`}>
+<BaseLayout
+  title={`記事｜${post.data.title}`}
+  ogTitle={post.data.title}
+  ogImage={post.data.thumbnail}
+>
   <main
     class="mx-auto max-w-[var(--max-width-pc)] bg-transparent px-2 py-8 lg:px-4"
   >

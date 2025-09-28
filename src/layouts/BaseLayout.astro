@@ -3,8 +3,10 @@ import "../styles/global.css";
 
 type Props = {
   title: string;
+  ogTitle?: string;
+  ogImage?: string;
 };
-const { title } = Astro.props;
+const { title, ogTitle, ogImage } = Astro.props;
 ---
 
 <!doctype html>
@@ -22,6 +24,8 @@ const { title } = Astro.props;
       rel="stylesheet"
     />
     <title>{title}</title>
+    <meta property="og:title" content={ogTitle ?? title} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
   </head>
   <body>
     <slot />
