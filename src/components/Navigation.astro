@@ -55,7 +55,9 @@ const { headings } = Astro.props;
     const overlay = document.querySelector("#mobile-overlay");
     const hamburgerIcon = document.querySelector("#hamburger-icon");
     const closeIcon = document.querySelector("#close-icon");
-    const navigationLinks = document.querySelectorAll(".navigation-link");
+    const navigationLinks = document.querySelectorAll(
+      ".navigation-link",
+    ) as NodeListOf<HTMLAnchorElement>;
 
     if (!navigation) return;
 
@@ -90,17 +92,83 @@ const { headings } = Astro.props;
         if (e.key === "Escape" && isMenuOpen) toggleMenu();
       });
     }
+    const extractIdFromHash = (hash: string) => {
+      if (!hash) return "";
+      const raw = hash.replace(/^#/, "");
+      return decodeURIComponent(raw);
+    };
+
+    let isProgrammaticScroll = false;
+    let programmaticScrollTimeout: number | null = null;
+
+    const suspendObserverUpdates = (duration = 800) => {
+      isProgrammaticScroll = true;
+      if (programmaticScrollTimeout !== null) {
+        window.clearTimeout(programmaticScrollTimeout);
+      }
+      programmaticScrollTimeout = window.setTimeout(() => {
+        isProgrammaticScroll = false;
+        programmaticScrollTimeout = null;
+      }, duration);
+    };
+
     navigationLinks.forEach((link) => {
-      link.addEventListener("click", () => {
+      link.addEventListener("click", (event) => {
+        const href = link.getAttribute("href");
+        if (!href) return;
+
+        const targetId = extractIdFromHash(href);
+        if (!targetId) return;
+
+        const targetHeading = document.getElementById(targetId);
+        if (!targetHeading) return;
+
+        event.preventDefault();
+
         if (isMenuOpen) toggleMenu();
+
+        suspendObserverUpdates(1000);
+
+        targetHeading.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        const canonicalHash = ensureHashPrefix(targetHeading.id || targetId);
+        currentHash = canonicalHash;
+        updateHash(currentHash);
+        activateLink(currentHash);
       });
     });
 
     /**
      * ハッシュが変わったら、ナビゲーションのリンクをハイライトする
      */
-    const setActiveByHash = () => {
-      const hash = decodeURIComponent(location.hash || "");
+    const encodeHash = (value: string) => {
+      if (!value) return "";
+      const trimmed = value.startsWith("#") ? value.slice(1) : value;
+      return `#${encodeURIComponent(trimmed)}`;
+    };
+
+    const ensureHashPrefix = (value: string) => {
+      if (!value) return "";
+      return value.startsWith("#") ? value : `#${value}`;
+    };
+
+    const updateHash = (hash: string) => {
+      const next = encodeHash(hash);
+      if (
+        typeof history !== "undefined" &&
+        typeof history.replaceState === "function"
+      ) {
+        history.replaceState(
+          null,
+          "",
+          `${location.pathname}${location.search}${next}`,
+        );
+      } else if (location.hash !== next) {
+        location.hash = next;
+      }
+    };
+
+    const clearActiveLinks = () => {
       navigationLinks.forEach((link) =>
         link.classList.remove(
           "border-note",
@@ -109,9 +177,13 @@ const { headings } = Astro.props;
           "inline-block",
         ),
       );
+    };
+
+    const activateLink = (hash: string) => {
+      clearActiveLinks();
       if (!hash) return;
       const target = Array.from(navigationLinks).find(
-        (LinkItem) => LinkItem.getAttribute("href") === hash,
+        (link) => link.getAttribute("href") === hash,
       );
       if (target) {
         target.classList.add(
@@ -122,46 +194,132 @@ const { headings } = Astro.props;
         );
       }
     };
-    window.addEventListener("hashchange", setActiveByHash);
-    setActiveByHash();
+
+    let currentHash = ensureHashPrefix(decodeURIComponent(location.hash || ""));
+    activateLink(currentHash);
+
+    const removeHashFromUrl = () => {
+      if (!currentHash) return;
+      if (
+        typeof history !== "undefined" &&
+        typeof history.replaceState === "function"
+      ) {
+        history.replaceState(
+          null,
+          "",
+          `${location.pathname}${location.search}`,
+        );
+      } else if (location.hash) {
+        location.hash = "";
+      }
+      currentHash = "";
+      activateLink(currentHash);
+    };
+
+    const syncToLocationHash = () => {
+      if (isProgrammaticScroll) return;
+      currentHash = ensureHashPrefix(decodeURIComponent(location.hash || ""));
+      activateLink(currentHash);
+    };
+
+    window.addEventListener("hashchange", syncToLocationHash);
 
     /**
-     * viewport内に見出しが入ったら配列に見出しのidを追加し、配列の最後の要素（最後に読み込まれた見出し）をハッシュに設定する
+     * ビューポート内の見出しからアクティブな見出しを選択し、URLハッシュとナビゲーションを同期する
      */
-    const setActiveByVisible = () => {
-      // 現在ビューポート内の見出しだけを追跡
-      const visibleHeadings = new Set();
+    const observeHeadings = () => {
+      const headings = Array.from(
+        document.querySelectorAll("h2[id], h3[id]"),
+      ).filter(
+        (element): element is HTMLElement => element instanceof HTMLElement,
+      );
+      if (headings.length === 0) return;
+
+      const visibleEntries = new Map<HTMLElement, IntersectionObserverEntry>();
+      let rafId = 0;
+      const TOP_RESET_THRESHOLD = 48;
+
+      const updateActiveFromVisible = () => {
+        rafId = 0;
+
+        const scrollTop =
+          typeof window !== "undefined"
+            ? window.scrollY ||
+              document.documentElement.scrollTop ||
+              document.body.scrollTop ||
+              0
+            : 0;
+
+        if (isProgrammaticScroll) return;
+
+        if (scrollTop <= TOP_RESET_THRESHOLD) {
+          if (currentHash) {
+            removeHashFromUrl();
+          } else {
+            clearActiveLinks();
+          }
+          return;
+        }
+
+        if (!visibleEntries.size) return;
+
+        const ordered = headings
+          .map((heading) => {
+            const entry = visibleEntries.get(heading);
+            if (!entry) return null;
+            return {
+              heading,
+              top: entry.boundingClientRect.top,
+            };
+          })
+          .filter((item): item is { heading: HTMLElement; top: number } =>
+            Boolean(item),
+          )
+          .sort((a, b) => a.top - b.top);
+
+        if (!ordered.length) return;
+
+        const candidate =
+          ordered.find((item) => item.top >= 0) ?? ordered[ordered.length - 1];
+
+        if (!candidate) return;
+
+        const nextHash = `#${candidate.heading.id}`;
+        if (nextHash === currentHash) return;
+
+        currentHash = nextHash;
+        updateHash(currentHash);
+        activateLink(currentHash);
+      };
+
+      const scheduleUpdate = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateActiveFromVisible);
+      };
+
       const io = new IntersectionObserver(
         (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting && entry.target.tagName === "H2") {
-              visibleHeadings.add(entry.target);
+          entries.forEach((entry) => {
+            const target = entry.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (entry.isIntersecting) {
+              visibleEntries.set(target, entry);
             } else {
-              visibleHeadings.delete(entry.target);
+              visibleEntries.delete(target);
             }
-          }
-
-          const nowVisible = Array.from(visibleHeadings).map((headingEl) => {
-            if (!(headingEl instanceof HTMLElement)) return "";
-            return (
-              headingEl.id ||
-              (headingEl.textContent ? headingEl.textContent.trim() : "")
-            );
           });
-          const last = nowVisible[nowVisible.length - 1];
-          if (last && `#${last}` !== location.hash) {
-            location.hash = last.startsWith("#") ? last : `#${last}`;
-          }
+          scheduleUpdate();
         },
         {
           root: null,
-          threshold: 0.2,
+          threshold: [0, 0.1, 0.5],
+          rootMargin: "-35% 0px -55% 0px",
         },
       );
 
-      document.querySelectorAll("h2").forEach((el) => io.observe(el));
+      headings.forEach((heading) => io.observe(heading));
     };
-    setActiveByVisible();
+    observeHeadings();
   });
 </script>
 
