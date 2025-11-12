@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "copy-images": "cpx \"src/content/posts/images/**/*\" public/images",
-    "dev": "npm run copy-images && astro dev",
-    "build": "npm run copy-images && astro build",
+    "dev": "op run --env-file=.env.1password -- bash -c 'npm run copy-images && astro dev'",
+    "build": "op run --env-file=.env.1password -- bash -c 'npm run copy-images && astro build'",
     "preview": "astro preview",
     "astro": "astro",
     "new:post": "hygen generator new",
