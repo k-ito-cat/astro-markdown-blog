@@ -25,7 +25,7 @@ collections:
         widget: image
         media_folder: "/images/thumbnail"
         public_folder: "/images/thumbnail"
-        default: "/images/thumbnail/noimage.png"
+        default: "/images/thumbnail/noimage.webp"
 
       - { label: GitHub URL, name: githubUrl, widget: string, required: false }
 
