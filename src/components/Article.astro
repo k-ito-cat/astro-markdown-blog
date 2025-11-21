@@ -14,7 +14,6 @@ type Props = {
   title: string;
   publishedAt: Date;
   categories: Category[];
-  thumbnail?: string;
   githubUrl?: string;
   content: AstroComponentFactory;
   headings?: {
@@ -25,15 +24,8 @@ type Props = {
   status: PublishedStatus;
 };
 
-const {
-  title,
-  publishedAt,
-  categories,
-  thumbnail,
-  githubUrl,
-  content,
-  status,
-} = Astro.props;
+const { title, publishedAt, categories, githubUrl, content, status } =
+  Astro.props;
 ---
 
 <article class="order-2 grid grid-cols-1 p-4 lg:order-1 lg:p-8">
@@ -59,18 +51,6 @@ const {
     </div>
 
     <Categories categories={categories} />
-
-    {
-      thumbnail && (
-        <img
-          class="block h-auto max-h-[600px] w-full rounded-md object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
-          src={thumbnail}
-          alt={title}
-          width={1200}
-          height={600}
-        />
-      )
-    }
 
     {githubUrl && <GithubCard url={githubUrl} />}
 
