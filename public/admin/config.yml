@@ -112,6 +112,11 @@ collections:
           - "Cursor"
           - "Web"
           - "zod"
+          - "1Password"
+          - "1Password CLI"
+          - "Docker"
+          - "devcontainer"
+          - "SSH"
 
       - label: 公開ステータス
         name: status

@@ -76,5 +76,10 @@ export const CATEGORIES = [
   "Cursor",
   "Web",
   "zod",
+  "1Password",
+  "1Password CLI",
+  "Docker",
+  "devcontainer",
+  "SSH"
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
