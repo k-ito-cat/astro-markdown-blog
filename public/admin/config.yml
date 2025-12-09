@@ -19,6 +19,11 @@ collections:
         widget: datetime
         date_format: "YYYY-MM-DD"
         time_format: false
+      - label: 更新日
+        name: "updatedAt"
+        widget: datetime
+        date_format: "YYYY-MM-DD"
+        time_format: false
 
       - label: サムネイル
         name: thumbnail

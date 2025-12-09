@@ -9,6 +9,7 @@ const posts = defineCollection({
     // FIXME: 必須にしたいが、optionalにしないとすべてのフロントマターslugを入力していてもバリエーションエラーになってしまうので一時的にoptionalにする
     slug: z.string().optional(),
     publishedAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
     categories: z.array(z.enum([...CATEGORIES])),
     thumbnail: z.string().optional(),
     githubUrl: z.string().optional(),

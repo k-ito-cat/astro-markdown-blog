@@ -13,6 +13,7 @@ import { Icon } from "astro-icon/components";
 type Props = {
   title: string;
   publishedAt: Date;
+  updatedAt: Date;
   categories: Category[];
   githubUrl?: string;
   content: AstroComponentFactory;
@@ -24,7 +25,7 @@ type Props = {
   status: PublishedStatus;
 };
 
-const { title, publishedAt, categories, githubUrl, content, status } =
+const { title, publishedAt, updatedAt, categories, githubUrl, content, status } =
   Astro.props;
 
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
@@ -39,10 +40,15 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       {title}
     </h1>
 
-    <span class="text-meta text-small inline-block">
-      {publishedAt.toISOString().split("T")[0]}
-    </span>
-
+    <div class="grid">
+      <span class="text-meta text-small inline-block">
+        公開日: {publishedAt.toISOString().split("T")[0]}
+      </span>
+      <span class="text-meta text-small inline-block">
+        更新日: {updatedAt.toISOString().split("T")[0]}
+      </span>
+    </div>
+      
     <div class="flex items-center gap-2 space-x-2">
       <a
         href="https://github.com/k-ito-cat"
