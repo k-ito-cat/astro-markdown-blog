@@ -13,7 +13,6 @@ collections:
     create: true
     fields:
       - { label: タイトル, name: "title", widget: string }
-      - { label: "スラッグ", name: "slug", widget: string, hint: "例: my-post" }
       - label: 公開日
         name: "publishedAt"
         widget: datetime
