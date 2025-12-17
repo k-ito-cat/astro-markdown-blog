@@ -20,8 +20,5 @@ export default defineConfig({
       allowDangerousHtml: true,
     },
   },
-  experimental: {
-    session: true,
-  },
   integrations: [icon()],
 });
