@@ -15,61 +15,6 @@ const { content: Content } = Astro.props;
 </div>
 
 <script>
-  // コピーするボタン
-  const pre = document.querySelectorAll(".prose pre");
-
-  pre.forEach((el) => {
-    const code = el.querySelector("code");
-
-    if (!code) return; // preタグしかないときは後続の処理をしない（ボタンを生成したくない）
-    const button = document.createElement("button");
-    button.textContent = "copy";
-    button.classList.add(
-      "absolute",
-      "top-0",
-      "right-0",
-      "bg-tag",
-      "cursor-pointer",
-      "px-2",
-      "pb-1",
-      "rounded-tr-md",
-      "inline-block",
-      "text-white",
-      "text-[12px]",
-    );
-
-    // preタグをラップするコンテナを作成
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("relative");
-
-    // preタグの親要素に挿入
-    el.parentNode?.insertBefore(wrapper, el);
-    wrapper.appendChild(el);
-    wrapper.appendChild(button);
-
-    let timeoutId: number | null = null;
-
-    button.addEventListener("click", async () => {
-      try {
-        if (!code?.textContent) return;
-        await navigator.clipboard.writeText(code.textContent); // @return Promise
-        button.textContent = "copied!";
-
-        if (timeoutId !== null) {
-          // 2秒以内に連続でコピーした場合は、前回のタイマーをクリアする（次のタイマーを始めない）
-          clearTimeout(timeoutId);
-        }
-
-        timeoutId = setTimeout(() => {
-          button.textContent = "copy";
-          timeoutId = null;
-        }, 2000) as unknown as number;
-      } catch (err) {
-        console.error("コピーに失敗しました", err);
-      }
-    });
-  });
-
   // medium-zoom で画像をLightbox表示
   // @ts-ignore 型定義が無いライブラリのため
   import("glightbox").then(({ default: GLightbox }) => {

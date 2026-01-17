@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import netlify from "@astrojs/netlify";
 import icon from "astro-icon";
 import remarkGithubBlockquoteAlert from "remark-github-blockquote-alert";
-import rehypeRaw from "rehype-raw";
+import astroExpressiveCode from "astro-expressive-code";
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,10 +15,11 @@ export default defineConfig({
   },
   markdown: {
     remarkPlugins: [remarkGithubBlockquoteAlert],
-    rehypePlugins: [rehypeRaw],
-    remarkRehype: {
-      allowDangerousHtml: true,
-    },
   },
-  integrations: [icon()],
+  integrations: [
+    icon(),
+    astroExpressiveCode({
+      themes: ["andromeeda"],
+    }),
+  ],
 });
