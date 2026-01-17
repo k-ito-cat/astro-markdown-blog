@@ -5,6 +5,7 @@ import netlify from "@astrojs/netlify";
 import icon from "astro-icon";
 import remarkGithubBlockquoteAlert from "remark-github-blockquote-alert";
 import astroExpressiveCode from "astro-expressive-code";
+import mdx from "@astrojs/mdx";
 
 // https://astro.build/config
 export default defineConfig({
@@ -21,5 +22,6 @@ export default defineConfig({
     astroExpressiveCode({
       themes: ["andromeeda"],
     }),
+    mdx(),
   ],
 });
