@@ -2,6 +2,7 @@
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
+import Meta from "./Meta.astro";
 import type { Category } from "~/constants/categories";
 import GithubCard from "./GithubCard.astro";
 import {
@@ -9,6 +10,7 @@ import {
   type PublishedStatus,
 } from "~/constants/publishedStatus";
 import { Icon } from "astro-icon/components";
+import Divider from "./Divider.astro";
 
 type Props = {
   title: string;
@@ -25,14 +27,21 @@ type Props = {
   status: PublishedStatus;
 };
 
-const { title, publishedAt, updatedAt, categories, githubUrl, content, status } =
-  Astro.props;
+const {
+  title,
+  publishedAt,
+  updatedAt,
+  categories,
+  githubUrl,
+  content,
+  status,
+} = Astro.props;
 
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
 ---
 
 <article class="order-2 grid grid-cols-1 p-4 lg:order-1 lg:p-8">
-  <header class="mb-8 space-y-4">
+  <header class="space-y-4">
     <h1
       class="lg:text-heading-first text-[28px] font-semibold"
       style="word-break: auto-phrase;"
@@ -40,49 +49,42 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       {title}
     </h1>
 
-    <div class="grid">
-      <span class="text-meta text-small inline-block">
-        公開日: {publishedAt.toISOString().split("T")[0]}
-      </span>
-      <span class="text-meta text-small inline-block">
-        更新日: {updatedAt.toISOString().split("T")[0]}
-      </span>
-    </div>
-      
-    <div class="flex items-center gap-2 space-x-2">
-      <a
-        href="https://github.com/k-ito-cat"
-        class="text-primary ease rounded no-underline transition-colors duration-300"
-      >
-        <Icon name="octicon:mark-github-16" width="24" height="24" />
-      </a>
-    </div>
+    <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
 
     <Categories categories={categories} />
 
     {githubUrl && <GithubCard url={githubUrl} />}
-
-    {
-      status.includes(PUBLISHED_STATUS.DRAFT) ? (
-        <p class="mt-4">
-          この投稿は下書き状態です。公開されるまでお待ちください。
-        </p>
-      ) : (
-        <>
-          <Prose content={content} />
-
-          <footer class="border-tag mt-8 flex flex-col gap-4 border-t pt-4">
-            <div class="flex items-center gap-2 text-[0.9rem]">
-              シェア：
-              <a href={xShareUrl} target="_blank" rel="noopener noreferrer">
-                <Icon name="x-logo" width={18} height={18} />
-              </a>
-            </div>
-          </footer>
-        </>
-      )
-    }
   </header>
+
+  <Divider variant="label" label="本文" align="center" />
+
+  {
+    status.includes(PUBLISHED_STATUS.DRAFT) ? (
+      <p class="mt-4">
+        この投稿は下書き状態です。公開されるまでお待ちください。
+      </p>
+    ) : (
+      <>
+        <Prose content={content} />
+      </>
+    )
+  }
+
+  <footer class="my-8 flex flex-col gap-4">
+    <Divider variant="label" label="シェア" align="center" mt="lg" mb="sm" />
+    <div class="flex items-center gap-2">
+      <a
+        href={xShareUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Xでシェア"
+        title="Xでシェア"
+        class="bg-card text-meta ease hover:bg-card-hover hover:text-link inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-base)] no-underline transition-colors duration-300 hover:border-[var(--color-link)] focus-visible:ring-2 focus-visible:ring-[var(--color-link)] focus-visible:outline-none"
+      >
+        <Icon name="x-logo" width={16} height={16} />
+      </a>
+    </div>
+  </footer>
 </article>
 
 <style is:global>

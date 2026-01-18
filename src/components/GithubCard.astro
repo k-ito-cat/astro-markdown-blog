@@ -1,4 +1,6 @@
 ---
+import { Icon } from "astro-icon/components";
+
 type Props = {
   url: string;
 };
@@ -22,25 +24,63 @@ if (!res.ok) {
 }
 
 const repoInfo = await res.json();
+
+const stars =
+  typeof repoInfo.stargazers_count === "number"
+    ? repoInfo.stargazers_count
+    : null;
+const language =
+  typeof repoInfo.language === "string" ? repoInfo.language : null;
+
+function formatCompactNumber(n: number): string {
+  return new Intl.NumberFormat("en", { notation: "compact" }).format(n);
+}
 ---
 
 <a
   href={url}
   target="_blank"
   rel="noopener noreferrer"
-  class="hover:bg-card-hover my-4 block rounded-lg border p-4 transition"
+  class="group my-4 flex min-w-0 items-start gap-2 no-underline"
+  aria-label={`Open ${repoInfo.full_name} on GitHub`}
 >
-  <div class="flex items-center gap-3">
-    <img
-      src={repoInfo.owner.avatar_url}
-      alt="owner avatar"
-      class="h-6 w-6 rounded-full"
-    />
-    <p class="text-lg font-bold">{repoInfo.full_name}</p>
+  <span
+    class="text-meta ease group-hover:text-link mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center transition-colors duration-300"
+  >
+    <Icon name="octicon:mark-github-16" width="16" height="16" />
+  </span>
+
+  <div class="min-w-0 flex-1">
+    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <span
+        class="text-link ease group-hover:text-link-hover min-w-0 truncate font-medium transition-colors duration-300"
+      >
+        {repoInfo.full_name}
+      </span>
+
+      {
+        (language || typeof stars === "number") && (
+          <span class="text-small text-meta flex items-center gap-2">
+            {language && <span>{language}</span>}
+            {language && typeof stars === "number" && (
+              <span aria-hidden="true">·</span>
+            )}
+            {typeof stars === "number" && (
+              <span class="whitespace-nowrap">
+                ★ {formatCompactNumber(stars)}
+              </span>
+            )}
+          </span>
+        )
+      }
+    </div>
+
+    {
+      repoInfo.description && (
+        <p class="text-small text-secondary mt-1 line-clamp-1">
+          {repoInfo.description}
+        </p>
+      )
+    }
   </div>
-  {
-    repoInfo.description && (
-      <p class="my-2 text-sm text-gray-600">{repoInfo.description}</p>
-    )
-  }
 </a>

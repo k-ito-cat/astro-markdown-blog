@@ -1,0 +1,81 @@
+---
+type Space = "none" | "xs" | "sm" | "md" | "lg" | "xl";
+
+type Props = {
+  variant?: "gradient" | "dashed" | "label";
+  label?: string;
+  align?: "left" | "center";
+  spacing?: Space;
+  mt?: Space;
+  mb?: Space;
+};
+
+const {
+  variant = "gradient",
+  label,
+  align = "left",
+  spacing = "md",
+  mt,
+  mb,
+} = Astro.props;
+
+const spaceClassMap: Record<Space, string> = {
+  none: "my-0",
+  xs: "my-3",
+  sm: "my-4",
+  md: "my-6",
+  lg: "my-8",
+  xl: "my-10",
+};
+
+const mtClassMap: Record<Space, string> = {
+  none: "mt-0",
+  xs: "mt-3",
+  sm: "mt-4",
+  md: "mt-6",
+  lg: "mt-8",
+  xl: "mt-10",
+};
+
+const mbClassMap: Record<Space, string> = {
+  none: "mb-0",
+  xs: "mb-3",
+  sm: "mb-4",
+  md: "mb-6",
+  lg: "mb-8",
+  xl: "mb-10",
+};
+
+const spacingClass =
+  mt || mb
+    ? `${mt ? mtClassMap[mt] : ""} ${mb ? mbClassMap[mb] : ""}`.trim()
+    : spaceClassMap[spacing];
+
+const alignClass = align === "center" ? "justify-center" : "justify-start";
+
+const hasLabel =
+  variant === "label" && typeof label === "string" && label.length > 0;
+---
+
+{
+  hasLabel ? (
+    <div class:list={[spacingClass, "flex items-center gap-3", alignClass]}>
+      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-base)] to-transparent" />
+
+      <span class="bg-card text-small text-meta rounded-full border border-[var(--border-base)] px-2 py-1">
+        {label}
+      </span>
+
+      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-base)] to-transparent" />
+    </div>
+  ) : variant === "dashed" ? (
+    <div class:list={[spacingClass, "w-full"]}>
+      <div class="h-px w-full border-t border-dashed border-[var(--border-base)]" />
+      <div class="-mt-px h-px w-full bg-gradient-to-r from-transparent via-[var(--color-link)] to-transparent opacity-20" />
+    </div>
+  ) : (
+    <div class:list={[spacingClass, "w-full"]}>
+      <div class="h-px w-full bg-gradient-to-r from-transparent via-[var(--border-base)] to-transparent" />
+    </div>
+  )
+}

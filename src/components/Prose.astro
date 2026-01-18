@@ -9,7 +9,7 @@ const { content: Content } = Astro.props;
 ---
 
 <div
-  class="prose text-secondary prose-p:leading-relaxed prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary prose-h2:border-b prose-h2:pb-2 w-full max-w-full leading-relaxed"
+  class="prose text-secondary prose-p:leading-relaxed prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary w-full max-w-full leading-relaxed"
 >
   <Content />
 </div>
@@ -81,6 +81,37 @@ const { content: Content } = Astro.props;
   .prose h3,
   .prose h4 {
     line-height: var(--leading-heading);
+  }
+
+  .prose h2 {
+    position: relative;
+    border-bottom: none;
+    padding-bottom: 10px;
+  }
+
+  .prose h2::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+
+    width: 100%;
+    height: 1px;
+    background: var(--border-base);
+    opacity: 0.7;
+  }
+
+  .prose h2::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+
+    width: 56px;
+    height: 2px;
+    background: var(--color-link);
+    opacity: 0.6;
+    border-radius: 9999px;
   }
 
   .prose p {
@@ -155,6 +186,11 @@ const { content: Content } = Astro.props;
     color: var(--color-secondary);
     margin: 0 0 10px 0;
     line-height: 1.7;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .prose .remark-link-card-plus__meta {
@@ -265,10 +301,18 @@ const { content: Content } = Astro.props;
 
   .prose img {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    max-width: 475px;
+
     width: 100%;
     height: auto;
-    margin-left: inherit;
+
+    max-width: 720px;
+    max-height: 520px;
+
+    object-fit: contain;
+
+    margin-left: auto;
+    margin-right: auto;
+
     cursor: zoom-in;
   }
   .prose img:hover {
@@ -294,18 +338,18 @@ const { content: Content } = Astro.props;
   /* NOTE */
   .prose .markdown-alert-note {
     background: var(--background-color-tag);
-    border-color: var(--color-note);
+    border-color: var(--color-info);
     box-shadow: 0 4px 12px rgba(71, 101, 130, 0.15);
   }
   .prose .markdown-alert-note .markdown-alert-title {
-    color: var(--color-note-text);
+    color: var(--color-info-text);
   }
   .prose .markdown-alert-note p {
-    color: var(--color-note-text);
+    color: var(--color-info-text);
   }
   .prose .markdown-alert-note svg {
-    color: var(--color-note);
-    fill: var(--color-note);
+    color: var(--color-info);
+    fill: var(--color-info);
   }
   /* TIP */
   .prose .markdown-alert-tip {

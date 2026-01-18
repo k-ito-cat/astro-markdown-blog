@@ -3,6 +3,7 @@
 
 :root {
   /* primitives (dark) */
+  --base: #111A27;
   --neutral-950: #0b0f14;
   --neutral-900: #0f1520;
   --neutral-850: #131b28;
@@ -26,7 +27,7 @@
   --danger-500: #ff6b6b;
 
   /* semantic (dark) */
-  --bg-base: var(--neutral-950);
+  --bg-base: var(--base);
   --bg-card: var(--neutral-900);
   --bg-code: var(--neutral-850);
   --bg-hover: var(--neutral-800);
@@ -70,6 +71,7 @@
     "Courier New", monospace;
 
   /* font sizes */
+  --text-xs: 10px;
   --text-sm: 14px;
   --text-md: 16px;
   --text-lg: 20px;
@@ -168,6 +170,7 @@
   --border-base: var(--border);
 
   --text-*: initial;
+  --text-xsmall: var(--text-xs);
   --text-small: var(--text-sm);
   --text-content: var(--text-md);
   --text-heading-first: var(--text-2xl);

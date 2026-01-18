@@ -9,23 +9,22 @@ const { categories } = Astro.props;
 
 {
   categories && categories.length > 0 && (
-    <div class="flex items-center gap-2 text-[0.9rem]">
-      <ul class="flex flex-wrap gap-2">
-        {categories.map((category: Category) => {
-          return (
-            <li>
-              <a
-                href={category === "すべて" ? "/" : `/?category=${category}`}
-                class:list={[
-                  "ease hover:bg-tag-hover text-primary border-primary inline-block rounded border px-3 py-2 leading-none no-underline transition-colors duration-300",
-                ]}
-              >
-                {category}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <ul class="flex flex-wrap items-center gap-2">
+      {categories.map((category: Category) => {
+        return (
+          <li>
+            <a
+              href={category === "すべて" ? "/" : `/?category=${category}`}
+              class:list={[
+                "text-small ease inline-flex items-center rounded-full px-2 py-1 leading-none no-underline transition-colors duration-300",
+                "bg-tag text-secondary hover:bg-tag-hover hover:text-primary",
+              ]}
+            >
+              {category}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
   )
 }

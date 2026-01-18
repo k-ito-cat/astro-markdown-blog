@@ -14,37 +14,42 @@ const { headings } = Astro.props;
 
 {
   headings.length > 0 && (
-    <>
-      <div class="relative lg:order-2">
-        <nav
-          id="navigation"
-          class="scrollbar-hide bg-tag fixed top-0 right-0 z-40 h-full w-80 translate-x-full overflow-y-scroll p-6 pt-12 transition-transform duration-300 ease-in-out lg:sticky lg:top-4 lg:order-1 lg:h-max lg:w-auto lg:translate-x-0 lg:overflow-y-auto lg:bg-transparent lg:px-0 lg:py-5"
+    <div class="relative lg:order-2">
+      <nav
+        id="navigation"
+        class="lg:backdrop-blur-0 fixed top-0 right-0 z-40 h-full w-80 translate-x-full overflow-y-auto border-l border-[var(--border-base)] bg-[var(--background-color-base)]/95 p-6 pt-12 backdrop-blur transition-transform duration-300 ease-in-out lg:sticky lg:top-6 lg:z-auto lg:h-auto lg:w-[280px] lg:translate-x-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pt-0"
+      >
+        <div
+          id="navigation-content"
+          class="lg:rounded-xl lg:border lg:border-[var(--border-base)] lg:bg-[var(--background-color-card)] lg:p-4"
         >
-          <div
-            id="navigation-content"
-            class="transform transition-all duration-200 ease-in-out lg:max-h-none"
-          >
-            <ul class="m-0 flex list-none flex-col p-0">
-              {headings.map((heading) => (
-                <li class="relative">
-                  <a
-                    href={`#${heading.slug}`}
-                    class:list={{
-                      "text-primary/80 hover:bg-note/10 hover:text-primary border-meta hover:border-note navigation-link relative block w-full overflow-visible border-l px-4 py-2 text-sm leading-relaxed no-underline transition-all duration-200 ease-in-out": true,
-                      "text-[15px] font-semibold":
-                        heading.depth === HEADING_LEVEL.TWO,
-                      "pl-8": heading.depth === HEADING_LEVEL.THREE,
-                    }}
-                  >
-                    {heading.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
+          <div class="mb-3 flex items-center gap-2">
+            <span class="text-small text-meta font-medium">目次</span>
+            <span class="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-base)] to-transparent" />
           </div>
-        </nav>
-      </div>
-    </>
+
+          <ul class="m-0 flex list-none flex-col gap-1 p-0">
+            {headings.map((heading) => (
+              <li>
+                <a
+                  href={`#${heading.slug}`}
+                  class:list={{
+                    "navigation-link group flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm leading-relaxed no-underline transition-colors duration-200 ease-in-out": true,
+                    "text-secondary hover:text-primary hover:bg-[var(--background-color-card-hover)]": true,
+                    "text-primary font-semibold":
+                      heading.depth === HEADING_LEVEL.TWO,
+                    "pl-7": heading.depth === HEADING_LEVEL.THREE,
+                  }}
+                >
+                  <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--border-base)] group-hover:bg-[var(--color-link)]" />
+                  <span class="min-w-0 flex-1 truncate">{heading.text}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+    </div>
   )
 }
 
@@ -169,14 +174,7 @@ const { headings } = Astro.props;
     };
 
     const clearActiveLinks = () => {
-      navigationLinks.forEach((link) =>
-        link.classList.remove(
-          "border-note",
-          "bg-note/10",
-          "text-primary",
-          "inline-block",
-        ),
-      );
+      navigationLinks.forEach((link) => link.classList.remove("is-active"));
     };
 
     const activateLink = (hash: string) => {
@@ -186,12 +184,7 @@ const { headings } = Astro.props;
         (link) => link.getAttribute("href") === hash,
       );
       if (target) {
-        target.classList.add(
-          "border-note",
-          "bg-note/10",
-          "text-primary",
-          "inline-block",
-        );
+        target.classList.add("is-active");
       }
     };
 

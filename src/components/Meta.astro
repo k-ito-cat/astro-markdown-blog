@@ -1,0 +1,27 @@
+---
+import { Icon } from "astro-icon/components";
+
+type Props = {
+  publishedAt: Date;
+  updatedAt: Date;
+};
+
+const { publishedAt, updatedAt } = Astro.props;
+---
+
+<div class="text-meta text-small flex flex-wrap items-center gap-x-3 gap-y-2">
+  <span>{publishedAt.toISOString().split("T")[0]} 公開</span>
+  <span aria-hidden="true">·</span>
+  <span>{updatedAt.toISOString().split("T")[0]} 更新</span>
+  <span aria-hidden="true">·</span>
+
+  <a
+    href="https://github.com/k-ito-cat"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="ease text-meta hover:text-link inline-flex items-center gap-2 no-underline transition-colors duration-300"
+  >
+    <Icon name="octicon:mark-github-16" width="16" height="16" />
+    <span>GitHub</span>
+  </a>
+</div>
