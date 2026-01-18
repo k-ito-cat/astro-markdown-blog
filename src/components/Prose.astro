@@ -64,6 +64,129 @@ const { content: Content } = Astro.props;
 </script>
 
 <style is:global>
+  .prose .remark-link-card-plus__container {
+    margin: 16px 0;
+    width: 100%;
+  }
+
+  .prose .remark-link-card-plus__card {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+
+    border: 1px solid var(--border-base);
+    background: var(--background-color-card);
+    border-radius: 12px;
+    overflow: hidden;
+
+    text-decoration: none;
+    color: inherit;
+
+    transition:
+      transform 0.2s ease,
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+  }
+
+  .prose .remark-link-card-plus__card:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-link);
+    background: var(--background-color-card-hover);
+  }
+
+  .prose .remark-link-card-plus__main {
+    padding: 14px 16px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .prose .remark-link-card-plus__content {
+    min-width: 0;
+  }
+
+  .prose .remark-link-card-plus__title {
+    font-size: var(--text-content);
+    font-weight: 600;
+    color: var(--color-link);
+    margin: 0 0 6px 0;
+    line-height: 1.5;
+  }
+
+  .prose .remark-link-card-plus__description {
+    font-size: var(--text-small);
+    color: var(--color-secondary);
+    margin: 0 0 10px 0;
+    line-height: 1.7;
+  }
+
+  .prose .remark-link-card-plus__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: var(--text-small);
+    color: var(--color-link);
+  }
+
+  .prose .remark-link-card-plus__favicon {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex: 0 0 auto;
+  }
+
+  .prose .remark-link-card-plus__url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .prose .remark-link-card-plus__thumbnail {
+    width: 160px;
+    background: var(--background-color-code);
+    flex: 0 0 auto;
+
+    position: relative;
+    overflow: hidden;
+  }
+
+  .prose .remark-link-card-plus__image {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    margin-block: 0;
+  }
+
+  @media (max-width: 640px) {
+    .prose .remark-link-card-plus__thumbnail {
+      display: none;
+    }
+
+    .prose .remark-link-card-plus__container {
+      margin: 12px 0;
+    }
+
+    .prose .remark-link-card-plus__main {
+      padding: 12px 14px;
+    }
+
+    .prose .remark-link-card-plus__description {
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .prose .remark-link-card-plus__url {
+      max-width: 26ch;
+    }
+  }
+
   .prose [data-filename] {
     position: relative;
   }
