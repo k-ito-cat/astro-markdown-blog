@@ -1,90 +1,171 @@
 @import "tailwindcss";
-@plugin '@tailwindcss/typography';
+@plugin "@tailwindcss/typography";
 
 :root {
-  /* primitive colors */
-  --color-white-100: #ffffff;
-  --color-gray-100: #c9d1d9;
-  --color-gray-200: #8b949e;
-  --color-gray-300: #6e7681;
-  --color-gray-400: #484f58;
-  --color-gray-500: #30363d;
-  --color-gray-600: #f0f0f0;
-  --color-gray-700: #999999;
-  --color-blue-100: #646cff;
-  --color-blue-200: #747bff;
-  --color-blue-300: #5865f2;
-  --color-blue-400: #4f46e5;
-  --color-red-100: #f87171;
-  --color-orange-100: #fb923c;
-  --color-pink-100: #f472b6;
-  --color-purple-100: #a78bfa;
+  /* primitives (dark) */
+  --neutral-950: #0b0f14;
+  --neutral-900: #0f1520;
+  --neutral-850: #131b28;
+  --neutral-800: #182233;
+  --neutral-700: #223047;
+  --neutral-600: #2e3f5c;
 
-  --color-info-100: #3451b2;
-  --color-info-50: #e7f3ff;
-  --color-tip-100: #16a085;
-  --color-tip-50: #f0f9ff;
-  --color-warning-100: #e6a700;
-  --color-warning-50: #fff8e1;
-  --color-danger-100: #e74c3c;
-  --color-danger-50: #ffebee;
-  --color-note-100: #5b7fa8;
-  --color-note-50: #f6f8fa;
+  --neutral-200: #c7d0dd;
+  --neutral-150: #d7dee8;
+  --neutral-100: #e7edf6;
 
-  --bg-dark-100: #1b1b1f;
-  --bg-card-100: #161618;
-  --bg-code-100: #2a2a2e;
-  --border-dark-100: #2e2e32;
+  --accent-500: #7aa2ff;
+  --accent-400: #9ab7ff;
+  --accent-600: #4f7dff;
 
-  /* typography */
+  --visited-500: #b28dff;
+
+  --info-500: #6aa7ff;
+  --success-500: #35c58a;
+  --warning-500: #f2b84b;
+  --danger-500: #ff6b6b;
+
+  /* semantic (dark) */
+  --bg-base: var(--neutral-950);
+  --bg-card: var(--neutral-900);
+  --bg-code: var(--neutral-850);
+  --bg-hover: var(--neutral-800);
+  --bg-selection: var(--neutral-700);
+
+  --text-primary: var(--neutral-100);
+  --text-secondary: var(--neutral-150);
+  --text-muted: var(--neutral-200);
+  --text-heading: var(--neutral-100);
+  --text-code: var(--accent-500);
+
+  --border: var(--neutral-700);
+  --border-strong: var(--neutral-600);
+  --focus: var(--accent-400);
+
+  --link: var(--accent-500);
+  --link-hover: var(--accent-400);
+  --link-active: var(--accent-600);
+  --link-visited: var(--visited-500);
+
+  --info: var(--info-500);
+  --info-bg: #12243f;
+  --info-text: var(--neutral-100);
+
+  --success: var(--success-500);
+  --success-bg: #10261e;
+  --success-text: var(--neutral-100);
+
+  --warning: var(--warning-500);
+  --warning-bg: #2a2010;
+  --warning-text: var(--neutral-100);
+
+  --danger: var(--danger-500);
+  --danger-bg: #2b1216;
+  --danger-text: var(--neutral-100);
+
+  /* typography tokens */
+  --font-sans: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  /* font sizes */
   --text-sm: 14px;
   --text-md: 16px;
-  --text-lg: 24px;
-  --text-xl: 32px;
-  --text-2xl: 48px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+
+  /* rhythm */
+  --leading-body: 1.75;
+  --leading-heading: 1.35;
+  --leading-code: 1.65;
+
+  /* measure */
+  --measure-prose: 72ch;
+
+  /* spacing */
+  --space-paragraph: 1.1em;
 
   --max-width-pc: 1440px;
 }
 
+/* light theme (future) */
+:root[data-theme="light"] {
+  --neutral-950: #ffffff;
+  --neutral-900: #f6f8fb;
+  --neutral-850: #eef2f7;
+  --neutral-800: #e7edf6;
+  --neutral-700: #d7dee8;
+  --neutral-600: #c7d0dd;
+
+  --neutral-200: #425164;
+  --neutral-150: #2b3746;
+  --neutral-100: #0b1220;
+
+  --bg-base: var(--neutral-950);
+  --bg-card: var(--neutral-900);
+  --bg-code: var(--neutral-850);
+  --bg-hover: var(--neutral-800);
+  --bg-selection: var(--neutral-700);
+
+  --text-primary: var(--neutral-100);
+  --text-secondary: var(--neutral-150);
+  --text-muted: var(--neutral-200);
+  --text-heading: var(--neutral-100);
+
+  --border: var(--neutral-700);
+  --border-strong: var(--neutral-600);
+
+  --info-bg: #e7f0ff;
+  --success-bg: #e8fbf2;
+  --warning-bg: #fff4df;
+  --danger-bg: #ffe7ea;
+
+  --info-text: var(--text-primary);
+  --success-text: var(--text-primary);
+  --warning-text: var(--text-primary);
+  --danger-text: var(--text-primary);
+}
+
 @theme {
   --color-*: initial;
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-primary: var(--color-white-100);
-  --color-secondary: var(--color-gray-100);
-  --color-link: var(--color-blue-100);
-  --color-link-hover: var(--color-blue-200);
-  --color-link-active: var(--color-blue-400);
-  --color-meta: var(--color-gray-200);
-  --color-code: var(--color-blue-100);
-  --color-text-light: var(--color-gray-600);
-  --color-text-muted: var(--color-gray-700);
 
-  --color-info: var(--color-info-100);
-  --color-info-bg: var(--color-info-50);
-  --color-info-text: var(--color-info-100);
-  --color-note: var(--color-note-100);
-  --color-note-bg: var(--color-note-50);
-  --color-note-text: var(--color-note-100);
-  --color-tip: var(--color-tip-100);
-  --color-tip-bg: var(--color-tip-50);
-  --color-tip-text: var(--color-tip-100);
-  --color-warning: var(--color-warning-100);
-  --color-warning-bg: var(--color-warning-50);
-  --color-warning-text: var(--color-warning-100);
-  --color-danger: var(--color-danger-100);
-  --color-danger-bg: var(--color-danger-50);
-  --color-danger-text: var(--color-danger-100);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-meta: var(--text-muted);
+
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-link-active: var(--link-active);
+
+  --color-code: var(--text-code);
+
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-text: var(--info-text);
+
+  --color-tip: var(--success);
+  --color-tip-bg: var(--success-bg);
+  --color-tip-text: var(--success-text);
+
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-text: var(--warning-text);
+
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-text: var(--danger-text);
 
   --background-color-*: initial;
-  --background-color-base: var(--bg-dark-100);
-  --background-color-card: var(--bg-card-100);
-  --background-color-code: var(--bg-code-100);
-  --background-color-tag: var(--color-gray-500);
-  --background-color-tag-hover: var(--color-gray-400);
-  --background-color-card-hover: var(--color-gray-500);
+  --background-color-base: var(--bg-base);
+  --background-color-card: var(--bg-card);
+  --background-color-code: var(--bg-code);
+  --background-color-card-hover: var(--bg-hover);
+  --background-color-tag: var(--bg-selection);
+  --background-color-tag-hover: var(--bg-hover);
 
-  --border-base: var(--border-dark-100);
+  --border-base: var(--border);
 
   --text-*: initial;
   --text-small: var(--text-sm);
@@ -96,7 +177,10 @@
 
 html,
 body {
-  @apply text-primary bg-base scroll-smooth font-[Noto_Sans_JP];
+  @apply scroll-smooth;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-base);
 
   scrollbar-width: none;
   -ms-overflow-style: none;

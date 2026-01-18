@@ -9,7 +9,7 @@ const { content: Content } = Astro.props;
 ---
 
 <div
-  class="prose text-secondary prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary prose-h2:border-b prose-h2:pb-2 w-full max-w-full"
+  class="prose text-secondary prose-p:leading-relaxed prose-p:mb-4 prose-h2:no-underline prose-h2:mt-8 prose-h3:mt-6 prose-h2:mb-4 prose-h3:text-[20px] prose-h2:text-primary prose-h2:lg:text-heading-second prose-h3:mb-4 prose-ul:pl-6 prose-ul:mb-4 prose-ul:list-disc prose-pre:bg-code prose-pre:p-4 prose-pre:my-4 prose-pre:rounded-md prose-pre:overflow-x-auto prose-code:font-code prose-code:text-[0.9rem] prose-code:text-code prose-a:no-underline prose-a:font-medium prose-a:transition-colors prose-a:duration-300 prose-a:ease-in-out prose-a:text-link prose-a:hover:underline prose-a:hover:text-link-hover prose-strong:text-primary prose-img:w-[80%] prose-img:mx-auto prose-blockquote:text-secondary prose-li:marker:text-secondary prose-code:py-1 prose-code:rounded-b-sm prose-code:bg-code prose-h3:text-primary prose-h3:lg:text-heading-third prose-a:break-words prose-h2:text-[24px] prose-h4:text-primary prose-h2:border-b prose-h2:pb-2 w-full max-w-full leading-relaxed"
 >
   <Content />
 </div>
@@ -64,6 +64,44 @@ const { content: Content } = Astro.props;
 </script>
 
 <style is:global>
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .prose {
+    width: 100%;
+    line-height: var(--leading-body);
+    font-size: var(--text-md);
+    color: var(--text-secondary);
+  }
+
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    line-height: var(--leading-heading);
+  }
+
+  .prose p {
+    margin-bottom: var(--space-paragraph);
+  }
+
+  .prose a:visited {
+    color: var(--link-visited);
+  }
+  .prose a:visited:hover {
+    color: var(--link-hover);
+  }
+  .prose a:active {
+    color: var(--link-active);
+  }
+
+  .prose code,
+  .prose pre code {
+    font-family: var(--font-mono);
+    line-height: var(--leading-code);
+  }
   .prose .remark-link-card-plus__container {
     margin: 16px 0;
     width: 100%;
@@ -125,7 +163,7 @@ const { content: Content } = Astro.props;
     gap: 8px;
 
     font-size: var(--text-small);
-    color: var(--color-link);
+    color: var(--text-muted);
   }
 
   .prose .remark-link-card-plus__favicon {
@@ -162,6 +200,10 @@ const { content: Content } = Astro.props;
   }
 
   @media (max-width: 640px) {
+    .prose {
+      max-width: 100%;
+    }
+
     .prose .remark-link-card-plus__thumbnail {
       display: none;
     }
@@ -339,6 +381,30 @@ const { content: Content } = Astro.props;
 
   /* 見出し自己リンクのスタイル */
   .prose .heading-self-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* 見出し自己リンクはリンクとして装飾しない */
+  .prose h2 a.heading-self-link,
+  .prose h3 a.heading-self-link,
+  .prose h4 a.heading-self-link {
+    color: inherit;
+    text-decoration: none;
+    font-weight: inherit;
+    transition: none;
+  }
+
+  /* hover, visited, active も無効化して見出し色を保つ */
+  .prose h2 a.heading-self-link:hover,
+  .prose h3 a.heading-self-link:hover,
+  .prose h4 a.heading-self-link:hover,
+  .prose h2 a.heading-self-link:visited,
+  .prose h3 a.heading-self-link:visited,
+  .prose h4 a.heading-self-link:visited,
+  .prose h2 a.heading-self-link:active,
+  .prose h3 a.heading-self-link:active,
+  .prose h4 a.heading-self-link:active {
     color: inherit;
     text-decoration: none;
   }
