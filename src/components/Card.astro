@@ -4,6 +4,7 @@ import {
   type PublishedStatus,
 } from "~/constants/publishedStatus";
 import type { Category } from "~/constants/categories";
+import { normalizePostSlug } from "~/utils/postSlug";
 
 interface Props {
   slug: string;
@@ -26,6 +27,7 @@ const {
 
 const isDraft = status.includes(PUBLISHED_STATUS.DRAFT);
 const hasDescription = Boolean(description && description.trim().length > 0);
+const normalizedSlug = normalizePostSlug(slug);
 ---
 
 <article
@@ -34,7 +36,7 @@ const hasDescription = Boolean(description && description.trim().length > 0);
     { "opacity-60": isDraft },
   ]}
 >
-  <a href={`/blog/${slug}`} class="block">
+  <a href={`/blog/${normalizedSlug}`} class="block">
     {
       isDraft && (
         <div class="text-small text-primary absolute top-3 right-3 z-10 rounded-full bg-[var(--bg-selection)] px-2.5 py-1 ring-1 ring-[var(--border-base)]">
@@ -60,7 +62,7 @@ const hasDescription = Boolean(description && description.trim().length > 0);
   </a>
 
   <div class="text-text-light flex h-full min-w-0 flex-col gap-2 p-4">
-    <a class="min-w-0 no-underline" href={`/blog/${slug}`}>
+    <a class="min-w-0 no-underline" href={`/blog/${normalizedSlug}`}>
       <h2
         class="clamp-2 text-primary m-0 text-[15px] leading-snug font-semibold tracking-tight"
       >
