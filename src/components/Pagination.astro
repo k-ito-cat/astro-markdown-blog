@@ -11,7 +11,7 @@ const hasNext = _currentPage < _totalPages;
 
 {
   totalPages > 1 && (
-    <nav class="mt-10 flex flex-wrap items-center justify-center gap-2">
+    <nav class="mt-10 flex flex-wrap items-center justify-center gap-2" data-pagination>
       {hasPrev ? (
         <a
           href={pageHref(_currentPage - 1)}

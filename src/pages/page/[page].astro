@@ -58,7 +58,7 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
           >
             記事一覧
           </h1>
-          <span class="text-meta text-small">
+          <span class="text-meta text-small" id="post-count" data-total={totalPosts}>
             {totalPosts} posts
           </span>
         </div>
@@ -68,6 +68,14 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
         </p>
 
         <div class="flex flex-wrap items-center gap-2 pt-1">
+          <input
+            id="post-search-input"
+            type="search"
+            inputmode="search"
+            placeholder="タイトルで検索"
+            class="text-small text-primary bg-[var(--background-color-tag)] placeholder:text-meta w-full max-w-[260px] rounded-full px-3 py-1 outline-none transition-colors duration-200 focus:bg-[var(--background-color-tag-hover)]"
+            aria-label="記事タイトル検索"
+          />
           <a
             href="/"
             class="text-small text-secondary bg-[var(--background-color-tag)] hover:text-primary hover:bg-[var(--background-color-tag-hover)] rounded-full px-3 py-1 no-underline transition-colors duration-200"
@@ -85,7 +93,7 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
             post.data;
 
           return (
-            <li class="min-w-0">
+            <li class="min-w-0" data-title={title.toLowerCase()}>
               <Card
                 slug={post.slug}
                 title={title}
@@ -103,3 +111,9 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
     <Pagination currentPage={currentPage} totalPages={totalPages} />
   </div>
 </BaseLayout>
+
+<script type="module">
+  import { initPostSearch } from "~/scripts/postSearch";
+
+  initPostSearch();
+</script>
