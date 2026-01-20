@@ -1,0 +1,53 @@
+---
+const { currentPage, totalPages } = Astro.props;
+const _currentPage: number = currentPage;
+const _totalPages: number = totalPages;
+const pages = Array.from({ length: _totalPages }, (_, i) => i + 1);
+const pageHref = (pageNum: number) =>
+  pageNum === 1 ? "/" : `/page/${pageNum}`;
+const hasPrev = _currentPage > 1;
+const hasNext = _currentPage < _totalPages;
+---
+
+{
+  totalPages > 1 && (
+    <nav class="mt-10 flex flex-wrap items-center justify-center gap-2">
+      {hasPrev ? (
+        <a
+          href={pageHref(_currentPage - 1)}
+          class="text-small text-secondary rounded-full bg-[var(--background-color-tag)] px-3 py-1 no-underline transition-colors duration-200 hover:bg-[var(--background-color-tag-hover)]"
+        >
+          前へ
+        </a>
+      ) : (
+        <span class="text-small text-meta rounded-full px-3 py-1">前へ</span>
+      )}
+
+      {pages.map((pageNum) => (
+        <a
+          href={pageHref(pageNum)}
+          aria-current={pageNum === _currentPage ? "page" : undefined}
+          class:list={[
+            "text-small rounded-full px-3 py-1 no-underline transition-colors duration-200",
+            pageNum === _currentPage
+              ? "text-primary bg-[var(--background-color-tag-hover)]"
+              : "text-secondary hover:text-primary bg-[var(--background-color-tag)] hover:bg-[var(--background-color-tag-hover)]",
+          ]}
+        >
+          {pageNum}
+        </a>
+      ))}
+
+      {hasNext ? (
+        <a
+          href={pageHref(_currentPage + 1)}
+          class="text-small text-secondary rounded-full bg-[var(--background-color-tag)] px-3 py-1 no-underline transition-colors duration-200 hover:bg-[var(--background-color-tag-hover)]"
+        >
+          次へ
+        </a>
+      ) : (
+        <span class="text-small text-meta rounded-full px-3 py-1">次へ</span>
+      )}
+    </nav>
+  )
+}

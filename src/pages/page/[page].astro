@@ -4,38 +4,48 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Card from "~/components/Card.astro";
 import Pagination from "~/components/Pagination.astro";
-import { type Category } from "~/constants/categories";
-// import Categories from "~/components/Categories.astro";
 
-const PAGE_SIZE = 12;
-const category = Astro.url.searchParams.get("category") as Category;
-
-/**
- * 公開または下書きのpostだけを取得
- */
-const posts = await getCollection("posts", ({ data }) => {
-  if (!category) {
+export async function getStaticPaths() {
+  const pageSize = 12;
+  /**
+   * 公開または下書きのpostだけを取得
+   */
+  const posts = await getCollection("posts", ({ data }) => {
     return data.status !== PUBLISHED_STATUS.PRIVATE;
-  } else {
+  });
+
+  /**
+   * 公開日時が新しい順でソート
+   */
+  const sortedPosts = posts.sort((a, b) => {
     return (
-      data.status !== PUBLISHED_STATUS.PRIVATE &&
-      data.categories.includes(category)
+      new Date(b.data.publishedAt).getTime() -
+      new Date(a.data.publishedAt).getTime()
     );
-  }
-});
+  });
 
-/**
- * 公開日時が新しい順でソート
- */
-const sortedPosts = posts.sort((a, b) => {
-  return (
-    new Date(b.data.publishedAt).getTime() -
-    new Date(a.data.publishedAt).getTime()
-  );
-});
+  const totalPages = Math.ceil(sortedPosts.length / pageSize);
 
-const totalPages = Math.ceil(sortedPosts.length / PAGE_SIZE);
-const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
+  if (totalPages <= 1) return [];
+
+  return Array.from({ length: totalPages - 1 }, (_, index) => {
+    const pageNum = index + 2;
+    const start = (pageNum - 1) * pageSize;
+    const end = start + pageSize;
+
+    return {
+      params: { page: String(pageNum) },
+      props: {
+        posts: sortedPosts.slice(start, end),
+        totalPages,
+        totalPosts: sortedPosts.length,
+        currentPage: pageNum,
+      },
+    };
+  });
+}
+
+const { posts, totalPages, totalPosts, currentPage } = Astro.props;
 ---
 
 <BaseLayout title="記事一覧">
@@ -49,7 +59,7 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
             記事一覧
           </h1>
           <span class="text-meta text-small">
-            {sortedPosts.length} posts
+            {totalPosts} posts
           </span>
         </div>
 
@@ -60,25 +70,17 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <a
             href="/"
-            aria-current={!category ? "page" : undefined}
-            class:list={[
-              "text-small rounded-full px-3 py-1 no-underline transition-colors duration-200",
-              !category
-                ? "text-primary bg-[var(--background-color-tag-hover)]"
-                : "text-secondary hover:text-primary bg-[var(--background-color-tag)] hover:bg-[var(--background-color-tag-hover)]",
-            ]}
+            class="text-small text-secondary bg-[var(--background-color-tag)] hover:text-primary hover:bg-[var(--background-color-tag-hover)] rounded-full px-3 py-1 no-underline transition-colors duration-200"
           >
             すべて
           </a>
-
-          <!-- <Categories categories={[...CATEGORIES]} /> -->
         </div>
       </div>
     </header>
 
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
       {
-        pagePosts.map((post) => {
+        posts.map((post) => {
           const { title, publishedAt, categories, thumbnail, status } =
             post.data;
 
@@ -98,6 +100,6 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
       }
     </ul>
 
-    <Pagination currentPage={1} totalPages={totalPages} />
+    <Pagination currentPage={currentPage} totalPages={totalPages} />
   </div>
 </BaseLayout>
