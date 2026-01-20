@@ -78,6 +78,8 @@ export const CATEGORIES = [
   "zod",
   "1Password",
   "1Password CLI",
+  "chezmoi",
+  "dotfiles",
   "Docker",
   "devcontainer",
   "SSH"
