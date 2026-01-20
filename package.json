@@ -13,7 +13,6 @@
     "posts-update": "git pull && git submodule update --remote src/content/posts"
   },
   "dependencies": {
-    "@astrojs/netlify": "^6.6.4",
     "@tailwindcss/vite": "^4.0.17",
     "astro": "^5.16.11",
     "astro-expressive-code": "^0.41.6",
