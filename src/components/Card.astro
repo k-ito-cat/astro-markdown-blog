@@ -8,50 +8,92 @@ import type { Category } from "~/constants/categories";
 interface Props {
   slug: string;
   title: string;
+  description?: string;
   thumbnail?: string;
   categories: Category[];
   publishedAt: Date;
   status: PublishedStatus;
 }
 
-const { slug, title, thumbnail, publishedAt, status } = Astro.props;
+const {
+  slug,
+  title,
+  description = "",
+  thumbnail,
+  publishedAt,
+  status,
+} = Astro.props;
+
+const isDraft = status.includes(PUBLISHED_STATUS.DRAFT);
+const hasDescription = Boolean(description && description.trim().length > 0);
 ---
 
 <article
   class:list={[
-    "ease relative flex h-full flex-col overflow-hidden transition duration-300 hover:translate-y-[-2px] hover:shadow-lg",
-    { "opacity-50": status.includes(PUBLISHED_STATUS.DRAFT) },
+    "ease group relative flex h-full flex-col overflow-hidden rounded-2xl ring-1 ring-[var(--border-base)] transition duration-200 hover:-translate-y-[1px] hover:ring-[var(--accent-500)]",
+    { "opacity-60": isDraft },
   ]}
 >
-  <a href={`/blog/${slug}`}>
+  <a href={`/blog/${slug}`} class="block">
     {
-      status.includes(PUBLISHED_STATUS.DRAFT) && (
-        <div class="text-small absolute top-0 right-0 z-10 px-2 py-1 text-white">
+      isDraft && (
+        <div class="text-small text-primary absolute top-3 right-3 z-10 rounded-full bg-[var(--bg-selection)] px-2.5 py-1 ring-1 ring-[var(--border-base)]">
           Draft
         </div>
       )
     }
-    {
-      thumbnail && (
-        <img
-          class="block h-auto max-h-[300px] w-full object-cover lg:max-h-[200px]"
-          src={thumbnail}
-          alt={title}
-          width="1200"
-          height="630"
-        />
-      )
-    }
+
+    <div class="aspect-[3/2] w-full bg-[var(--bg-code)]">
+      {
+        thumbnail ? (
+          <img
+            class="h-full w-full object-cover"
+            src={thumbnail}
+            alt={title}
+            loading="lazy"
+          />
+        ) : (
+          <div class="h-full w-full opacity-60" />
+        )
+      }
+    </div>
   </a>
-  <div class="text-text-light flex h-full flex-col justify-between gap-2 p-4">
-    <a class="h-full" href={`/blog/${slug}`}>
-      <h2 class="m-0 text-[1.2rem] font-semibold">{title}</h2>
+
+  <div class="text-text-light flex h-full min-w-0 flex-col gap-2 p-4">
+    <a class="min-w-0 no-underline" href={`/blog/${slug}`}>
+      <h2
+        class="clamp-2 text-primary m-0 text-[15px] leading-snug font-semibold tracking-tight"
+      >
+        {title}
+      </h2>
     </a>
 
-    <div class="flex items-center justify-between">
+    {
+      hasDescription && (
+        <p class="clamp-2 text-small text-secondary m-0 leading-relaxed">
+          {description}
+        </p>
+      )
+    }
+
+    <div class="mt-auto flex items-center justify-between gap-3 pt-2">
       <span class="text-text-muted text-[0.85rem]">
         {new Date(publishedAt).toISOString().split("T")[0]}
+      </span>
+      <span
+        class="text-text-muted group-hover:text-secondary text-[0.85rem] opacity-80"
+      >
+        Read →
       </span>
     </div>
   </div>
 </article>
+
+<style is:global>
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+</style>

@@ -34,26 +34,51 @@ const sortedPosts = posts.sort((a, b) => {
 ---
 
 <BaseLayout title="記事一覧">
-  <!-- TODO: PCはサイドにタグ一覧を表示、SPはハンバーガーメニューに格納 -->
-  <!-- タグを実装するまでは「すべて」を単体で出力しておく -->
-  <!-- <Categories categories={[...CATEGORIES]} /> -->
-  <div class="h-auto w-full">
-    <a
-      href="/"
-      class="text-primary bg-tag ease hover:bg-tag-hover mx-4 mt-4 inline-block rounded px-[0.6rem] py-[0.3rem] no-underline transition-colors duration-300"
-    >
-      すべて
-    </a>
-    <ul
-      class="bg-base grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 p-4"
-    >
+  <div class="mx-auto w-full max-w-[var(--max-width-pc)] px-4 py-6">
+    <header class="mb-6">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-end justify-between gap-4">
+          <h1
+            class="text-primary text-[24px] font-bold tracking-tight sm:text-[28px]"
+          >
+            記事一覧
+          </h1>
+          <span class="text-meta text-small">
+            {sortedPosts.length} posts
+          </span>
+        </div>
+
+        <p class="text-secondary text-small leading-relaxed">
+          ほぼ環境改善系の技術メモ。
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <a
+            href="/"
+            aria-current={!category ? "page" : undefined}
+            class:list={[
+              "text-small rounded-full px-3 py-1 no-underline transition-colors duration-200",
+              !category
+                ? "text-primary bg-[var(--background-color-tag-hover)]"
+                : "text-secondary hover:text-primary bg-[var(--background-color-tag)] hover:bg-[var(--background-color-tag-hover)]",
+            ]}
+          >
+            すべて
+          </a>
+
+          <!-- <Categories categories={[...CATEGORIES]} /> -->
+        </div>
+      </div>
+    </header>
+
+    <ul class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
       {
         sortedPosts.map((post) => {
           const { title, publishedAt, categories, thumbnail, status } =
             post.data;
 
           return (
-            <li>
+            <li class="min-w-0">
               <Card
                 slug={post.slug}
                 title={title}
