@@ -1,0 +1,123 @@
+---
+import { getCollection } from "astro:content";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import Card from "~/components/Card.astro";
+import Pagination from "~/components/Pagination.astro";
+
+export async function getStaticPaths() {
+  const pageSize = 12;
+  /**
+   * 公開または下書きのpostだけを取得
+   */
+  const posts = await getCollection("posts", ({ data }) => {
+    return data.status !== PUBLISHED_STATUS.PRIVATE;
+  });
+
+  /**
+   * 公開日時が新しい順でソート
+   */
+  const sortedPosts = posts.sort((a, b) => {
+    return (
+      new Date(b.data.publishedAt).getTime() -
+      new Date(a.data.publishedAt).getTime()
+    );
+  });
+
+  const totalPages = Math.ceil(sortedPosts.length / pageSize);
+
+  if (totalPages <= 1) return [];
+
+  return Array.from({ length: totalPages - 1 }, (_, index) => {
+    const pageNum = index + 2;
+    const start = (pageNum - 1) * pageSize;
+    const end = start + pageSize;
+
+    return {
+      params: { page: String(pageNum) },
+      props: {
+        posts: sortedPosts.slice(start, end),
+        totalPages,
+        totalPosts: sortedPosts.length,
+        currentPage: pageNum,
+      },
+    };
+  });
+}
+
+const { posts, totalPages, totalPosts, currentPage } = Astro.props;
+---
+
+<BaseLayout title="記事一覧">
+  <div class="mx-auto w-full max-w-[var(--max-width-pc)] px-4 py-6">
+    <header class="mb-6">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-end justify-between gap-4">
+          <h1
+            class="text-primary text-[24px] font-bold tracking-tight sm:text-[28px]"
+          >
+            記事一覧
+          </h1>
+          <span class="text-meta text-small" id="post-count" data-total={totalPosts}>
+            {totalPosts} posts
+          </span>
+        </div>
+
+        <p class="text-secondary text-small leading-relaxed">
+          ほぼ環境改善系の技術メモ。
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <input
+            id="post-search-input"
+            type="search"
+            inputmode="search"
+            placeholder="タイトルで検索"
+            class="text-small text-primary bg-[var(--background-color-tag)] placeholder:text-meta w-full max-w-[260px] rounded-full px-3 py-1 outline-none transition-colors duration-200 focus:bg-[var(--background-color-tag-hover)]"
+            aria-label="記事タイトル検索"
+          />
+          <a
+            href="/blog"
+            class="text-small text-secondary bg-[var(--background-color-tag)] hover:text-primary hover:bg-[var(--background-color-tag-hover)] rounded-full px-3 py-1 no-underline transition-colors duration-200"
+          >
+            すべて
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <ul class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
+      {
+        posts.map((post) => {
+          const { title, publishedAt, categories, thumbnail, status } =
+            post.data;
+
+          return (
+            <li class="min-w-0" data-title={title.toLowerCase()}>
+              <Card
+                slug={post.slug}
+                title={title}
+                publishedAt={publishedAt}
+                categories={categories}
+                thumbnail={thumbnail}
+                status={status}
+              />
+            </li>
+          );
+        })
+      }
+    </ul>
+
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      basePath="/blog"
+    />
+  </div>
+</BaseLayout>
+
+<script type="module">
+  import { initPostSearch } from "~/scripts/postSearch";
+
+  initPostSearch();
+</script>

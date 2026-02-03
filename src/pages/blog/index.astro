@@ -4,48 +4,39 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Card from "~/components/Card.astro";
 import Pagination from "~/components/Pagination.astro";
+import { type Category } from "~/constants/categories";
+// import Categories from "~/components/Categories.astro";
 
-export async function getStaticPaths() {
-  const pageSize = 12;
-  /**
-   * 公開または下書きのpostだけを取得
-   */
-  const posts = await getCollection("posts", ({ data }) => {
+const PAGE_SIZE = 12;
+const category = Astro.url.searchParams.get("category") as Category;
+
+/**
+ * 公開または下書きのpostだけを取得
+ */
+const posts = await getCollection("posts", ({ data }) => {
+  if (!category) {
     return data.status !== PUBLISHED_STATUS.PRIVATE;
-  });
-
-  /**
-   * 公開日時が新しい順でソート
-   */
-  const sortedPosts = posts.sort((a, b) => {
+  } else {
     return (
-      new Date(b.data.publishedAt).getTime() -
-      new Date(a.data.publishedAt).getTime()
+      data.status !== PUBLISHED_STATUS.PRIVATE &&
+      data.categories.includes(category)
     );
-  });
+  }
+});
 
-  const totalPages = Math.ceil(sortedPosts.length / pageSize);
+/**
+ * 公開日時が新しい順でソート
+ */
+const sortedPosts = posts.sort((a, b) => {
+  return (
+    new Date(b.data.publishedAt).getTime() -
+    new Date(a.data.publishedAt).getTime()
+  );
+});
 
-  if (totalPages <= 1) return [];
-
-  return Array.from({ length: totalPages - 1 }, (_, index) => {
-    const pageNum = index + 2;
-    const start = (pageNum - 1) * pageSize;
-    const end = start + pageSize;
-
-    return {
-      params: { page: String(pageNum) },
-      props: {
-        posts: sortedPosts.slice(start, end),
-        totalPages,
-        totalPosts: sortedPosts.length,
-        currentPage: pageNum,
-      },
-    };
-  });
-}
-
-const { posts, totalPages, totalPosts, currentPage } = Astro.props;
+const totalPosts = sortedPosts.length;
+const totalPages = Math.ceil(totalPosts / PAGE_SIZE);
+const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
 ---
 
 <BaseLayout title="記事一覧">
@@ -77,18 +68,26 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
             aria-label="記事タイトル検索"
           />
           <a
-            href="/"
-            class="text-small text-secondary bg-[var(--background-color-tag)] hover:text-primary hover:bg-[var(--background-color-tag-hover)] rounded-full px-3 py-1 no-underline transition-colors duration-200"
+            href="/blog"
+            aria-current={!category ? "page" : undefined}
+            class:list={[
+              "text-small rounded-full px-3 py-1 no-underline transition-colors duration-200",
+              !category
+                ? "text-primary bg-[var(--background-color-tag-hover)]"
+                : "text-secondary hover:text-primary bg-[var(--background-color-tag)] hover:bg-[var(--background-color-tag-hover)]",
+            ]}
           >
             すべて
           </a>
+
+          <!-- <Categories categories={[...CATEGORIES]} /> -->
         </div>
       </div>
     </header>
 
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
       {
-        posts.map((post) => {
+        pagePosts.map((post) => {
           const { title, publishedAt, categories, thumbnail, status } =
             post.data;
 
@@ -108,7 +107,7 @@ const { posts, totalPages, totalPosts, currentPage } = Astro.props;
       }
     </ul>
 
-    <Pagination currentPage={currentPage} totalPages={totalPages} />
+    <Pagination currentPage={1} totalPages={totalPages} basePath="/blog" />
   </div>
 </BaseLayout>
 

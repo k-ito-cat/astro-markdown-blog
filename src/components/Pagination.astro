@@ -1,10 +1,15 @@
 ---
-const { currentPage, totalPages } = Astro.props;
+const { currentPage, totalPages, basePath = "" } = Astro.props;
 const _currentPage: number = currentPage;
 const _totalPages: number = totalPages;
 const pages = Array.from({ length: _totalPages }, (_, i) => i + 1);
+const normalizedBasePath = basePath
+  ? basePath.replace(/\/$/, "")
+  : "";
 const pageHref = (pageNum: number) =>
-  pageNum === 1 ? "/" : `/page/${pageNum}`;
+  pageNum === 1
+    ? normalizedBasePath || "/"
+    : `${normalizedBasePath}/page/${pageNum}`;
 const hasPrev = _currentPage > 1;
 const hasNext = _currentPage < _totalPages;
 ---
