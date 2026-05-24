@@ -94,7 +94,7 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
           return (
             <li class="min-w-0" data-title={title.toLowerCase()}>
               <Card
-                slug={post.slug}
+                slug={post.id}
                 title={title}
                 publishedAt={publishedAt}
                 categories={categories}

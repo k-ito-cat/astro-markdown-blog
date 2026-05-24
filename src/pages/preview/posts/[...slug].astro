@@ -1,5 +1,5 @@
 ---
-import { getCollection, getEntry } from "astro:content";
+import { getCollection, getEntry, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
@@ -70,8 +70,8 @@ export async function getStaticPaths() {
       props: { entrySlug: undefined },
     },
     ...posts.map((post) => ({
-      params: { slug: normalizePostSlug(post.slug) },
-      props: { entrySlug: post.slug },
+      params: { slug: normalizePostSlug(post.id) },
+      props: { entrySlug: post.id },
     })),
   ];
 }
@@ -92,7 +92,7 @@ if (isDetail && !post) {
   return Astro.redirect("/404");
 }
 
-const rendered = post ? await post.render() : null;
+const rendered = post ? await render(post) : null;
 const Content = rendered?.Content;
 const headings = rendered?.headings ?? [];
 
@@ -100,8 +100,8 @@ const posts = await getCollection("posts");
 const sortedPosts = posts
   .map((post) => ({
     ...post,
-    previewSlug: normalizePostSlug(post.slug),
-    hasMemo: hasMemo(post.body),
+    previewSlug: normalizePostSlug(post.id),
+    hasMemo: hasMemo(post.body ?? ""),
   }))
   .sort((a, b) => {
     const statusDiff =

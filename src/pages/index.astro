@@ -121,7 +121,7 @@ const getRelatedEntry = (slug: string) =>
             return (
               <li class="min-w-0" data-title={title.toLowerCase()}>
                 <Card
-                  slug={post.slug}
+                  slug={post.id}
                   title={title}
                   publishedAt={publishedAt}
                   categories={categories}
@@ -205,7 +205,7 @@ const getRelatedEntry = (slug: string) =>
                           post ? (
                             <li>
                               <a
-                                href={`/blog/${normalizePostSlug(post.slug)}`}
+                                href={`/blog/${normalizePostSlug(post.id)}`}
                                 class="text-small text-secondary hover:text-primary no-underline transition-colors duration-200"
                               >
                                 {post.data.title}

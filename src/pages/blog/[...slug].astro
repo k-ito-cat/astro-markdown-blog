@@ -1,5 +1,5 @@
 ---
-import { getCollection, getEntry } from "astro:content";
+import { getCollection, getEntry, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
@@ -16,15 +16,15 @@ export async function getStaticPaths() {
     return data.status !== PUBLISHED_STATUS.PRIVATE;
   });
   return posts.map((post) => {
-    const normalizedSlug = normalizePostSlug(post.slug);
+    const normalizedSlug = normalizePostSlug(post.id);
     return {
       /**
-       * getCollectionのslugは基本ファイル名だが、フロントマターに"slug"プロパティがあればオーバーライドが可能
-       * また、Sveltia CMSではslug編集機能がデフォルトで備わっており、slugの変更(Markdownファイル名の変更)が可能
-       * @see https://docs.astro.build/en/guides/content-collections/#defining-custom-ids
+       * glob loaderの id は基本ファイル名(拡張子なし)。
+       * フロントマターでの slug オーバーライドや Sveltia CMS の slug 編集機能で変更可能。
+       * @see https://docs.astro.build/en/guides/content-collections/
        */
       params: { slug: normalizedSlug },
-      props: { entrySlug: post.slug },
+      props: { entrySlug: post.id },
     };
   });
 }
@@ -38,7 +38,7 @@ const post = entrySlug ? await getEntry("posts", entrySlug) : null;
 
 if (!post) return Astro.redirect("/404");
 
-const rendered = await post.render();
+const rendered = await render(post);
 const { Content, headings } = rendered;
 ---
 
