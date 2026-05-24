@@ -129,6 +129,17 @@ collections:
           - "published"
         default: "private"
 
+      - label: 執筆ステータス
+        name: writingStatus
+        widget: select
+        options:
+          - "writing"
+          - "planned-high"
+          - "planned-mid"
+          - "todo"
+          - "done"
+        default: "todo"
+
       - label: 本文
         name: body
         widget: markdown

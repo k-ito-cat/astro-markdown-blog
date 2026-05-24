@@ -61,6 +61,20 @@ const { content: Content } = Astro.props;
     while (headingEl.firstChild) navLink.appendChild(headingEl.firstChild);
     headingEl.appendChild(navLink);
   });
+
+  const memoHeading = document.querySelector(".prose h2#メモ");
+  if (memoHeading && !memoHeading.closest(".prose-memo-section")) {
+    const memoSection = document.createElement("section");
+    memoSection.className = "prose-memo-section";
+    memoHeading.parentNode?.insertBefore(memoSection, memoHeading);
+
+    let currentNode: ChildNode | null = memoHeading;
+    while (currentNode) {
+      const nextNode: ChildNode | null = currentNode.nextSibling;
+      memoSection.appendChild(currentNode);
+      currentNode = nextNode;
+    }
+  }
 </script>
 
 <style is:global>
@@ -126,6 +140,22 @@ const { content: Content } = Astro.props;
   }
   .prose a:active {
     color: var(--link-active);
+  }
+
+  .prose .prose-memo-section {
+    margin: 32px 0 0;
+    padding: 20px;
+    border-left: 4px solid var(--color-warning);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--warning-bg) 78%, white 22%);
+  }
+
+  .prose .prose-memo-section > :first-child {
+    margin-top: 0;
+  }
+
+  .prose .prose-memo-section > :last-child {
+    margin-bottom: 0;
   }
 
   .prose code,

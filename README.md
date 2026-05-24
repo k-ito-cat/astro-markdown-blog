@@ -23,6 +23,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 ## 用意している npm script
 
 - `npm run new:post` - 新規ブログ投稿のテンプレートを作成（hygen）
+- `npm run posts:board` - 記事を `status` 別に集計し、メモ欄の状態を確認
 - `npm run update` - git pull とサブモジュール更新を実行
   - 管理画面でcommitが進むことがほとんどなので、このプロジェクトで何らかの修正を加える前に最新化する目的
   - 将来的にpre-pushで実行するなど自動化を考える
@@ -31,6 +32,71 @@ Astro Content Collections を使用した Markdown 形式のブログ
   - 基本的に開発サーバー起動時とビルド時に実行されるようにしているので意識して実行はしなくて良い
 
 ## 記事の管理方法
+
+### ステータス運用
+
+記事の公開状態は frontmatter の `status`、執筆状態は `writingStatus` で管理する。
+
+`status` は公開可否と公開意思を表す。
+
+- `private`: 非公開。書いたが公開をやめたい記事、公開対象にしない記事
+- `draft`: 執筆中で、公開する意思がある記事
+- `published`: 公開記事
+
+`writingStatus` は次の順序で確認する。
+
+- `writing`: 進行中
+- `planned-high`: 進行予定高
+- `planned-mid`: 進行予定中
+- `todo`: 未着手
+- `done`: 執筆完了
+
+状態ごとの件数は次のコマンドで確認する。
+
+```bash
+npm run posts:board
+```
+
+対象記事も表示する場合は `--detail` を付ける。
+
+```bash
+npm run posts:board -- --detail
+```
+
+### ローカルプレビュー
+
+`private` / `draft` の記事本文をレンダリングして確認したい場合は、開発サーバーを起動してローカルプレビューを見る。
+
+```bash
+npm run dev
+```
+
+```txt
+http://localhost:4321/preview/posts
+```
+
+`/preview/posts` はカードではなくテーブル形式で、`status` / `writingStatus` / メモ欄の有無を確認できる。タイトルをクリックすると、通常の記事詳細と同じ表示コンポーネントで本文を確認できる。
+
+このプレビューはローカル確認用で、本番ビルドでは preview ページを生成しない。公開側の `/blog` は従来通り `private` を除外する。
+
+記事にメモを残す場合は、Markdown の末尾に次の固定見出しでメモ欄を置く。
+
+```md
+## メモ
+
+ここにメモを書く
+```
+
+メモ欄は Markdown として表示され、記事プレビュー上では薄い黄色の背景で本文と区別される。執筆素材として保持し、本文へ書き起こしてから公開する想定。`published` にする記事は、原則としてメモ欄を削除してから公開する。
+
+`posts:board` は `status` を主分類として表示し、メモ欄の有無は補助情報として表示する。
+
+- `## メモ` 見出しがある: メモ欄あり
+- メモ欄の中に空白以外の文字がある: `HAS_MEMO`
+- メモ欄の中が空、または空白だけ: `EMPTY_MEMO`
+- メモ欄がない: `NO_MEMO`
+- `## メモ` 見出しが複数ある: `BROKEN_MEMO`
+- メモ欄は1記事につき1つだけ置く
 
 ### 1. エディタで直接編集
 

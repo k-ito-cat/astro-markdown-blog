@@ -25,6 +25,8 @@ type Props = {
     text: string;
   }[];
   status: PublishedStatus;
+  forceRenderContent?: boolean;
+  showGithubCard?: boolean;
 };
 
 const {
@@ -35,6 +37,8 @@ const {
   githubUrl,
   content,
   status,
+  forceRenderContent = false,
+  showGithubCard = true,
 } = Astro.props;
 
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
@@ -53,13 +57,13 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
     <Categories categories={categories} />
 
-    {githubUrl && <GithubCard url={githubUrl} />}
+    {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
 
   <Divider variant="label" label="本文" align="center" />
 
   {
-    status.includes(PUBLISHED_STATUS.DRAFT) ? (
+    status.includes(PUBLISHED_STATUS.DRAFT) && !forceRenderContent ? (
       <p class="mt-4">
         この投稿は下書き状態です。公開されるまでお待ちください。
       </p>
