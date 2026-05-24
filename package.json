@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.17",
-    "astro": "^5.16.11",
+    "astro": "^6.3.7",
     "astro-expressive-code": "^0.41.6",
     "astro-icon": "^1.1.5",
     "glightbox": "^3.3.1",
@@ -27,7 +27,7 @@
     "@iconify-json/octicon": "^1.2.20",
     "@tailwindcss/typography": "^0.5.16",
     "@typescript-eslint/parser": "^8.23.0",
-    "cpx": "^1.5.0",
+    "cpx": "^1.2.1",
     "dotenv": "^16.5.0",
     "eslint": "^9.20.0",
     "eslint-config-prettier": "^10.0.1",
