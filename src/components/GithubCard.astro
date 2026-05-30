@@ -15,7 +15,7 @@ function extractRepoApiUrl(url: string): string {
 const apiUrl = extractRepoApiUrl(url);
 const res = await fetch(apiUrl, {
   headers: {
-    Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
+    Authorization: `Bearer ${import.meta.env.GITHUB_REPO_METADATA_TOKEN}`,
   },
 });
 
