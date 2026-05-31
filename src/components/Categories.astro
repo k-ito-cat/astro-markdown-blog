@@ -9,22 +9,52 @@ const { categories } = Astro.props;
 
 {
   categories && categories.length > 0 && (
-    <ul class="flex flex-wrap items-center gap-2">
-      {categories.map((category: Category) => {
-        return (
-          <li>
-            <a
-              href={category === "すべて" ? "/" : `/?category=${category}`}
-              class:list={[
-                "text-small ease inline-flex items-center rounded-full px-2 py-1 leading-none no-underline transition-colors duration-300",
-                "bg-tag text-secondary hover:bg-tag-hover hover:text-primary",
-              ]}
-            >
-              {category}
-            </a>
-          </li>
-        );
-      })}
+    <ul class="category-list">
+      {categories.map((category: Category) => (
+        <li>
+          <a
+            href={
+              category === "すべて" ? "/blog" : `/blog?category=${category}`
+            }
+            class="category-label"
+          >
+            {category}
+          </a>
+        </li>
+      ))}
     </ul>
   )
 }
+
+<style>
+  .category-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .category-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-selection);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    text-decoration: none;
+    transition:
+      background-color 140ms ease-out,
+      color 140ms ease-out;
+  }
+
+  .category-label:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+    text-decoration: none;
+  }
+</style>

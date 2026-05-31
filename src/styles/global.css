@@ -2,68 +2,6 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* primitives (dark) */
-  --base: #111A27;
-  --neutral-950: #0b0f14;
-  --neutral-900: #0f1520;
-  --neutral-850: #131b28;
-  --neutral-800: #182233;
-  --neutral-700: #223047;
-  --neutral-600: #2e3f5c;
-
-  --neutral-200: #c7d0dd;
-  --neutral-150: #d7dee8;
-  --neutral-100: #e7edf6;
-
-  --accent-500: #7aa2ff;
-  --accent-400: #9ab7ff;
-  --accent-600: #4f7dff;
-
-  --visited-500: #b28dff;
-
-  --info-500: #6aa7ff;
-  --success-500: #35c58a;
-  --warning-500: #f2b84b;
-  --danger-500: #ff6b6b;
-
-  /* semantic (dark) */
-  --bg-base: var(--base);
-  --bg-card: var(--neutral-900);
-  --bg-code: var(--neutral-850);
-  --bg-hover: var(--neutral-800);
-  --bg-selection: var(--neutral-700);
-
-  --text-primary: var(--neutral-100);
-  --text-secondary: var(--neutral-150);
-  --text-muted: var(--neutral-200);
-  --text-heading: var(--neutral-100);
-  --text-code: var(--accent-500);
-
-  --border: var(--neutral-700);
-  --border-strong: var(--neutral-600);
-  --focus: var(--accent-400);
-
-  --link: var(--accent-500);
-  --link-hover: var(--accent-400);
-  --link-active: var(--accent-600);
-  --link-visited: var(--visited-500);
-
-  --info: var(--info-500);
-  --info-bg: #12243f;
-  --info-text: var(--neutral-100);
-
-  --success: var(--success-500);
-  --success-bg: #10261e;
-  --success-text: var(--neutral-100);
-
-  --warning: var(--warning-500);
-  --warning-bg: #2a2010;
-  --warning-text: var(--neutral-100);
-
-  --danger: var(--danger-500);
-  --danger-bg: #2b1216;
-  --danger-text: var(--neutral-100);
-
   /* typography tokens */
   --font-sans: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono:
@@ -71,62 +9,118 @@
     "Courier New", monospace;
 
   /* font sizes */
-  --text-xs: 10px;
+  --text-xs: 13px;
   --text-sm: 14px;
   --text-md: 16px;
   --text-lg: 20px;
-  --text-xl: 28px;
-  --text-2xl: 40px;
+  --text-xl: 24px;
+  --text-2xl: 34px;
 
   /* rhythm */
-  --leading-body: 1.75;
-  --leading-heading: 1.35;
-  --leading-code: 1.65;
+  --leading-body: 1.9;
+  --leading-heading: 1.5;
+  --leading-code: 1.7;
 
   /* measure */
-  --measure-prose: 72ch;
+  --measure-prose: 720px;
 
   /* spacing */
-  --space-paragraph: 1.1em;
+  --space-paragraph: 1.15em;
+
+  /* radius */
+  --radius-label: 4px;
+  --radius-card: 6px;
 
   --max-width-pc: 1440px;
+  --max-width-content: 1080px;
 }
 
-/* light theme (future) */
+/* Warm Gray + Soft Latte: light */
+:root,
 :root[data-theme="light"] {
-  --neutral-950: #ffffff;
-  --neutral-900: #f6f8fb;
-  --neutral-850: #eef2f7;
-  --neutral-800: #e7edf6;
-  --neutral-700: #d7dee8;
-  --neutral-600: #c7d0dd;
+  color-scheme: light;
 
-  --neutral-200: #425164;
-  --neutral-150: #2b3746;
-  --neutral-100: #0b1220;
+  --bg-base: #f7f5f1;
+  --bg-card: #efebe4;
+  --bg-code: #272420;
+  --bg-hover: #e6e1d8;
+  --bg-selection: #e6e1d8;
 
-  --bg-base: var(--neutral-950);
-  --bg-card: var(--neutral-900);
-  --bg-code: var(--neutral-850);
-  --bg-hover: var(--neutral-800);
-  --bg-selection: var(--neutral-700);
+  --text-primary: #24211d;
+  --text-secondary: #5b554d;
+  --text-muted: #81786c;
+  --text-heading: #24211d;
+  --text-code: #24211d;
 
-  --text-primary: var(--neutral-100);
-  --text-secondary: var(--neutral-150);
-  --text-muted: var(--neutral-200);
-  --text-heading: var(--neutral-100);
+  --border: #d8d0c3;
+  --border-strong: #c4bbaa;
+  --focus: #6f8faf;
 
-  --border: var(--neutral-700);
-  --border-strong: var(--neutral-600);
+  --accent-warm: #c9a77b;
 
-  --info-bg: #e7f0ff;
-  --success-bg: #e8fbf2;
-  --warning-bg: #fff4df;
-  --danger-bg: #ffe7ea;
+  --link: #4e6f8f;
+  --link-hover: #375b78;
+  --link-active: #375b78;
+  --link-visited: #4e6f8f;
 
+  --info: #4e6f8f;
+  --info-bg: #e8edf2;
   --info-text: var(--text-primary);
+
+  --success: #5e8268;
+  --success-bg: #e7efe7;
   --success-text: var(--text-primary);
+
+  --warning: #b9863e;
+  --warning-bg: #f4ecdd;
   --warning-text: var(--text-primary);
+
+  --danger: #b0584f;
+  --danger-bg: #f2e4e1;
+  --danger-text: var(--text-primary);
+}
+
+/* Warm Gray + Soft Latte: dark */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-base: #171817;
+  --bg-card: #20211f;
+  --bg-code: #111210;
+  --bg-hover: #2a2b28;
+  --bg-selection: #2a2b28;
+
+  --text-primary: #f0ede7;
+  --text-secondary: #c9c3b8;
+  --text-muted: #958e82;
+  --text-heading: #f0ede7;
+  --text-code: #f0ede7;
+
+  --border: #3a3935;
+  --border-strong: #4a4842;
+  --focus: #9bb7d0;
+
+  --accent-warm: #b99568;
+
+  --link: #8faecb;
+  --link-hover: #b3c8dd;
+  --link-active: #b3c8dd;
+  --link-visited: #8faecb;
+
+  --info: #8faecb;
+  --info-bg: #222a33;
+  --info-text: var(--text-primary);
+
+  --success: #84a88b;
+  --success-bg: #232c25;
+  --success-text: var(--text-primary);
+
+  --warning: #cda864;
+  --warning-bg: #2e2a20;
+  --warning-text: var(--text-primary);
+
+  --danger: #cf867d;
+  --danger-bg: #2e2422;
   --danger-text: var(--text-primary);
 }
 
@@ -159,6 +153,8 @@
   --color-danger-bg: var(--danger-bg);
   --color-danger-text: var(--danger-text);
 
+  --color-accent-warm: var(--accent-warm);
+
   --background-color-*: initial;
   --background-color-base: var(--bg-base);
   --background-color-card: var(--bg-card);
@@ -187,4 +183,23 @@ body {
 
   scrollbar-width: none;
   -ms-overflow-style: none;
+
+  transition:
+    background-color 160ms ease-out,
+    color 160ms ease-out;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  html,
+  body {
+    transition: none !important;
+    animation: none !important;
+  }
 }

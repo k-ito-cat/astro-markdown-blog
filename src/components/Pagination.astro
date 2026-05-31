@@ -3,9 +3,7 @@ const { currentPage, totalPages, basePath = "" } = Astro.props;
 const _currentPage: number = currentPage;
 const _totalPages: number = totalPages;
 const pages = Array.from({ length: _totalPages }, (_, i) => i + 1);
-const normalizedBasePath = basePath
-  ? basePath.replace(/\/$/, "")
-  : "";
+const normalizedBasePath = basePath ? basePath.replace(/\/$/, "") : "";
 const pageHref = (pageNum: number) =>
   pageNum === 1
     ? normalizedBasePath || "/"
@@ -16,16 +14,13 @@ const hasNext = _currentPage < _totalPages;
 
 {
   totalPages > 1 && (
-    <nav class="mt-10 flex flex-wrap items-center justify-center gap-2" data-pagination>
+    <nav class="pagination" data-pagination aria-label="ページ送り">
       {hasPrev ? (
-        <a
-          href={pageHref(_currentPage - 1)}
-          class="text-small text-secondary rounded-full bg-[var(--background-color-tag)] px-3 py-1 no-underline transition-colors duration-200 hover:bg-[var(--background-color-tag-hover)]"
-        >
+        <a href={pageHref(_currentPage - 1)} class="pagination-step">
           前へ
         </a>
       ) : (
-        <span class="text-small text-meta rounded-full px-3 py-1">前へ</span>
+        <span class="pagination-step is-disabled">前へ</span>
       )}
 
       {pages.map((pageNum) => (
@@ -33,10 +28,8 @@ const hasNext = _currentPage < _totalPages;
           href={pageHref(pageNum)}
           aria-current={pageNum === _currentPage ? "page" : undefined}
           class:list={[
-            "text-small rounded-full px-3 py-1 no-underline transition-colors duration-200",
-            pageNum === _currentPage
-              ? "text-primary bg-[var(--background-color-tag-hover)]"
-              : "text-secondary hover:text-primary bg-[var(--background-color-tag)] hover:bg-[var(--background-color-tag-hover)]",
+            "pagination-num",
+            { "is-current": pageNum === _currentPage },
           ]}
         >
           {pageNum}
@@ -44,15 +37,64 @@ const hasNext = _currentPage < _totalPages;
       ))}
 
       {hasNext ? (
-        <a
-          href={pageHref(_currentPage + 1)}
-          class="text-small text-secondary rounded-full bg-[var(--background-color-tag)] px-3 py-1 no-underline transition-colors duration-200 hover:bg-[var(--background-color-tag-hover)]"
-        >
+        <a href={pageHref(_currentPage + 1)} class="pagination-step">
           次へ
         </a>
       ) : (
-        <span class="text-small text-meta rounded-full px-3 py-1">次へ</span>
+        <span class="pagination-step is-disabled">次へ</span>
       )}
     </nav>
   )
 }
+
+<style>
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 40px;
+  }
+
+  .pagination-step,
+  .pagination-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-label);
+    transition:
+      background-color 140ms ease-out,
+      color 140ms ease-out;
+  }
+
+  .pagination-step:hover,
+  .pagination-num:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .pagination-num.is-current {
+    color: var(--text-primary);
+    background: var(--bg-selection);
+    border-color: var(--border);
+  }
+
+  .pagination-step.is-disabled {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  .pagination-step.is-disabled:hover {
+    background: transparent;
+    color: var(--text-muted);
+  }
+</style>

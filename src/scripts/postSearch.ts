@@ -5,15 +5,22 @@ const getElements = () => {
   if (!(count instanceof HTMLElement)) return null;
 
   const items = Array.from(
-    document.querySelectorAll<HTMLElement>("ul > li[data-title]")
+    document.querySelectorAll<HTMLElement>("ul > li[data-title]"),
   );
   const pagination = document.querySelector<HTMLElement>("[data-pagination]");
+  const emptyState = document.querySelector<HTMLElement>("[data-search-empty]");
+  const clears = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-search-clear]"),
+  );
   const total = Number(count.getAttribute("data-total") ?? "0");
 
-  return { input, count, items, pagination, total };
+  return { input, count, items, pagination, emptyState, clears, total };
 };
 
-const updateView = (elements: ReturnType<typeof getElements>, query: string) => {
+const updateView = (
+  elements: ReturnType<typeof getElements>,
+  query: string,
+) => {
   if (!elements) return;
   const queryLower = query.trim().toLowerCase();
   let visible = 0;
@@ -30,6 +37,12 @@ const updateView = (elements: ReturnType<typeof getElements>, query: string) => 
   if (elements.pagination) {
     elements.pagination.classList.toggle("hidden", queryLower.length > 0);
   }
+  if (elements.emptyState) {
+    elements.emptyState.hidden = !(queryLower.length > 0 && visible === 0);
+  }
+  elements.clears.forEach((clear) => {
+    clear.hidden = queryLower.length === 0;
+  });
 };
 
 export const initPostSearch = () => {
@@ -39,5 +52,12 @@ export const initPostSearch = () => {
   updateView(elements, elements.input.value);
   elements.input.addEventListener("input", () => {
     updateView(elements, elements.input.value);
+  });
+  elements.clears.forEach((clear) => {
+    clear.addEventListener("click", () => {
+      elements.input.value = "";
+      updateView(elements, "");
+      elements.input.focus();
+    });
   });
 };

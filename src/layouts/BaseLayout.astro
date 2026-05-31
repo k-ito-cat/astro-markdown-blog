@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import Header from "../components/Header.astro";
 
 type Props = {
   title: string;
@@ -14,6 +15,20 @@ const { title, ogTitle, ogImage } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem("amb-theme");
+        const pref =
+          stored === "light" || stored === "dark" || stored === "system"
+            ? stored
+            : "system";
+        const dark =
+          pref === "dark" ||
+          (pref === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
     <meta name="robots" content="noindex" />
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
@@ -28,6 +43,7 @@ const { title, ogTitle, ogImage } = Astro.props;
     {ogImage && <meta property="og:image" content={ogImage} />}
   </head>
   <body>
+    <Header />
     <slot />
   </body>
 </html>

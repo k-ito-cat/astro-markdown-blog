@@ -10,324 +10,88 @@ type Props = {
 };
 
 const { headings } = Astro.props;
+
+const tocHeadings = headings.filter(
+  (heading) =>
+    heading.depth === HEADING_LEVEL.TWO ||
+    heading.depth === HEADING_LEVEL.THREE,
+);
 ---
 
 {
-  headings.length > 0 && (
-    <div class="relative lg:order-2">
-      <nav
-        id="navigation"
-        class="lg:backdrop-blur-0 fixed top-0 right-0 z-40 h-full w-80 translate-x-full overflow-y-auto border-l border-[var(--border-base)] bg-[var(--background-color-base)]/95 p-6 pt-12 backdrop-blur transition-transform duration-300 ease-in-out lg:sticky lg:top-6 lg:z-auto lg:h-auto lg:w-[280px] lg:translate-x-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pt-0"
-      >
-        <div
-          id="navigation-content"
-          class="lg:rounded-xl lg:border lg:border-[var(--border-base)] lg:bg-[var(--background-color-card)] lg:p-4"
-        >
-          <div class="mb-3 flex items-center gap-2">
-            <span class="text-small text-meta font-medium">目次</span>
-            <span class="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-base)] to-transparent" />
-          </div>
-
-          <ul class="m-0 flex list-none flex-col gap-1 p-0">
-            {headings.map((heading) => (
-              <li>
-                <a
-                  href={`#${heading.slug}`}
-                  class:list={{
-                    "navigation-link group flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm leading-relaxed no-underline transition-colors duration-200 ease-in-out": true,
-                    "text-secondary hover:text-primary hover:bg-[var(--background-color-card-hover)]": true,
-                    "text-primary font-semibold":
-                      heading.depth === HEADING_LEVEL.TWO,
-                    "pl-7": heading.depth === HEADING_LEVEL.THREE,
-                  }}
-                >
-                  <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--border-base)] group-hover:bg-[var(--color-link)]" />
-                  <span class="min-w-0 flex-1 truncate">{heading.text}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
-    </div>
+  tocHeadings.length > 0 && (
+    <aside class="toc-rail lg:order-2">
+      <div class="toc-sticky">
+        <p class="toc-label">目次</p>
+        <ul class="toc-list">
+          {tocHeadings.map((heading) => (
+            <li>
+              <a
+                href={`#${heading.slug}`}
+                class:list={[
+                  "toc-link",
+                  { "is-h3": heading.depth === HEADING_LEVEL.THREE },
+                ]}
+              >
+                {heading.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </aside>
   )
 }
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const hamburgerButton = document.querySelector("#hamburger-button");
-    const navigation = document.querySelector("#navigation");
-    const overlay = document.querySelector("#mobile-overlay");
-    const hamburgerIcon = document.querySelector("#hamburger-icon");
-    const closeIcon = document.querySelector("#close-icon");
-    const navigationLinks = document.querySelectorAll(
-      ".navigation-link",
-    ) as NodeListOf<HTMLAnchorElement>;
-
-    if (!navigation) return;
-
-    let isMenuOpen = false;
-
-    const toggleMenu = () => {
-      isMenuOpen = !isMenuOpen;
-
-      if (isMenuOpen) {
-        // メニューを開く
-        navigation.classList.remove("translate-x-full");
-        overlay?.classList.remove("opacity-0", "pointer-events-none");
-        hamburgerIcon?.classList.add("hidden");
-        closeIcon?.classList.remove("hidden");
-        document.body.style.overflow = "hidden";
-      } else {
-        // メニューを閉じる
-        navigation.classList.add("translate-x-full");
-        overlay?.classList.add("opacity-0", "pointer-events-none");
-        hamburgerIcon?.classList.remove("hidden");
-        closeIcon?.classList.add("hidden");
-        document.body.style.overflow = "";
-      }
-    };
-
-    if (hamburgerButton) {
-      hamburgerButton.addEventListener("click", toggleMenu);
-      overlay?.addEventListener("click", () => {
-        if (isMenuOpen) toggleMenu();
-      });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && isMenuOpen) toggleMenu();
-      });
-    }
-    const extractIdFromHash = (hash: string) => {
-      if (!hash) return "";
-      const raw = hash.replace(/^#/, "");
-      return decodeURIComponent(raw);
-    };
-
-    let isProgrammaticScroll = false;
-    let programmaticScrollTimeout: number | null = null;
-
-    const suspendObserverUpdates = (duration = 800) => {
-      isProgrammaticScroll = true;
-      if (programmaticScrollTimeout !== null) {
-        window.clearTimeout(programmaticScrollTimeout);
-      }
-      programmaticScrollTimeout = window.setTimeout(() => {
-        isProgrammaticScroll = false;
-        programmaticScrollTimeout = null;
-      }, duration);
-    };
-
-    navigationLinks.forEach((link) => {
-      link.addEventListener("click", (event) => {
-        const href = link.getAttribute("href");
-        if (!href) return;
-
-        const targetId = extractIdFromHash(href);
-        if (!targetId) return;
-
-        const targetHeading = document.getElementById(targetId);
-        if (!targetHeading) return;
-
-        event.preventDefault();
-
-        if (isMenuOpen) toggleMenu();
-
-        suspendObserverUpdates(1000);
-
-        targetHeading.scrollIntoView({ behavior: "smooth", block: "start" });
-
-        const canonicalHash = ensureHashPrefix(targetHeading.id || targetId);
-        currentHash = canonicalHash;
-        updateHash(currentHash);
-        activateLink(currentHash);
-      });
-    });
-
-    /**
-     * ハッシュが変わったら、ナビゲーションのリンクをハイライトする
-     */
-    const encodeHash = (value: string) => {
-      if (!value) return "";
-      const trimmed = value.startsWith("#") ? value.slice(1) : value;
-      return `#${encodeURIComponent(trimmed)}`;
-    };
-
-    const ensureHashPrefix = (value: string) => {
-      if (!value) return "";
-      return value.startsWith("#") ? value : `#${value}`;
-    };
-
-    const updateHash = (hash: string) => {
-      const next = encodeHash(hash);
-      if (
-        typeof history !== "undefined" &&
-        typeof history.replaceState === "function"
-      ) {
-        history.replaceState(
-          null,
-          "",
-          `${location.pathname}${location.search}${next}`,
-        );
-      } else if (location.hash !== next) {
-        location.hash = next;
-      }
-    };
-
-    const clearActiveLinks = () => {
-      navigationLinks.forEach((link) => link.classList.remove("is-active"));
-    };
-
-    const activateLink = (hash: string) => {
-      clearActiveLinks();
-      if (!hash) return;
-      const target = Array.from(navigationLinks).find(
-        (link) => link.getAttribute("href") === hash,
-      );
-      if (target) {
-        target.classList.add("is-active");
-      }
-    };
-
-    let currentHash = ensureHashPrefix(decodeURIComponent(location.hash || ""));
-    activateLink(currentHash);
-
-    const removeHashFromUrl = () => {
-      if (!currentHash) return;
-      if (
-        typeof history !== "undefined" &&
-        typeof history.replaceState === "function"
-      ) {
-        history.replaceState(
-          null,
-          "",
-          `${location.pathname}${location.search}`,
-        );
-      } else if (location.hash) {
-        location.hash = "";
-      }
-      currentHash = "";
-      activateLink(currentHash);
-    };
-
-    const syncToLocationHash = () => {
-      if (isProgrammaticScroll) return;
-      currentHash = ensureHashPrefix(decodeURIComponent(location.hash || ""));
-      activateLink(currentHash);
-    };
-
-    window.addEventListener("hashchange", syncToLocationHash);
-
-    /**
-     * ビューポート内の見出しからアクティブな見出しを選択し、URLハッシュとナビゲーションを同期する
-     */
-    const observeHeadings = () => {
-      const headings = Array.from(
-        document.querySelectorAll("h2[id], h3[id]"),
-      ).filter(
-        (element): element is HTMLElement => element instanceof HTMLElement,
-      );
-      if (headings.length === 0) return;
-
-      const visibleEntries = new Map<HTMLElement, IntersectionObserverEntry>();
-      let rafId = 0;
-      const TOP_RESET_THRESHOLD = 48;
-
-      const updateActiveFromVisible = () => {
-        rafId = 0;
-
-        const scrollTop =
-          typeof window !== "undefined"
-            ? window.scrollY ||
-              document.documentElement.scrollTop ||
-              document.body.scrollTop ||
-              0
-            : 0;
-
-        if (isProgrammaticScroll) return;
-
-        if (scrollTop <= TOP_RESET_THRESHOLD) {
-          if (currentHash) {
-            removeHashFromUrl();
-          } else {
-            clearActiveLinks();
-          }
-          return;
-        }
-
-        if (!visibleEntries.size) return;
-
-        const ordered = headings
-          .map((heading) => {
-            const entry = visibleEntries.get(heading);
-            if (!entry) return null;
-            return {
-              heading,
-              top: entry.boundingClientRect.top,
-            };
-          })
-          .filter((item): item is { heading: HTMLElement; top: number } =>
-            Boolean(item),
-          )
-          .sort((a, b) => a.top - b.top);
-
-        if (!ordered.length) return;
-
-        const candidate =
-          ordered.find((item) => item.top >= 0) ?? ordered[ordered.length - 1];
-
-        if (!candidate) return;
-
-        const nextHash = `#${candidate.heading.id}`;
-        if (nextHash === currentHash) return;
-
-        currentHash = nextHash;
-        updateHash(currentHash);
-        activateLink(currentHash);
-      };
-
-      const scheduleUpdate = () => {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(updateActiveFromVisible);
-      };
-
-      const io = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            const target = entry.target;
-            if (!(target instanceof HTMLElement)) return;
-            if (entry.isIntersecting) {
-              visibleEntries.set(target, entry);
-            } else {
-              visibleEntries.delete(target);
-            }
-          });
-          scheduleUpdate();
-        },
-        {
-          root: null,
-          threshold: [0, 0.1, 0.5],
-          rootMargin: "-35% 0px -55% 0px",
-        },
-      );
-
-      headings.forEach((heading) => io.observe(heading));
-    };
-    observeHeadings();
-  });
-</script>
-
-<style is:inline>
-  .scrollbar-hide {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
+<style>
+  .toc-rail {
     display: none;
   }
-  .scrollbar-width-0 {
-    scrollbar-width: 0;
+
+  @media (min-width: 1024px) {
+    .toc-rail {
+      display: block;
+    }
   }
-  .scrollbar-color-transparent-gray-100 {
-    scrollbar-color: transparent transparent;
+
+  .toc-sticky {
+    position: sticky;
+    top: 24px;
+  }
+
+  .toc-label {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .toc-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0 0 0 12px;
+    list-style: none;
+    border-left: 1px solid var(--border);
+  }
+
+  .toc-link {
+    display: block;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 140ms ease-out;
+  }
+
+  .toc-link:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .toc-link.is-h3 {
+    padding-left: 12px;
   }
 </style>

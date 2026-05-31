@@ -9,8 +9,8 @@ import {
   PUBLISHED_STATUS,
   type PublishedStatus,
 } from "~/constants/publishedStatus";
+import { HEADING_LEVEL } from "~/constants/headingLevel";
 import { Icon } from "astro-icon/components";
-import Divider from "./Divider.astro";
 
 type Props = {
   title: string;
@@ -36,65 +36,243 @@ const {
   categories,
   githubUrl,
   content,
+  headings = [],
   status,
   forceRenderContent = false,
   showGithubCard = true,
 } = Astro.props;
 
+const tocHeadings = headings.filter(
+  (heading) =>
+    heading.depth === HEADING_LEVEL.TWO ||
+    heading.depth === HEADING_LEVEL.THREE,
+);
+
+const isDraft = status.includes(PUBLISHED_STATUS.DRAFT);
+const showContent = !isDraft || forceRenderContent;
+
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
 ---
 
-<article class="order-2 grid grid-cols-1 p-4 lg:order-1 lg:p-8">
-  <header class="space-y-4">
-    <h1
-      class="lg:text-heading-first text-[28px] font-semibold"
-      style="word-break: auto-phrase;"
-    >
-      {title}
-    </h1>
-
+<article class="article">
+  <header class="article-header">
+    <h1 class="article-title">{title}</h1>
     <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
-
     <Categories categories={categories} />
-
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
 
-  <Divider variant="label" label="本文" align="center" />
-
   {
-    status.includes(PUBLISHED_STATUS.DRAFT) && !forceRenderContent ? (
-      <p class="mt-4">
-        この投稿は下書き状態です。公開されるまでお待ちください。
-      </p>
-    ) : (
-      <>
-        <Prose content={content} />
-      </>
+    showContent && tocHeadings.length > 0 && (
+      <details class="mobile-toc">
+        <summary class="mobile-toc-summary">
+          <span class="mobile-toc-label">
+            <Icon name="octicon:list-unordered-16" />
+            目次
+          </span>
+          <Icon name="octicon:chevron-down-16" class="mobile-toc-chevron" />
+        </summary>
+        <ul class="mobile-toc-list">
+          {tocHeadings.map((heading) => (
+            <li>
+              <a
+                href={`#${heading.slug}`}
+                class:list={[
+                  "mobile-toc-link",
+                  { "is-h3": heading.depth === HEADING_LEVEL.THREE },
+                ]}
+                data-toc-link
+              >
+                {heading.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
     )
   }
 
-  <footer class="my-8 flex flex-col gap-4">
-    <Divider variant="label" label="シェア" align="center" mt="lg" mb="sm" />
-    <div class="flex items-center gap-2">
-      <a
-        href={xShareUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Xでシェア"
-        title="Xでシェア"
-        class="bg-card text-meta ease hover:bg-card-hover hover:text-link inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-base)] no-underline transition-colors duration-300 hover:border-[var(--color-link)] focus-visible:ring-2 focus-visible:ring-[var(--color-link)] focus-visible:outline-none"
-      >
-        <Icon name="x-logo" width={16} height={16} />
-      </a>
-    </div>
+  {
+    showContent ? (
+      <Prose content={content} />
+    ) : (
+      <p class="article-draft-note">
+        この投稿は下書き状態です。公開されるまでお待ちください。
+      </p>
+    )
+  }
+
+  <footer class="article-footer">
+    <span class="article-share-label">この記事を共有</span>
+    <a
+      href={xShareUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Xでシェア"
+      title="Xでシェア"
+      class="share-button"
+    >
+      <Icon name="x-logo" width={16} height={16} />
+    </a>
   </footer>
 </article>
+
+<style>
+  .article {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .article-header {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: var(--measure-prose);
+    margin: 0 auto 24px;
+  }
+
+  .article-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    word-break: auto-phrase;
+  }
+
+  .mobile-toc {
+    max-width: var(--measure-prose);
+    margin: 0 auto 24px;
+  }
+
+  .mobile-toc-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    list-style: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .mobile-toc-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-toc-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-toc-chevron {
+    transition: transform 160ms ease-out;
+  }
+
+  .mobile-toc[open] .mobile-toc-chevron {
+    transform: rotate(180deg);
+  }
+
+  .mobile-toc :global(svg) {
+    font-size: 15px;
+  }
+
+  .mobile-toc-list {
+    display: grid;
+    gap: 2px;
+    margin: 6px 0 0;
+    padding: 8px;
+    list-style: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .mobile-toc-link {
+    display: block;
+    padding: 4px 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-label);
+  }
+
+  .mobile-toc-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+    text-decoration: none;
+  }
+
+  .mobile-toc-link.is-h3 {
+    padding-left: 20px;
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-toc {
+      display: none;
+    }
+  }
+
+  .article-draft-note {
+    max-width: var(--measure-prose);
+    margin: 32px auto 0;
+    color: var(--text-secondary);
+  }
+
+  .article-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    max-width: var(--measure-prose);
+    margin: 48px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .article-share-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .share-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    text-decoration: none;
+    transition:
+      background-color 140ms ease-out,
+      color 140ms ease-out,
+      border-color 140ms ease-out;
+  }
+
+  .share-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+    border-color: var(--accent-warm);
+  }
+
+  @media (min-width: 640px) {
+    .article-title {
+      font-size: 34px;
+    }
+  }
+</style>
 
 <style is:global>
   h2,
   h3 {
-    scroll-margin-top: 18px;
+    scroll-margin-top: 24px;
   }
 
   .scroll {
@@ -106,3 +284,14 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     display: none;
   }
 </style>
+
+<script>
+  document.querySelectorAll("[data-toc-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const details = link.closest("details");
+      if (details instanceof HTMLDetailsElement) {
+        details.open = false;
+      }
+    });
+  });
+</script>

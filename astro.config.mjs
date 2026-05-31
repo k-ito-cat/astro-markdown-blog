@@ -22,7 +22,12 @@ export default defineConfig({
   integrations: [
     icon(),
     astroExpressiveCode({
-      themes: ["andromeeda"],
+      themes: ["github-dark"],
+      styleOverrides: {
+        codeBackground: "#1f1c18",
+        borderRadius: "6px",
+        borderColor: "var(--border)",
+      },
     }),
   ],
 });
