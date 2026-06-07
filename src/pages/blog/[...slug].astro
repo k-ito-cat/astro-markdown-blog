@@ -40,6 +40,32 @@ if (!post) return Astro.redirect("/404");
 const rendered = await render(post);
 const { Content, headings } = rendered;
 const isDraft = post.data.status.includes(PUBLISHED_STATUS.DRAFT);
+
+const publishedPosts = await getCollection("posts", ({ data }) => {
+  return data.status !== PUBLISHED_STATUS.PRIVATE;
+});
+const timeline = publishedPosts.sort(
+  (a, b) =>
+    new Date(b.data.publishedAt).getTime() -
+    new Date(a.data.publishedAt).getTime(),
+);
+const currentIndex = timeline.findIndex((entry) => entry.id === post.id);
+const newerPost = currentIndex > 0 ? timeline[currentIndex - 1] : undefined;
+const olderPost =
+  currentIndex >= 0 && currentIndex < timeline.length - 1
+    ? timeline[currentIndex + 1]
+    : undefined;
+const relatedPosts = timeline
+  .filter(
+    (entry) =>
+      entry.id !== post.id &&
+      entry.data.categories.some((category) =>
+        post.data.categories.includes(category),
+      ),
+  )
+  .slice(0, 4);
+const fmtDate = (date: Date) =>
+  new Date(date).toISOString().split("T")[0].replaceAll("-", ".");
 ---
 
 <BaseLayout
@@ -81,6 +107,55 @@ const isDraft = post.data.status.includes(PUBLISHED_STATUS.DRAFT);
           />
           <Navigation headings={headings} />
         </div>
+      )
+    }
+
+    {
+      !isDraft && (relatedPosts.length > 0 || olderPost || newerPost) && (
+        <nav class="threads" aria-label="関連するノート">
+          {relatedPosts.length > 0 && (
+            <div class="threads-related">
+              <p class="threads-label">
+                <span class="threads-mark">¶</span> 同じ関心の糸
+              </p>
+              <ul class="threads-list">
+                {relatedPosts.map((entry) => (
+                  <li>
+                    <a
+                      href={`/blog/${normalizePostSlug(entry.id)}`}
+                      class="threads-link"
+                    >
+                      <time>{fmtDate(entry.data.publishedAt)}</time>
+                      <span>{entry.data.title}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {(olderPost || newerPost) && (
+            <div class="threads-seq">
+              {olderPost && (
+                <a
+                  href={`/blog/${normalizePostSlug(olderPost.id)}`}
+                  class="threads-seq-link"
+                >
+                  <span class="threads-seq-label">前のノート</span>
+                  <span class="threads-seq-title">{olderPost.data.title}</span>
+                </a>
+              )}
+              {newerPost && (
+                <a
+                  href={`/blog/${normalizePostSlug(newerPost.id)}`}
+                  class="threads-seq-link is-next"
+                >
+                  <span class="threads-seq-label">次のノート</span>
+                  <span class="threads-seq-title">{newerPost.data.title}</span>
+                </a>
+              )}
+            </div>
+          )}
+        </nav>
       )
     }
   </main>
@@ -170,9 +245,99 @@ const isDraft = post.data.status.includes(PUBLISHED_STATUS.DRAFT);
     font-size: 20px;
   }
 
+  .threads {
+    max-width: var(--measure-prose);
+    margin: 56px auto 0;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+
+  .threads-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .threads-mark {
+    color: var(--accent-warm);
+  }
+
+  .threads-list {
+    margin: 0 0 32px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .threads-link {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    padding: 8px 0;
+    text-decoration: none;
+  }
+
+  .threads-link time {
+    flex: none;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .threads-link span {
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: color 140ms ease-out;
+  }
+
+  .threads-link:hover span {
+    color: var(--text-primary);
+  }
+
+  .threads-seq {
+    display: grid;
+    gap: 12px;
+  }
+
+  .threads-seq-link {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    text-decoration: none;
+    transition: border-color 140ms ease-out;
+  }
+
+  .threads-seq-link:hover {
+    border-color: var(--accent-warm);
+  }
+
+  .threads-seq-link.is-next {
+    text-align: right;
+  }
+
+  .threads-seq-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .threads-seq-title {
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
   @media (min-width: 640px) {
     .article-main {
       padding: 32px 24px 64px;
+    }
+
+    .threads-seq {
+      grid-template-columns: 1fr 1fr;
     }
   }
 
