@@ -5,16 +5,18 @@ const getElements = () => {
   if (!(count instanceof HTMLElement)) return null;
 
   const items = Array.from(
-    document.querySelectorAll<HTMLElement>("ul > li[data-title]"),
+    document.querySelectorAll<HTMLElement>("li[data-title]"),
   );
-  const pagination = document.querySelector<HTMLElement>("[data-pagination]");
+  const sections = Array.from(
+    document.querySelectorAll<HTMLElement>(".tl-year, .tl-month"),
+  );
   const emptyState = document.querySelector<HTMLElement>("[data-search-empty]");
   const clears = Array.from(
     document.querySelectorAll<HTMLElement>("[data-search-clear]"),
   );
   const total = Number(count.getAttribute("data-total") ?? "0");
 
-  return { input, count, items, pagination, emptyState, clears, total };
+  return { input, count, items, sections, emptyState, clears, total };
 };
 
 const updateView = (
@@ -33,10 +35,13 @@ const updateView = (
     if (match) visible += 1;
   });
 
-  elements.count.textContent = `${queryLower ? visible : elements.total} posts`;
-  if (elements.pagination) {
-    elements.pagination.classList.toggle("hidden", queryLower.length > 0);
-  }
+  elements.count.textContent = `${queryLower ? visible : elements.total} notes`;
+
+  // 検索中は地層（年・月）の見出しを隠し、ヒットしたノートだけを並べる
+  elements.sections.forEach((section) => {
+    section.classList.toggle("is-hidden", queryLower.length > 0);
+  });
+
   if (elements.emptyState) {
     elements.emptyState.hidden = !(queryLower.length > 0 && visible === 0);
   }

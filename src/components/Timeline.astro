@@ -1,0 +1,212 @@
+---
+type Entry = {
+  slug: string;
+  title: string;
+  date: string;
+  year: string;
+  month: string;
+  categories: string[];
+  wip: boolean;
+};
+
+type Props = {
+  entries: Entry[];
+  variant?: "stream" | "index";
+};
+
+const { entries, variant = "stream" } = Astro.props;
+---
+
+<ol class:list={["timeline", { "is-index": variant === "index" }]}>
+  {
+    entries.map((entry, index) => {
+      const prev = entries[index - 1];
+      const showYear = index === 0 || prev.year !== entry.year;
+      const showMonth = showYear || prev.month !== entry.month;
+      return (
+        <Fragment>
+          {showYear && (
+            <li class="tl-year" aria-hidden="true">
+              {entry.year}
+            </li>
+          )}
+          {showMonth && (
+            <li class="tl-month" aria-hidden="true">
+              {entry.month}
+            </li>
+          )}
+          <li
+            class:list={["tl-entry", { "is-wip": entry.wip }]}
+            data-title={entry.title.toLowerCase()}
+          >
+            <span class="tl-node" aria-hidden="true" />
+            <a href={`/blog/${entry.slug}`} class="tl-body">
+              <span class="tl-meta">
+                <time class="tl-date">
+                  {variant === "index"
+                    ? entry.date.split(".").slice(1).join(".")
+                    : entry.date}
+                </time>
+                {entry.wip && <span class="tl-wip">WIP</span>}
+              </span>
+              <span class="tl-title">{entry.title}</span>
+              {entry.categories.length > 0 && (
+                <span class="tl-tags">{entry.categories.join(" · ")}</span>
+              )}
+            </a>
+          </li>
+        </Fragment>
+      );
+    })
+  }
+</ol>
+
+<style>
+  .timeline {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .tl-year {
+    margin: 44px 0 8px;
+    padding-left: 30px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tl-year:first-child {
+    margin-top: 0;
+  }
+
+  .tl-month {
+    margin: 20px 0 4px;
+    padding-left: 30px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tl-entry {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  .tl-node {
+    position: absolute;
+    left: 2px;
+    top: 18px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent-warm);
+    box-shadow: 0 0 0 3px var(--bg-base);
+  }
+
+  .tl-entry.is-wip .tl-node {
+    background: var(--bg-base);
+    border: 1.5px solid var(--text-muted);
+  }
+
+  .tl-body {
+    display: block;
+    padding: 10px 0;
+    text-decoration: none;
+  }
+
+  .tl-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tl-date {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tl-wip {
+    padding: 1px 5px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+  }
+
+  .tl-title {
+    display: block;
+    margin: 3px 0;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  .tl-body:hover .tl-title {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .tl-body:hover .tl-date {
+    color: var(--accent-warm);
+  }
+
+  .tl-tags {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    color: var(--text-muted);
+  }
+
+  .tl-entry.hidden {
+    display: none;
+  }
+
+  .tl-year.is-hidden,
+  .tl-month.is-hidden {
+    display: none;
+  }
+
+  .timeline.is-index::before {
+    display: none;
+  }
+
+  .timeline.is-index .tl-node {
+    display: none;
+  }
+
+  .timeline.is-index .tl-month {
+    display: none;
+  }
+
+  .timeline.is-index .tl-entry {
+    padding-left: 0;
+  }
+
+  .timeline.is-index .tl-year {
+    padding-left: 0;
+    margin-top: 36px;
+  }
+
+  .timeline.is-index .tl-year:first-child {
+    margin-top: 0;
+  }
+</style>

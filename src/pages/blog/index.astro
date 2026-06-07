@@ -1,56 +1,73 @@
 ---
 import { getCollection } from "astro:content";
 import { Icon } from "astro-icon/components";
-import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import BaseLayout from "~/layouts/BaseLayout.astro";
-import Card from "~/components/Card.astro";
-import Pagination from "~/components/Pagination.astro";
+import Timeline from "~/components/Timeline.astro";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import { WRITING_STATUS } from "~/constants/writingStatus";
+import { normalizePostSlug } from "~/utils/postSlug";
 import { type Category } from "~/constants/categories";
-// import Categories from "~/components/Categories.astro";
 
-const PAGE_SIZE = 12;
-const category = Astro.url.searchParams.get("category") as Category;
+const category = Astro.url.searchParams.get("category") as Category | null;
 
-/**
- * 公開または下書きのpostだけを取得
- */
 const posts = await getCollection("posts", ({ data }) => {
   if (!category) {
     return data.status !== PUBLISHED_STATUS.PRIVATE;
-  } else {
-    return (
-      data.status !== PUBLISHED_STATUS.PRIVATE &&
-      data.categories.includes(category)
-    );
   }
+  return (
+    data.status !== PUBLISHED_STATUS.PRIVATE &&
+    data.categories.includes(category)
+  );
 });
 
-/**
- * 公開日時が新しい順でソート
- */
-const sortedPosts = posts.sort((a, b) => {
+const sorted = posts.sort((a, b) => {
   return (
     new Date(b.data.publishedAt).getTime() -
     new Date(a.data.publishedAt).getTime()
   );
 });
 
-const totalPosts = sortedPosts.length;
-const totalPages = Math.ceil(totalPosts / PAGE_SIZE);
-const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
+const toIso = (date: Date) => new Date(date).toISOString().split("T")[0];
+
+const entries = sorted.map((post) => {
+  const iso = toIso(post.data.publishedAt);
+  const [year, month] = iso.split("-");
+  return {
+    slug: normalizePostSlug(post.id),
+    title: post.data.title,
+    date: iso.replaceAll("-", "."),
+    year,
+    month,
+    categories: post.data.categories.filter((c) => c !== "すべて"),
+    wip:
+      post.data.status === PUBLISHED_STATUS.DRAFT ||
+      post.data.writingStatus !== WRITING_STATUS.DONE,
+  };
+});
+
+const total = entries.length;
 ---
 
-<BaseLayout title="記事一覧">
+<BaseLayout title="ノート一覧">
   <div class="blog">
     <header class="blog-head">
       <div class="blog-head-top">
-        <h1 class="blog-title">記事一覧</h1>
-        <span class="blog-count" id="post-count" data-total={totalPosts}>
-          {totalPosts} posts
+        <h1 class="blog-title">ノート一覧</h1>
+        <span class="blog-count" id="post-count" data-total={total}>
+          {total} notes
         </span>
       </div>
 
-      <p class="blog-desc">ほぼ環境改善系の技術メモ。</p>
+      {
+        category && (
+          <p class="blog-filter-active">
+            <span class="blog-filter-mark">¶</span> {category}
+            <a href="/blog" class="blog-filter-clear">
+              解除
+            </a>
+          </p>
+        )
+      }
 
       <div class="blog-tools">
         <div class="search-field">
@@ -61,7 +78,7 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
             inputmode="search"
             placeholder="タイトルで検索"
             class="search-input"
-            aria-label="記事タイトル検索"
+            aria-label="ノートのタイトル検索"
           />
           <button
             type="button"
@@ -73,37 +90,10 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
             <Icon name="octicon:x-16" />
           </button>
         </div>
-        <a
-          href="/blog"
-          aria-current={!category ? "page" : undefined}
-          class:list={["blog-filter", { "is-active": !category }]}
-        >
-          すべて
-        </a>
       </div>
     </header>
 
-    <ul class="card-list" id="post-list">
-      {
-        pagePosts.map((post) => {
-          const { title, publishedAt, categories, thumbnail, status } =
-            post.data;
-
-          return (
-            <li data-title={title.toLowerCase()}>
-              <Card
-                slug={post.id}
-                title={title}
-                publishedAt={publishedAt}
-                categories={categories}
-                thumbnail={thumbnail}
-                status={status}
-              />
-            </li>
-          );
-        })
-      }
-    </ul>
+    <Timeline entries={entries} variant="index" />
 
     <p class="blog-empty" data-search-empty hidden>
       合う記事が見つかりませんでした。
@@ -111,21 +101,19 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
         条件を外す
       </button>
     </p>
-
-    <Pagination currentPage={1} totalPages={totalPages} basePath="/blog" />
   </div>
 </BaseLayout>
 
 <style>
   .blog {
     width: 100%;
-    max-width: var(--max-width-content);
+    max-width: 680px;
     margin: 0 auto;
     padding: 40px 16px;
   }
 
   .blog-head {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }
 
   .blog-head-top {
@@ -147,20 +135,29 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
     flex: none;
     font-size: 13px;
     color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
 
-  .blog-desc {
-    margin: 8px 0 0;
-    font-size: 14px;
-    line-height: 1.8;
+  .blog-filter-active {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 0;
+    font-size: 13px;
     color: var(--text-secondary);
   }
 
+  .blog-filter-mark {
+    color: var(--accent-warm);
+  }
+
+  .blog-filter-clear {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .blog-tools {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
     margin-top: 16px;
   }
 
@@ -222,45 +219,8 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
     display: none;
   }
 
-  .blog-filter {
-    flex: none;
-    padding: 7px 12px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-label);
-    transition:
-      background-color 140ms ease-out,
-      color 140ms ease-out;
-  }
-
-  .blog-filter:hover {
-    color: var(--text-primary);
-    text-decoration: none;
-  }
-
-  .blog-filter.is-active {
-    color: var(--text-primary);
-    background: var(--bg-selection);
-  }
-
-  .card-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .card-list > li {
-    min-width: 0;
-  }
-
   .blog-empty {
-    margin: 0;
+    margin: 28px 0 0;
     padding: 32px 20px;
     text-align: center;
     font-size: 14px;
@@ -294,7 +254,7 @@ const pagePosts = sortedPosts.slice(0, PAGE_SIZE);
   }
 </style>
 
-<script type="module">
+<script>
   import { initPostSearch } from "~/scripts/postSearch";
 
   initPostSearch();
