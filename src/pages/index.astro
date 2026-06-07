@@ -1,31 +1,27 @@
 ---
-import { getCollection, getEntry } from "astro:content";
+import { getCollection } from "astro:content";
 import { Icon } from "astro-icon/components";
 import BaseLayout from "~/layouts/BaseLayout.astro";
-import Card from "~/components/Card.astro";
+import Timeline from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
-import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
+import { WRITING_STATUS } from "~/constants/writingStatus";
+import { normalizePostSlug } from "~/utils/postSlug";
 
-const productItems = [
+const works = [
   {
     name: "digital-clock-display",
     description: "デジタル時計の表示デザインと実装。",
     repoUrl: "https://github.com/k-ito-cat/digital-clock-display",
   },
-];
-
-const engineeringItems = [
   {
     name: "dotfiles",
     description: "chezmoi を軸にしたローカル環境の一元管理。",
     repoUrl: "https://github.com/k-ito-cat/dotfiles",
-    relatedSlugs: ["dotfiles-local-machine-settings"],
   },
   {
     name: "devcontainer-template",
     description: "再現性と安全性を重視した開発用テンプレート。",
     repoUrl: "https://github.com/k-ito-cat/devcontainer-template",
-    relatedSlugs: ["devcontainer-template"],
   },
 ];
 
@@ -33,163 +29,72 @@ const posts = await getCollection("posts", ({ data }) => {
   return data.status !== PUBLISHED_STATUS.PRIVATE;
 });
 
-const sortedPosts = posts.sort((a, b) => {
+const sorted = posts.sort((a, b) => {
   return (
     new Date(b.data.publishedAt).getTime() -
     new Date(a.data.publishedAt).getTime()
   );
 });
 
-const recentPosts = sortedPosts.slice(0, 3);
+const toIso = (date: Date) => new Date(date).toISOString().split("T")[0];
 
-const relatedEntrySlugs = [
-  ...new Set(
-    engineeringItems.flatMap((item) =>
-      (item.relatedSlugs ?? []).map((slug) => resolvePostEntrySlug(slug)),
+const entries = sorted.slice(0, 15).map((post) => {
+  const iso = toIso(post.data.publishedAt);
+  const [year, month] = iso.split("-");
+  return {
+    slug: normalizePostSlug(post.id),
+    title: post.data.title,
+    date: iso.replaceAll("-", "."),
+    year,
+    month,
+    categories: post.data.categories.filter(
+      (category) => category !== "すべて",
     ),
-  ),
-];
-
-const relatedEntries = await Promise.all(
-  relatedEntrySlugs.map((slug) => getEntry("posts", slug)),
-);
-
-const relatedEntryMap = new Map(
-  relatedEntries.flatMap((entry, index) =>
-    entry ? [[relatedEntrySlugs[index], entry]] : [],
-  ),
-);
-
-const getRelatedEntry = (slug: string) =>
-  relatedEntryMap.get(resolvePostEntrySlug(slug));
+    wip:
+      post.data.status === PUBLISHED_STATUS.DRAFT ||
+      post.data.writingStatus !== WRITING_STATUS.DONE,
+  };
+});
 ---
 
-<BaseLayout title="Home">
-  <main class="home">
-    <section class="intro">
-      <h1 class="intro-title">Blog / Product / Engineering</h1>
-      <p class="intro-lead">近況・プロダクト・技術メモのまとめ。</p>
-      <a href="/blog" class="intro-link">
-        記事を読む
-        <Icon name="octicon:arrow-right-16" />
-      </a>
-    </section>
+<BaseLayout title="Note">
+  <main class="stream">
+    <header class="stream-intro">
+      <p class="stream-eyebrow"><span class="stream-mark">¶</span> Note</p>
+      <h1 class="stream-title">記録</h1>
+      <p class="stream-lead">
+        新しいものが上。下へ遡るほど、その時々で考えていたこと。
+      </p>
+    </header>
 
-    <section id="blog" class="home-section">
-      <div class="section-head">
-        <div class="section-title">
-          <h2>Blog</h2>
-          <span class="section-note">最新3件</span>
-        </div>
-        <a href="/blog" class="section-more">一覧へ</a>
-      </div>
+    <Timeline entries={entries} />
 
-      {
-        recentPosts.length > 0 ? (
-          <ul class="card-list">
-            {recentPosts.map((post) => {
-              const { title, publishedAt, categories, thumbnail, status } =
-                post.data;
-              return (
-                <li data-title={title.toLowerCase()}>
-                  <Card
-                    slug={post.id}
-                    title={title}
-                    publishedAt={publishedAt}
-                    categories={categories}
-                    thumbnail={thumbnail}
-                    status={status}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p class="section-empty">
-            まだ記事がありません。最初の一本を書いたらここに並びます。
-          </p>
-        )
-      }
-    </section>
+    <a href="/blog" class="stream-more">
+      過去へさかのぼる
+      <Icon name="octicon:arrow-down-16" />
+    </a>
 
-    <section id="product" class="home-section">
-      <div class="section-head">
-        <div class="section-title">
-          <h2>Product</h2>
-          <span class="section-note">作品・個人開発</span>
-        </div>
-      </div>
-      <ul class="link-list">
+    <section class="works">
+      <h2 class="works-head"><span class="works-mark">¶</span> 制作物</h2>
+      <ul class="works-list">
         {
-          productItems.map((item) => (
-            <li class="link-item">
-              <div class="link-item-head">
-                <h3>{item.name}</h3>
+          works.map((work) => (
+            <li class="works-item">
+              <div class="works-item-head">
+                <h3>{work.name}</h3>
                 <a
-                  href={item.repoUrl}
+                  href={work.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  class="link-item-repo"
+                  class="works-repo"
                 >
                   <Icon name="octicon:mark-github-16" />
                   GitHub
                 </a>
               </div>
-              <p class="link-item-desc">{item.description}</p>
+              <p class="works-desc">{work.description}</p>
             </li>
           ))
-        }
-      </ul>
-    </section>
-
-    <section id="engineering" class="home-section">
-      <div class="section-head">
-        <div class="section-title">
-          <h2>Engineering</h2>
-          <span class="section-note">開発基盤・運用</span>
-        </div>
-      </div>
-      <ul class="link-list">
-        {
-          engineeringItems.map((item) => {
-            const relatedPosts = (item.relatedSlugs ?? [])
-              .map((slug) => getRelatedEntry(slug))
-              .filter((post) => Boolean(post));
-
-            return (
-              <li class="link-item">
-                <div class="link-item-head">
-                  <h3>{item.name}</h3>
-                  <a
-                    href={item.repoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    class="link-item-repo"
-                  >
-                    <Icon name="octicon:mark-github-16" />
-                    GitHub
-                  </a>
-                </div>
-                <p class="link-item-desc">{item.description}</p>
-                {relatedPosts.length > 0 && (
-                  <div class="link-item-related">
-                    <p class="link-item-related-label">関連記事</p>
-                    <ul>
-                      {relatedPosts.map((post) =>
-                        post ? (
-                          <li>
-                            <a href={`/blog/${normalizePostSlug(post.id)}`}>
-                              {post.data.title}
-                            </a>
-                          </li>
-                        ) : null,
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </li>
-            );
-          })
         }
       </ul>
     </section>
@@ -197,151 +102,115 @@ const getRelatedEntry = (slug: string) =>
 </BaseLayout>
 
 <style>
-  .home {
+  .stream {
     width: 100%;
-    max-width: var(--max-width-content);
+    max-width: 680px;
     margin: 0 auto;
     padding: 0 16px;
   }
 
-  .intro {
-    padding: 48px 0 8px;
+  .stream-intro {
+    padding: 56px 0 32px;
   }
 
-  .intro-title {
+  .stream-eyebrow {
+    margin: 0 0 14px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .stream-mark {
+    color: var(--accent-warm);
+  }
+
+  .stream-title {
     margin: 0;
-    max-width: 32rem;
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 700;
-    line-height: 1.4;
-    letter-spacing: -0.01em;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
   }
 
-  .intro-lead {
-    margin: 16px 0 0;
-    max-width: 36rem;
+  .stream-lead {
+    margin: 14px 0 0;
     font-size: 15px;
     line-height: 1.9;
     color: var(--text-secondary);
   }
 
-  .intro-link {
+  .stream-more {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 22px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--link);
-    text-decoration: none;
-  }
-
-  .intro-link:hover {
-    color: var(--link-hover);
-    text-decoration: none;
-  }
-
-  .home-section {
-    padding: 40px 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .section-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .section-title {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-
-  .section-title h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .section-note {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-
-  .section-more {
+    margin-top: 24px;
+    padding-left: 30px;
     font-size: 13px;
     color: var(--text-secondary);
     text-decoration: none;
     transition: color 140ms ease-out;
   }
 
-  .section-more:hover {
+  .stream-more:hover {
     color: var(--text-primary);
-    text-decoration: none;
   }
 
-  .section-empty {
-    margin: 0;
-    padding: 28px 20px;
-    text-align: center;
+  .stream-more :global(svg) {
     font-size: 14px;
-    color: var(--text-secondary);
-    border: 1px dashed var(--border);
-    border-radius: var(--radius-card);
   }
 
-  .card-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .card-list > li {
-    min-width: 0;
-  }
-
-  .link-list {
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .link-item {
-    padding: 18px 0;
+  .works {
+    margin-top: 64px;
+    padding-top: 32px;
     border-top: 1px solid var(--border);
   }
 
-  .link-item:first-child {
+  .works-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .works-mark {
+    color: var(--accent-warm);
+  }
+
+  .works-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .works-item {
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .works-item:first-child {
     border-top: 0;
     padding-top: 0;
   }
 
-  .link-item-head {
+  .works-item-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
   }
 
-  .link-item-head h3 {
+  .works-item-head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
   }
 
-  .link-item-repo {
+  .works-repo {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -352,66 +221,28 @@ const getRelatedEntry = (slug: string) =>
     transition: color 140ms ease-out;
   }
 
-  .link-item-repo:hover {
+  .works-repo:hover {
     color: var(--text-primary);
-    text-decoration: none;
   }
 
-  .link-item-desc {
-    margin: 8px 0 0;
+  .works-repo :global(svg) {
+    font-size: 15px;
+  }
+
+  .works-desc {
+    margin: 6px 0 0;
     font-size: 14px;
     line-height: 1.8;
     color: var(--text-secondary);
   }
 
-  .link-item-related {
-    margin-top: 12px;
-  }
-
-  .link-item-related-label {
-    margin: 0 0 6px;
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-
-  .link-item-related ul {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .link-item-related a {
-    font-size: 14px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color 140ms ease-out;
-  }
-
-  .link-item-related a:hover {
-    color: var(--text-primary);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .intro-link :global(svg),
-  .link-item-repo :global(svg) {
-    font-size: 15px;
-  }
-
   @media (min-width: 640px) {
-    .home {
+    .stream {
       padding: 0 24px;
     }
 
-    .intro {
-      padding: 64px 0 12px;
-    }
-
-    .intro-title {
-      font-size: 34px;
+    .stream-title {
+      font-size: 36px;
     }
   }
 </style>
