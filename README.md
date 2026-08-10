@@ -104,6 +104,19 @@ http://localhost:4321/preview/posts
 - `## メモ` 見出しが複数ある: `BROKEN_MEMO`
 - メモ欄は1記事につき1つだけ置く
 
+### Obsidianで編集
+
+記事リポジトリはObsidianでの編集に対応している。親リポジトリ全体ではなく、サブモジュールの `src/content/posts` を既存のVaultとして開く。
+
+Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の一部を追跡している。
+
+- Wikilinkではなく標準のMarkdownリンクを使用する
+- 新しい添付ファイルを `images` に保存する
+- `.obsidian` 内では `app.json`、`appearance.json`、`core-plugins.json` だけをGit管理する
+- Community Pluginは必須としない
+
+画像はビルド時に `public/images` へコピーされ、公開ページでは `/images/...` で参照する。Obsidianで画像を貼り付けた後は、本文に生成された画像URLが `/images/...` になっていることを確認する。
+
 ### 1. エディタで直接編集
 
 1. `npm run new:post` を実行してテンプレートを生成
