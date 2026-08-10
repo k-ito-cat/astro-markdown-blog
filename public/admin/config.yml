@@ -134,11 +134,20 @@ collections:
         widget: select
         options:
           - "writing"
-          - "planned-high"
-          - "planned-mid"
+          - "planned"
           - "todo"
           - "done"
         default: "todo"
+
+      - label: 優先度
+        name: priority
+        widget: select
+        options:
+          - "high"
+          - "medium"
+          - "low"
+          - "none"
+        default: "none"
 
       - label: 本文
         name: body

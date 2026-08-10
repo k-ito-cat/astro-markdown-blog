@@ -1,18 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import process from "node:process";
+import { detectMemoState } from "../src/utils/postMemo.js";
 
 const POSTS_DIR = path.join(process.cwd(), "src/content/posts/blog");
 const VALID_STATUSES = ["published", "private", "draft"];
 const STATUS_LABELS = [...VALID_STATUSES, "missing", "unknown"];
-const VALID_WRITING_STATUSES = [
-  "writing",
-  "planned-high",
-  "planned-mid",
-  "todo",
-  "done",
-];
+const VALID_WRITING_STATUSES = ["writing", "planned", "todo", "done"];
 const WRITING_STATUS_LABELS = [...VALID_WRITING_STATUSES, "missing", "unknown"];
-const MEMO_HEADING_PATTERN = /^## メモ\s*$/gm;
+const VALID_PRIORITIES = ["high", "medium", "low", "none"];
+const PRIORITY_LABELS = [...VALID_PRIORITIES, "missing", "unknown"];
 const args = new Set(process.argv.slice(2));
 const showDetail = args.has("--detail") || args.has("-d");
 
@@ -29,8 +26,12 @@ const colors = {
 const color = (value, colorName) =>
   process.stdout.isTTY ? `${colors[colorName]}${value}${colors.reset}` : value;
 
-const pad = (value, length) => String(value).padEnd(length, " ");
 const count = (entries, predicate) => entries.filter(predicate).length;
+const stripColors = (value) =>
+  Object.values(colors).reduce(
+    (text, sequence) => text.replaceAll(sequence, ""),
+    String(value),
+  );
 const isWideCodePoint = (codePoint) =>
   (codePoint >= 0x1100 && codePoint <= 0x115f) ||
   (codePoint >= 0x2e80 && codePoint <= 0xa4cf) ||
@@ -41,7 +42,7 @@ const isWideCodePoint = (codePoint) =>
   (codePoint >= 0xff00 && codePoint <= 0xff60) ||
   (codePoint >= 0xffe0 && codePoint <= 0xffe6);
 const visibleLength = (value) =>
-  Array.from(String(value).replace(/\x1b\[[0-9;]*m/g, "")).reduce(
+  Array.from(stripColors(value)).reduce(
     (length, character) =>
       length + (isWideCodePoint(character.codePointAt(0)) ? 2 : 1),
     0,
@@ -107,24 +108,12 @@ const parseFrontmatter = (content) => {
   return result;
 };
 
-const detectMemoState = (content) => {
-  const matches = [...content.matchAll(MEMO_HEADING_PATTERN)];
-
-  if (matches.length === 0) return "NO_MEMO";
-  if (matches.length > 1) {
-    return "BROKEN_MEMO";
-  }
-
-  const memoStartIndex = matches[0].index + matches[0][0].length;
-  const memo = content.slice(memoStartIndex);
-  return memo.trim().length > 0 ? "HAS_MEMO" : "EMPTY_MEMO";
-};
-
 const readPost = async (filePath) => {
   const content = await fs.readFile(filePath, "utf8");
   const frontmatter = parseFrontmatter(content);
   const status = frontmatter.status;
   const writingStatus = frontmatter.writingStatus;
+  const priority = frontmatter.priority;
   const statusGroup = !status
     ? "missing"
     : VALID_STATUSES.includes(status)
@@ -135,6 +124,11 @@ const readPost = async (filePath) => {
     : VALID_WRITING_STATUSES.includes(writingStatus)
       ? writingStatus
       : "unknown";
+  const priorityGroup = !priority
+    ? "missing"
+    : VALID_PRIORITIES.includes(priority)
+      ? priority
+      : "unknown";
 
   return {
     file: path.relative(POSTS_DIR, filePath),
@@ -143,6 +137,8 @@ const readPost = async (filePath) => {
     statusGroup,
     writingStatus: writingStatus || "(missing)",
     writingStatusGroup,
+    priority: priority || "(missing)",
+    priorityGroup,
     memoState: detectMemoState(content),
   };
 };
@@ -163,10 +159,17 @@ const statusColor = (status) => {
 
 const writingStatusColor = (writingStatus) => {
   if (writingStatus === "writing") return "cyan";
-  if (writingStatus === "planned-high") return "yellow";
-  if (writingStatus === "planned-mid") return "yellow";
+  if (writingStatus === "planned") return "yellow";
   if (writingStatus === "done") return "green";
   if (writingStatus === "todo") return "dim";
+  return "red";
+};
+
+const priorityColor = (priority) => {
+  if (priority === "high") return "red";
+  if (priority === "medium") return "yellow";
+  if (priority === "low") return "dim";
+  if (priority === "none") return "dim";
   return "red";
 };
 
@@ -220,6 +223,12 @@ const printSummary = (entries) => {
       writingStatusColor,
     ),
   );
+  console.log("");
+  printSummaryTable(
+    "Priority",
+    "priority",
+    createSummaryRows(entries, PRIORITY_LABELS, "priorityGroup", priorityColor),
+  );
 
   const missingStatus = count(
     entries,
@@ -237,6 +246,14 @@ const printSummary = (entries) => {
     entries,
     (entry) => entry.writingStatusGroup === "unknown",
   );
+  const missingPriority = count(
+    entries,
+    (entry) => entry.priorityGroup === "missing",
+  );
+  const unknownPriority = count(
+    entries,
+    (entry) => entry.priorityGroup === "unknown",
+  );
   const brokenMemo = count(
     entries,
     (entry) => entry.memoState === "BROKEN_MEMO",
@@ -248,6 +265,8 @@ const printSummary = (entries) => {
   console.log(`  unknown status: ${unknownStatus}`);
   console.log(`  missing writingStatus: ${missingWritingStatus}`);
   console.log(`  unknown writingStatus: ${unknownWritingStatus}`);
+  console.log(`  missing priority: ${missingPriority}`);
+  console.log(`  unknown priority: ${unknownPriority}`);
   console.log(`  broken memo:    ${brokenMemo}`);
 };
 
@@ -266,9 +285,10 @@ const printDetail = (entries) => {
 
     console.log(
       createTable(
-        ["status", "memo", "title", "file"],
+        ["status", "priority", "memo", "title", "file"],
         statusEntries.map((entry) => [
           color(entry.status, statusColor(entry.statusGroup)),
+          color(entry.priority, priorityColor(entry.priorityGroup)),
           color(entry.memoState, memoColor(entry.memoState)),
           entry.title,
           color(entry.file, "dim"),

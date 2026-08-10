@@ -10,9 +10,11 @@ thumbnail: "/images/thumbnail/noimage.webp"
 githubUrl: ""
 categories: []
 # status: draft | private | published
-# writingStatus: writing | planned-high | planned-mid | todo | done
+# writingStatus: writing | planned | todo | done
+# priority: high | medium | low | none
 status: "private"
 writingStatus: "todo"
+priority: "none"
 ---
 
 ここに本文を書く

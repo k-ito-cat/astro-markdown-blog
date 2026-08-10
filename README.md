@@ -35,21 +35,27 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 ### ステータス運用
 
-記事の公開状態は frontmatter の `status`、執筆状態は `writingStatus` で管理する。
+記事の公開状態は frontmatter の `status`、執筆状態は `writingStatus`、取り組む順序は `priority` で管理する。3つの値を分け、公開可否・執筆工程・優先順位を独立して変更できるようにする。
 
-`status` は公開可否と公開意思を表す。
+`status` は公開側での表示状態を表す。
 
-- `private`: 非公開。書いたが公開をやめたい記事、公開対象にしない記事
-- `draft`: 執筆中で、公開する意思がある記事
-- `published`: 公開記事
+- `private`: 非公開。公開側の一覧に表示しない
+- `draft`: 公開中（WIP）。公開側の一覧には表示するが、本文は下書き表示にする
+- `published`: 公開済み。完成記事として公開する
 
 `writingStatus` は次の順序で確認する。
 
-- `writing`: 進行中
-- `planned-high`: 進行予定高
-- `planned-mid`: 進行予定中
+- `writing`: 執筆中
+- `planned`: 執筆予定
 - `todo`: 未着手
 - `done`: 執筆完了
+
+`priority` は次に取り組む順序を表す。
+
+- `high`: 高。次に優先して進める
+- `medium`: 中。高優先度の後に進める
+- `low`: 低。保持するが当面急がない
+- `none`: 未設定。優先順位をまだ判断していない
 
 状態ごとの件数は次のコマンドで確認する。
 
@@ -89,7 +95,7 @@ http://localhost:4321/preview/posts
 
 メモ欄は Markdown として表示され、記事プレビュー上では薄い黄色の背景で本文と区別される。執筆素材として保持し、本文へ書き起こしてから公開する想定。`published` にする記事は、原則としてメモ欄を削除してから公開する。
 
-`posts:board` は `status` を主分類として表示し、メモ欄の有無は補助情報として表示する。
+`posts:board` は `status`、`writingStatus`、`priority`を集計し、メモ欄の状態を補助情報として表示する。
 
 - `## メモ` 見出しがある: メモ欄あり
 - メモ欄の中に空白以外の文字がある: `HAS_MEMO`

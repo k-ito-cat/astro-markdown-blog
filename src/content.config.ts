@@ -1,6 +1,7 @@
 import { z, defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { CATEGORIES } from "~/constants/categories";
+import { POST_PRIORITY } from "~/constants/postPriority";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { WRITING_STATUS } from "~/constants/writingStatus";
 
@@ -20,10 +21,15 @@ const posts = defineCollection({
     ]),
     writingStatus: z.enum([
       WRITING_STATUS.WRITING,
-      WRITING_STATUS.PLANNED_HIGH,
-      WRITING_STATUS.PLANNED_MID,
+      WRITING_STATUS.PLANNED,
       WRITING_STATUS.TODO,
       WRITING_STATUS.DONE,
+    ]),
+    priority: z.enum([
+      POST_PRIORITY.HIGH,
+      POST_PRIORITY.MEDIUM,
+      POST_PRIORITY.LOW,
+      POST_PRIORITY.NONE,
     ]),
   }),
 });
