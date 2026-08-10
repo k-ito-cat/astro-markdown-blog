@@ -1,14 +1,19 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import "glightbox/dist/css/glightbox.min.css";
+import {
+  PUBLISHED_STATUS,
+  type PublishedStatus,
+} from "~/constants/publishedStatus";
 
 type Props = {
   content: AstroComponentFactory;
+  status: PublishedStatus;
 };
-const { content: Content } = Astro.props;
+const { content: Content, status } = Astro.props;
 ---
 
-<div class="prose">
+<div class="prose" data-is-published={status === PUBLISHED_STATUS.PUBLISHED}>
   <Content />
 </div>
 
@@ -62,16 +67,27 @@ const { content: Content } = Astro.props;
 
   const memoHeading = document.querySelector(".prose h2#メモ");
   if (memoHeading && !memoHeading.closest(".prose-memo-section")) {
+    const prose = memoHeading.closest<HTMLElement>(".prose");
+    const isPublished = prose?.dataset.isPublished === "true";
     const memoSection = document.createElement("section");
     memoSection.className = "prose-memo-section";
+    memoSection.classList.toggle("is-published", isPublished);
     memoHeading.parentNode?.insertBefore(memoSection, memoHeading);
 
-    let currentNode: ChildNode | null = memoHeading;
+    let currentNode = memoHeading.nextSibling;
+    memoSection.appendChild(memoHeading);
     while (currentNode) {
-      const nextNode: ChildNode | null = currentNode.nextSibling;
+      const nextNode = currentNode.nextSibling;
       memoSection.appendChild(currentNode);
       currentNode = nextNode;
     }
+
+    const memoNote = document.createElement("p");
+    memoNote.className = "prose-memo-note";
+    memoNote.textContent = isPublished
+      ? "このメモは本番にも表示されます。メモを削除するか、公開状態を変更してください。"
+      : "編集用メモです。公開済みにする前に削除してください。";
+    memoHeading.insertAdjacentElement("afterend", memoNote);
   }
 </script>
 
@@ -125,6 +141,10 @@ const { content: Content } = Astro.props;
   .prose strong {
     color: var(--text-primary);
     font-weight: 700;
+  }
+
+  .prose h1 {
+    color: color-mix(in srgb, var(--text-primary) 82%, var(--accent-warm));
   }
 
   .prose h2,
@@ -246,17 +266,45 @@ const { content: Content } = Astro.props;
     cursor: zoom-in;
   }
 
-  /* メモ欄: 警告ではなく、淡い面と暖色の罫線で本文から少し区別する */
   .prose .prose-memo-section {
     margin: 40px 0 0;
-    padding: 16px 20px;
-    border-left: 3px solid var(--accent-warm);
-    border-radius: var(--radius-card);
-    background: var(--bg-subtle);
+    padding: 0 0 0 16px;
+    border-left: 1px solid var(--border-strong);
   }
 
-  .prose .prose-memo-section > :first-child {
-    margin-top: 0;
+  .prose .prose-memo-section.is-published {
+    border-left-color: var(--danger);
+  }
+
+  .prose .prose-memo-section > h2:first-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 7px;
+    padding: 0;
+    color: var(--text-muted);
+    border: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .prose .prose-memo-section > h2:first-child::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .prose .prose-memo-note {
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .prose .prose-memo-section.is-published .prose-memo-note {
+    color: var(--danger);
   }
 
   .prose .prose-memo-section > :last-child {

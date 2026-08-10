@@ -94,7 +94,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
   {
     showContent ? (
-      <Prose content={content} />
+      <Prose content={content} status={status} />
     ) : (
       <p class="article-draft-note">
         この投稿は下書き状態です。公開されるまでお待ちください。
