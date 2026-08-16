@@ -74,8 +74,8 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     >
       <Icon name="octicon:home-16" aria-hidden="true" />
     </a>
-    <details class="mobile-menu">
-      <summary aria-label="サイト内ナビゲーション">
+    <details class="mobile-menu" data-mobile-menu>
+      <summary aria-label="サイト内ナビゲーション" data-mobile-menu-summary>
         <span class="menu-open-icon" aria-hidden="true">
           <Icon name="octicon:three-bars-16" />
         </span>
@@ -83,7 +83,7 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
           <Icon name="octicon:x-16" />
         </span>
       </summary>
-      <nav aria-label="モバイルナビゲーション">
+      <nav aria-label="モバイルナビゲーション" data-mobile-menu-panel>
         {
           mobileNavItems.map((item) => (
             <a
@@ -173,16 +173,24 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     display: none;
   }
 
+  .menu-open-icon,
   .menu-close-icon {
-    display: none;
-  }
-
-  .mobile-menu[open] .menu-open-icon {
-    display: none;
-  }
-
-  .mobile-menu[open] .menu-close-icon {
+    position: absolute;
     display: inline-flex;
+    opacity: 1;
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  .menu-close-icon {
+    opacity: 0;
+  }
+
+  .mobile-menu[open]:not([data-closing]) .menu-open-icon {
+    opacity: 0;
+  }
+
+  .mobile-menu[open]:not([data-closing]) .menu-close-icon {
+    opacity: 1;
   }
 
   .mobile-menu nav {
@@ -192,8 +200,18 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px 20px;
     padding: 20px 16px 24px;
+    opacity: 1;
     background: var(--color-background);
-    border-bottom: 2px solid var(--color-primary);
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  .mobile-menu[open]:not([data-closing]) nav {
+    animation: mobile-menu-surface-in var(--duration-feedback) ease both;
+  }
+
+  .mobile-menu[data-closing] nav {
+    pointer-events: none;
+    opacity: 0;
   }
 
   .mobile-menu nav::before {
@@ -204,6 +222,37 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     width: 44px;
     height: 2px;
     background: var(--color-primary);
+  }
+
+  .mobile-menu[open]:not([data-closing]) nav::before {
+    animation: mobile-menu-line-in var(--duration-feedback) var(--ease-trace)
+      both;
+  }
+
+  .mobile-menu nav::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--color-primary);
+    transform-origin: left;
+  }
+
+  .mobile-menu[open]:not([data-closing]) nav::after {
+    animation: mobile-menu-rule-in var(--duration-feedback) var(--ease-trace)
+      both;
+  }
+
+  .mobile-menu[data-closing] nav::before {
+    width: 0;
+    transition: width var(--duration-feedback) var(--ease-trace);
+  }
+
+  .mobile-menu[data-closing] nav::after {
+    transform: scaleX(0);
+    transition: transform var(--duration-feedback) var(--ease-trace);
   }
 
   .mobile-menu nav a {
@@ -249,6 +298,36 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
 
   .mobile-menu nav a[aria-current="page"]::before {
     background: var(--color-primary);
+  }
+
+  @keyframes mobile-menu-surface-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mobile-menu-line-in {
+    from {
+      width: 0;
+    }
+
+    to {
+      width: 44px;
+    }
+  }
+
+  @keyframes mobile-menu-rule-in {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
   }
 
   @media (min-width: 960px) {
@@ -334,4 +413,87 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
       width: calc(100% - 48px);
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu-open-icon,
+    .menu-close-icon,
+    .mobile-menu nav,
+    .mobile-menu nav::before,
+    .mobile-menu nav::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 </style>
+
+<script>
+  const mobileMenu =
+    document.querySelector<HTMLDetailsElement>("[data-mobile-menu]");
+  const mobileMenuSummary = mobileMenu?.querySelector<HTMLElement>(
+    "[data-mobile-menu-summary]",
+  );
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const closeDuration = 160;
+  const closeScrollDistance = 72;
+
+  if (mobileMenu && mobileMenuSummary) {
+    let closeTimer = 0;
+    let openedAtScrollY = window.scrollY;
+    let scrollUpdateQueued = false;
+
+    const finishClosing = () => {
+      window.clearTimeout(closeTimer);
+      mobileMenu.open = false;
+      delete mobileMenu.dataset.closing;
+    };
+
+    const closeMobileMenu = () => {
+      if (!mobileMenu.open || mobileMenu.dataset.closing !== undefined) return;
+
+      if (reducedMotion.matches) {
+        finishClosing();
+        return;
+      }
+
+      mobileMenu.dataset.closing = "";
+      closeTimer = window.setTimeout(finishClosing, closeDuration);
+    };
+
+    mobileMenuSummary.addEventListener("click", (event) => {
+      if (!mobileMenu.open) return;
+      event.preventDefault();
+      closeMobileMenu();
+    });
+
+    mobileMenu.addEventListener("toggle", () => {
+      if (!mobileMenu.open) return;
+      openedAtScrollY = window.scrollY;
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!mobileMenu.open) return;
+      const target = event.target;
+      if (target instanceof Node && !mobileMenu.contains(target)) {
+        closeMobileMenu();
+      }
+    });
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!mobileMenu.open || scrollUpdateQueued) return;
+        scrollUpdateQueued = true;
+
+        requestAnimationFrame(() => {
+          if (
+            Math.abs(window.scrollY - openedAtScrollY) >= closeScrollDistance
+          ) {
+            closeMobileMenu();
+          }
+          scrollUpdateQueued = false;
+        });
+      },
+      { passive: true },
+    );
+  }
+</script>
