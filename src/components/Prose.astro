@@ -14,6 +14,7 @@ const { content: Content, status } = Astro.props;
 ---
 
 <div class="prose" data-is-published={status === PUBLISHED_STATUS.PUBLISHED}>
+  <span id="external-link-new-tab" class="sr-only">新しいタブで開きます</span>
   <Content />
 </div>
 
@@ -137,6 +138,15 @@ const { content: Content, status } = Astro.props;
 
   .prose a:active {
     color: var(--link-active);
+  }
+
+  .prose .external-link-icon {
+    display: inline-block;
+    width: 0.76em;
+    height: 0.76em;
+    margin-inline-start: 0.28em;
+    color: currentColor;
+    vertical-align: 0.06em;
   }
 
   .prose strong {
@@ -390,6 +400,13 @@ const { content: Content, status } = Astro.props;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .prose .remark-link-card-plus__meta > .external-link-icon {
+    width: 12px;
+    height: 12px;
+    margin-inline-start: auto;
+    flex: 0 0 auto;
   }
 
   .prose .remark-link-card-plus__thumbnail {

@@ -4,6 +4,9 @@ import icon from "astro-icon";
 
 import remarkGithubBlockquoteAlert from "remark-github-blockquote-alert";
 import remarkLinkCardPlus from "remark-link-card-plus";
+import rehypeExternalLinks, {
+  remarkExternalLinksInHtml,
+} from "./src/plugins/rehypeExternalLinks.mjs";
 
 import astroExpressiveCode from "astro-expressive-code";
 
@@ -17,6 +20,13 @@ export default defineConfig({
     remarkPlugins: [
       remarkGithubBlockquoteAlert,
       [remarkLinkCardPlus, { noFavicon: true }],
+      [
+        remarkExternalLinksInHtml,
+        { internalHosts: ["k-ito-blog.netlify.app"] },
+      ],
+    ],
+    rehypePlugins: [
+      [rehypeExternalLinks, { internalHosts: ["k-ito-blog.netlify.app"] }],
     ],
   },
   integrations: [
