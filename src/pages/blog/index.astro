@@ -2,260 +2,253 @@
 import { getCollection } from "astro:content";
 import { Icon } from "astro-icon/components";
 import BaseLayout from "~/layouts/BaseLayout.astro";
-import Timeline from "~/components/Timeline.astro";
+import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
-import { WRITING_STATUS } from "~/constants/writingStatus";
+import { VERIFICATION_STATUS_LABELS } from "~/constants/verificationStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
-import { type Category } from "~/constants/categories";
+import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
-const category = Astro.url.searchParams.get("category") as Category | null;
+const allPosts = await getCollection(
+  "posts",
+  ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
+);
 
-const posts = await getCollection("posts", ({ data }) => {
-  if (!category) {
-    return data.status !== PUBLISHED_STATUS.PRIVATE;
-  }
-  return (
-    data.status !== PUBLISHED_STATUS.PRIVATE &&
-    data.categories.includes(category)
-  );
-});
+const entries: TimelineEntry[] = allPosts
+  .map((post) => {
+    const isRevision =
+      post.data.updatedAt.getTime() > post.data.publishedAt.getTime();
+    const activityDate = isRevision
+      ? post.data.updatedAt
+      : post.data.publishedAt;
+    const isoDate = toIsoDate(activityDate);
+    const [year, month] = isoDate.split("-");
+    return {
+      slug: normalizePostSlug(post.id),
+      title: post.data.title,
+      isoDate,
+      displayDate: formatJapaneseDate(activityDate),
+      year,
+      month,
+      categories: post.data.categories.filter((item) => item !== "すべて"),
+      activity: isRevision ? "改訂" : "新規",
+      isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
+      verificationLabel: post.data.verificationStatus
+        ? VERIFICATION_STATUS_LABELS[post.data.verificationStatus]
+        : undefined,
+      revisionCount: post.data.revisions?.length ?? (isRevision ? 1 : 0),
+    };
+  })
+  .sort((a, b) => b.isoDate.localeCompare(a.isoDate));
 
-const sorted = posts.sort((a, b) => {
-  return (
-    new Date(b.data.publishedAt).getTime() -
-    new Date(a.data.publishedAt).getTime()
-  );
-});
-
-const toIso = (date: Date) => new Date(date).toISOString().split("T")[0];
-
-const entries = sorted.map((post) => {
-  const iso = toIso(post.data.publishedAt);
-  const [year, month] = iso.split("-");
-  return {
-    slug: normalizePostSlug(post.id),
-    title: post.data.title,
-    date: iso.replaceAll("-", "."),
-    year,
-    month,
-    categories: post.data.categories.filter((c) => c !== "すべて"),
-    wip:
-      post.data.status === PUBLISHED_STATUS.DRAFT ||
-      post.data.writingStatus !== WRITING_STATUS.DONE,
-  };
-});
-
-const total = entries.length;
+const fieldCounts = Array.from(
+  allPosts.reduce((map, post) => {
+    post.data.categories
+      .filter((item) => item !== "すべて")
+      .forEach((item) => map.set(item, (map.get(item) ?? 0) + 1));
+    return map;
+  }, new Map<string, number>()),
+).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
 ---
 
-<BaseLayout title="ノート一覧">
-  <div class="blog">
-    <header class="blog-head">
-      <div class="blog-head-top">
-        <h1 class="blog-title">ノート一覧</h1>
-        <span class="blog-count" id="post-count" data-total={total}>
-          {total} notes
+<BaseLayout title="索引">
+  <main class="index-page">
+    <header class="index-head">
+      <div class="index-title-row">
+        <h1>索引</h1>
+        <span id="post-count" data-total={entries.length} aria-live="polite">
+          {entries.length}件の記録
         </span>
       </div>
+      <p>言葉が決まっていれば検索、まだ決まっていなければ分野から辿れます。</p>
 
-      {
-        category && (
-          <p class="blog-filter-active">
-            <span class="blog-filter-mark">¶</span> {category}
-            <a href="/blog" class="blog-filter-clear">
-              解除
-            </a>
-          </p>
-        )
-      }
-
-      <div class="blog-tools">
-        <div class="search-field">
-          <Icon name="octicon:search-16" class="search-icon" />
-          <input
-            id="post-search-input"
-            type="search"
-            inputmode="search"
-            placeholder="タイトルで検索"
-            class="search-input"
-            aria-label="ノートのタイトル検索"
-          />
-          <button
-            type="button"
-            class="search-clear"
-            data-search-clear
-            aria-label="検索条件を外す"
-            hidden
-          >
-            <Icon name="octicon:x-16" />
-          </button>
-        </div>
+      <div class="search-field">
+        <Icon name="octicon:search-16" aria-hidden="true" />
+        <input
+          id="post-search-input"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          placeholder="記録名・分野を検索 /"
+          aria-label="記録名と分野を検索"
+        />
+        <button
+          type="button"
+          data-search-clear
+          aria-label="検索条件を外す"
+          hidden
+        >
+          <Icon name="octicon:x-16" aria-hidden="true" />
+        </button>
       </div>
+
+      <p class="active-filter" data-category-filter hidden>
+        分野「<span data-category-name></span>」を表示中 <a href="/blog">解除</a
+        >
+      </p>
     </header>
 
-    <Timeline entries={entries} variant="index" />
+    <nav class="fields" id="fields" aria-label="分野">
+      <ul>
+        {
+          fieldCounts.map(([field, count]) => (
+            <li>
+              <a href={`/blog?category=${encodeURIComponent(field)}`}>
+                <>
+                  <span>{field}</span>
+                  <span>{count}</span>
+                </>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
 
-    <p class="blog-empty" data-search-empty hidden>
-      合う記事が見つかりませんでした。
-      <button type="button" class="blog-empty-clear" data-search-clear>
-        条件を外す
-      </button>
-    </p>
-  </div>
+    <section class="index-records" aria-label="記録">
+      <Timeline entries={entries} variant="index" />
+      <p class="index-empty" data-search-empty hidden>
+        該当する記録はありません。<button type="button" data-search-clear
+          >条件を外す</button
+        >
+      </p>
+    </section>
+  </main>
 </BaseLayout>
 
 <style>
-  .blog {
+  .index-page {
     width: 100%;
-    max-width: 680px;
+    max-width: var(--max-width-content);
     margin: 0 auto;
-    padding: 40px 16px;
+    padding: 32px 16px 80px;
   }
 
-  .blog-head {
-    margin-bottom: 28px;
+  .index-head,
+  .fields,
+  .index-records {
+    max-width: var(--layout-stream);
+    margin-right: auto;
+    margin-left: auto;
   }
 
-  .blog-head-top {
+  .index-title-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 16px;
+    gap: 20px;
   }
 
-  .blog-title {
+  .index-title-row h1 {
     margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
+    color: var(--color-primary);
+    font-size: var(--text-2xl);
+    line-height: 1.2;
   }
 
-  .blog-count {
-    flex: none;
-    font-size: 13px;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
+  .index-title-row span,
+  .index-head > p {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
   }
 
-  .blog-filter-active {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 14px 0 0;
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .blog-filter-mark {
-    color: var(--accent-warm);
-  }
-
-  .blog-filter-clear {
-    color: var(--link);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .blog-tools {
-    margin-top: 16px;
+  .index-head > p {
+    margin: 12px 0 0;
   }
 
   .search-field {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 6px;
-    width: 100%;
-    max-width: 300px;
-    height: 38px;
-    padding: 0 10px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
-    transition: border-color 140ms ease-out;
+    gap: 8px;
+    width: min(100%, 360px);
+    min-height: 42px;
+    margin-top: 20px;
+    padding: 0 2px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border-strong);
   }
 
   .search-field:focus-within {
-    border-color: var(--focus);
+    border-bottom-color: var(--color-secondary);
   }
 
-  .search-input {
+  .search-field input {
+    appearance: none;
     flex: 1;
     min-width: 0;
-    height: 100%;
     border: 0;
+    outline: 0;
+    color: var(--color-text);
     background: transparent;
-    color: var(--text-primary);
-    font-size: 14px;
-    outline: none;
   }
 
-  .search-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  .search-icon {
-    flex: none;
-    font-size: 16px;
-    color: var(--text-muted);
-  }
-
-  .search-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    color: var(--text-muted);
-    border: 0;
-    background: transparent;
-    font-size: 14px;
-  }
-
-  .search-clear:hover {
-    color: var(--text-primary);
-  }
-
-  .search-clear[hidden] {
+  .search-field input::-webkit-search-cancel-button {
     display: none;
   }
 
-  .blog-empty {
-    margin: 28px 0 0;
-    padding: 32px 20px;
-    text-align: center;
-    font-size: 14px;
-    color: var(--text-secondary);
-    border: 1px dashed var(--border);
-    border-radius: var(--radius-card);
-  }
-
-  .blog-empty[hidden] {
-    display: none;
-  }
-
-  .blog-empty-clear {
-    margin-left: 8px;
-    color: var(--link);
-    border: 0;
+  .search-field button,
+  .index-empty button {
+    min-width: 32px;
+    min-height: 32px;
+    color: var(--color-interaction-text);
     background: transparent;
-    font-size: 14px;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    border: 0;
+    cursor: pointer;
   }
 
-  .blog-empty-clear:hover {
-    color: var(--link-hover);
+  .active-filter {
+    color: var(--color-primary) !important;
+  }
+
+  .fields {
+    margin-top: 32px;
+  }
+
+  .fields ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fields a {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .fields a span:last-child {
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 11px;
+  }
+
+  .index-records {
+    margin-top: 44px;
+  }
+
+  .index-empty {
+    margin: 28px 0;
+    padding: 24px 0;
+    color: var(--color-text-sub);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
   }
 
   @media (min-width: 640px) {
-    .blog {
-      padding: 48px 24px;
+    .index-page {
+      padding: 48px 24px 96px;
     }
   }
 </style>
 
 <script>
   import { initPostSearch } from "~/scripts/postSearch";
-
   initPostSearch();
 </script>

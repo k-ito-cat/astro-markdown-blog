@@ -1,85 +1,337 @@
 ---
-import ThemeSwitcher from "./ThemeSwitcher.astro";
+import { Icon } from "astro-icon/components";
+
+const pathname = Astro.url.pathname;
+const navItems = [
+  {
+    href: "/",
+    label: "記録",
+    icon: "octicon:pencil-16",
+    current: pathname === "/",
+  },
+  {
+    href: "/blog",
+    label: "索引",
+    icon: "octicon:list-unordered-16",
+    current: pathname.startsWith("/blog"),
+  },
+  {
+    href: "/blog#fields",
+    label: "分野",
+    icon: "octicon:hash-16",
+    current: false,
+  },
+  {
+    href: "/#works",
+    label: "制作物",
+    icon: "octicon:repo-16",
+    current: false,
+  },
+];
+const mobileNavItems = navItems.filter((item) => item.href !== "/");
 ---
 
 <header class="site-header">
-  <div class="site-header-inner">
-    <a href="/" class="site-logo" aria-label="Note ホーム">
-      <span class="site-logo-mark" aria-hidden="true">¶</span>
-      <span class="site-logo-name">Note</span>
+  <div class="desktop-edge">
+    <a
+      href="/"
+      class="edge-mark"
+      aria-label="ホーム"
+      aria-current={pathname === "/" ? "page" : undefined}
+    >
+      <Icon name="octicon:home-16" aria-hidden="true" />
     </a>
-    <nav class="site-nav" aria-label="サイト内ナビゲーション">
+    <nav class="edge-nav" aria-label="サイト内ナビゲーション">
+      {
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class="edge-link"
+            aria-current={item.current ? "page" : undefined}
+          >
+            <Icon name={item.icon} aria-hidden="true" />
+            <span>{item.label}</span>
+          </a>
+        ))
+      }
       {
         import.meta.env.DEV && (
-          <a href="/preview/posts" class="site-nav-link">
-            preview
+          <a href="/preview/posts" class="edge-link">
+            <Icon name="octicon:eye-16" aria-hidden="true" />
+            <span>プレビュー</span>
           </a>
         )
       }
-      <a href="/blog" class="site-nav-link">blog</a>
-      <ThemeSwitcher />
     </nav>
+  </div>
+
+  <div class="mobile-bar">
+    <a
+      href="/"
+      class="mobile-home"
+      aria-label="ホーム"
+      aria-current={pathname === "/" ? "page" : undefined}
+    >
+      <Icon name="octicon:home-16" aria-hidden="true" />
+    </a>
+    <details class="mobile-menu">
+      <summary aria-label="サイト内ナビゲーション">
+        <span class="menu-open-icon" aria-hidden="true">
+          <Icon name="octicon:three-bars-16" />
+        </span>
+        <span class="menu-close-icon" aria-hidden="true">
+          <Icon name="octicon:x-16" />
+        </span>
+      </summary>
+      <nav aria-label="モバイルナビゲーション">
+        {
+          mobileNavItems.map((item) => (
+            <a
+              href={item.href}
+              aria-current={item.current ? "page" : undefined}
+            >
+              <Icon name={item.icon} aria-hidden="true" />
+              <span>{item.label}</span>
+            </a>
+          ))
+        }
+        {
+          import.meta.env.DEV && (
+            <a href="/preview/posts">
+              <Icon name="octicon:eye-16" aria-hidden="true" />
+              <span>プレビュー</span>
+            </a>
+          )
+        }
+      </nav>
+    </details>
   </div>
 </header>
 
 <style>
-  .site-header {
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-base);
+  .desktop-edge {
+    display: none;
   }
 
-  .site-header-inner {
+  .mobile-bar {
+    position: relative;
+    z-index: 30;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    width: 100%;
-    max-width: var(--max-width-content);
-    margin: 0 auto;
-    padding: 12px 16px;
+    min-height: 52px;
+    padding: 0 16px;
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .site-logo {
+  .mobile-home,
+  .mobile-menu summary {
+    position: relative;
     display: inline-flex;
-    align-items: baseline;
-    gap: 7px;
-    text-decoration: none;
-  }
-
-  .site-logo-mark {
-    font-size: 15px;
-    line-height: 1;
-    color: var(--accent-warm);
-  }
-
-  .site-logo-name {
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--text-primary);
-  }
-
-  .site-nav {
-    display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: var(--color-primary);
   }
 
-  .site-nav-link {
-    font-size: 13px;
-    letter-spacing: 0.02em;
-    color: var(--text-secondary);
+  .mobile-home {
     text-decoration: none;
-    transition: color 140ms ease-out;
   }
 
-  .site-nav-link:hover {
-    color: var(--text-primary);
+  .mobile-home svg,
+  .mobile-menu summary svg {
+    width: 18px;
+    height: 18px;
   }
 
-  @media (min-width: 640px) {
-    .site-header-inner {
-      padding: 14px 24px;
+  .mobile-home[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    bottom: 2px;
+    left: 12px;
+    height: 2px;
+    background: var(--color-secondary);
+  }
+
+  .mobile-home:hover,
+  .mobile-home:focus-visible,
+  .mobile-menu summary:hover,
+  .mobile-menu summary:focus-visible,
+  .mobile-menu[open] summary {
+    color: var(--color-secondary);
+  }
+
+  .mobile-menu summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mobile-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu-close-icon {
+    display: none;
+  }
+
+  .mobile-menu[open] .menu-open-icon {
+    display: none;
+  }
+
+  .mobile-menu[open] .menu-close-icon {
+    display: inline-flex;
+  }
+
+  .mobile-menu nav {
+    position: absolute;
+    inset: 52px 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 20px;
+    padding: 20px 16px 24px;
+    background: var(--color-background);
+    border-bottom: 2px solid var(--color-primary);
+  }
+
+  .mobile-menu nav::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 16px;
+    width: 44px;
+    height: 2px;
+    background: var(--color-primary);
+  }
+
+  .mobile-menu nav a {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 10px 8px;
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+  }
+
+  .mobile-menu nav a:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-menu nav a svg {
+    color: var(--color-secondary);
+  }
+
+  .mobile-menu nav a::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 2px;
+    background: transparent;
+  }
+
+  .mobile-menu nav a:hover,
+  .mobile-menu nav a:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .mobile-menu nav a[aria-current="page"] {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .mobile-menu nav a[aria-current="page"]::before {
+    background: var(--color-primary);
+  }
+
+  @media (min-width: 960px) {
+    .mobile-bar {
+      display: none;
+    }
+
+    .desktop-edge {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      width: 48px;
+      overflow: hidden;
+      background: var(--color-background);
+      border-right: 2px solid var(--color-primary);
+      transition: width var(--duration-state) var(--ease-trace);
+    }
+
+    .desktop-edge:hover,
+    .desktop-edge:focus-within {
+      width: 196px;
+    }
+
+    .edge-mark {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 64px;
+      padding: 0 16px;
+      color: var(--color-primary);
+      font-weight: 700;
+      white-space: nowrap;
+      text-decoration: none;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .edge-mark > svg {
+      flex: 0 0 16px;
+      color: var(--color-secondary);
+    }
+
+    .edge-nav {
+      display: grid;
+      margin-top: 18px;
+    }
+
+    .edge-link {
+      position: relative;
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      align-items: center;
+      gap: 14px;
+      min-height: 44px;
+      padding: 0 16px;
+      color: var(--color-text-sub);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .edge-link::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 5px;
+      width: 0;
+      height: 1px;
+      background: var(--color-secondary);
+      transition: width var(--duration-feedback) var(--ease-trace);
+    }
+
+    .edge-link:hover,
+    .edge-link:focus-visible,
+    .edge-link[aria-current="page"] {
+      color: var(--color-primary);
+    }
+
+    .edge-link:hover::after,
+    .edge-link:focus-visible::after,
+    .edge-link[aria-current="page"]::after {
+      width: calc(100% - 48px);
     }
   }
 </style>

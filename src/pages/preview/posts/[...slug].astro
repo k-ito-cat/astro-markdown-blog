@@ -50,39 +50,46 @@ const posts = await getCollection("posts");
 <BaseLayout title={post ? `Preview｜${post.data.title}` : "Preview Posts"}>
   {
     post && Content ? (
-      <main class="mx-auto max-w-[var(--max-width-pc)] bg-transparent px-2 py-8 lg:px-[80px] lg:py-4">
-        <header class="mb-4">
+      <main class="preview-detail">
+        <header class="preview-toolbar">
           <a
             href="/preview/posts"
-            class="text-link hover:text-link-hover inline-flex items-center rounded-md border border-[var(--border-base)] px-3 py-1 text-sm no-underline hover:bg-[var(--bg-hover)]"
+            data-reading-return
+            data-return-paths='["/preview/posts"]'
           >
-            一覧に戻る
+            一覧へ戻る
           </a>
         </header>
 
         <div
           class:list={[
-            {
-              "grid gap-4 lg:grid-cols-[minmax(0,auto)_30%]":
-                headings.length > 0,
-            },
+            "preview-article-grid",
+            { "has-trace": headings.length > 0 },
           ]}
         >
-          <Navigation headings={headings} />
-          <div class="order-2 lg:order-1">
-            <Article
-              title={post.data.title}
-              publishedAt={post.data.publishedAt}
-              updatedAt={post.data.updatedAt}
-              categories={post.data.categories}
-              githubUrl={post.data.githubUrl}
-              content={Content}
+          <Article
+            slug={normalizePostSlug(post.id)}
+            title={post.data.title}
+            publishedAt={post.data.publishedAt}
+            updatedAt={post.data.updatedAt}
+            categories={post.data.categories}
+            githubUrl={post.data.githubUrl}
+            content={Content}
+            headings={headings}
+            status={post.data.status}
+            verificationStatus={post.data.verificationStatus}
+            revisions={post.data.revisions}
+            forceRenderContent
+            showGithubCard={false}
+          />
+          {headings.length > 0 && (
+            <Navigation
               headings={headings}
-              status={post.data.status}
-              forceRenderContent
-              showGithubCard={false}
+              returnHref="/preview/posts"
+              returnLabel="一覧へ戻る"
+              returnSourcePaths={["/preview/posts"]}
             />
-          </div>
+          )}
         </div>
       </main>
     ) : (
@@ -90,3 +97,46 @@ const posts = await getCollection("posts");
     )
   }
 </BaseLayout>
+
+<style>
+  .preview-detail {
+    width: 100%;
+    max-width: var(--max-width-content);
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .preview-toolbar {
+    margin-bottom: 28px;
+  }
+
+  .preview-toolbar a {
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+  }
+
+  .preview-toolbar a:hover,
+  .preview-toolbar a:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+  }
+
+  .preview-article-grid {
+    display: grid;
+    gap: 36px;
+  }
+
+  @media (min-width: 640px) {
+    .preview-detail {
+      padding: 36px 24px 96px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .preview-article-grid.has-trace {
+      grid-template-columns: minmax(0, 1fr) 180px;
+      gap: 48px;
+    }
+  }
+</style>

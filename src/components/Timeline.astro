@@ -1,67 +1,128 @@
 ---
-type Entry = {
+import RecordMark from "./RecordMark.astro";
+
+export type TimelineEntry = {
   slug: string;
   title: string;
-  date: string;
+  isoDate: string;
+  displayDate: string;
   year: string;
   month: string;
   categories: string[];
-  wip: boolean;
+  activity: "新規" | "改訂";
+  isWip: boolean;
+  verificationLabel?: string;
+  revisionCount: number;
 };
 
 type Props = {
-  entries: Entry[];
+  entries: TimelineEntry[];
   variant?: "stream" | "index";
 };
 
 const { entries, variant = "stream" } = Astro.props;
 ---
 
-<ol class:list={["timeline", { "is-index": variant === "index" }]}>
-  {
-    entries.map((entry, index) => {
-      const prev = entries[index - 1];
-      const showYear = index === 0 || prev.year !== entry.year;
-      const showMonth = showYear || prev.month !== entry.month;
-      return (
-        <Fragment>
-          {showYear && (
-            <li class="tl-year" aria-hidden="true">
-              {entry.year}
-            </li>
-          )}
-          {showMonth && (
-            <li class="tl-month" aria-hidden="true">
-              {entry.month}
-            </li>
-          )}
-          <li
-            class:list={["tl-entry", { "is-wip": entry.wip }]}
-            data-title={entry.title.toLowerCase()}
-          >
-            <span class="tl-node" aria-hidden="true" />
-            <a href={`/blog/${entry.slug}`} class="tl-body">
-              <span class="tl-meta">
-                <time class="tl-date">
-                  {variant === "index"
-                    ? entry.date.split(".").slice(1).join(".")
-                    : entry.date}
-                </time>
-                {entry.wip && <span class="tl-wip">WIP</span>}
-              </span>
-              <span class="tl-title">{entry.title}</span>
-              {entry.categories.length > 0 && (
-                <span class="tl-tags">{entry.categories.join(" · ")}</span>
+<div class="timeline-root" data-timeline-root>
+  <ol class:list={["timeline", { "is-index": variant === "index" }]}>
+    {
+      entries.map((entry, index) => {
+        const previous = entries[index - 1];
+        const showDate = index === 0 || previous.isoDate !== entry.isoDate;
+        const showMonth =
+          index === 0 ||
+          previous.year !== entry.year ||
+          previous.month !== entry.month;
+        return (
+          <Fragment>
+            {showDate && (
+              <li
+                class="tl-date-group"
+                data-date-group
+                id={
+                  showMonth ? `month-${entry.year}-${entry.month}` : undefined
+                }
+              >
+                <time datetime={entry.isoDate}>{entry.displayDate}</time>
+              </li>
+            )}
+            <li
+              class:list={["tl-entry", { "is-wip": entry.isWip }]}
+              data-record-entry
+              data-search-text={`${entry.title} ${entry.categories.join(" ")}`.toLocaleLowerCase(
+                "ja",
               )}
-            </a>
-          </li>
-        </Fragment>
-      );
-    })
+              data-categories={JSON.stringify(entry.categories)}
+              data-year={entry.year}
+              data-month={entry.month}
+            >
+              <span class="tl-node" aria-hidden="true" />
+              <div
+                class:list={[
+                  "tl-row",
+                  { "has-tags": entry.categories.length > 0 },
+                ]}
+              >
+                <a
+                  href={`/blog/${entry.slug}`}
+                  class="tl-body"
+                  data-record-link
+                  aria-describedby={`record-context-${index}`}
+                >
+                  <span class="tl-meta">
+                    <span
+                      class:list={[
+                        "tl-activity",
+                        { "is-revision": entry.activity === "改訂" },
+                      ]}
+                    >
+                      {entry.activity}
+                    </span>
+                    {entry.isWip && <span class="tl-wip">WIP</span>}
+                    {entry.verificationLabel && (
+                      <span class="tl-verification">
+                        {entry.verificationLabel}
+                      </span>
+                    )}
+                  </span>
+                  <span class="tl-title">{entry.title}</span>
+                  {entry.categories.length > 0 && (
+                    <span class="tl-tags">{entry.categories.join("・")}</span>
+                  )}
+                </a>
+                <RecordMark slug={entry.slug} title={entry.title} />
+              </div>
+              <aside class="tl-context" id={`record-context-${index}`}>
+                <p>{entry.displayDate}の記録</p>
+                {entry.categories.length > 0 && (
+                  <p>分野: {entry.categories.join("・")}</p>
+                )}
+                {entry.verificationLabel && (
+                  <p>状態: {entry.verificationLabel}</p>
+                )}
+                {entry.revisionCount > 0 && (
+                  <p>改訂: {entry.revisionCount}回</p>
+                )}
+              </aside>
+            </li>
+          </Fragment>
+        );
+      })
+    }
+  </ol>
+  {
+    variant === "index" && (
+      <div class="timeline-mist-space" aria-hidden="true" />
+    )
   }
-</ol>
+  <div class="timeline-mist" data-timeline-mist aria-hidden="true"></div>
+</div>
 
 <style>
+  .timeline-root {
+    --timeline-mist-height: 96px;
+  }
+
   .timeline {
     position: relative;
     margin: 0;
@@ -72,141 +133,307 @@ const { entries, variant = "stream" } = Astro.props;
   .timeline::before {
     content: "";
     position: absolute;
-    left: 6px;
-    top: 8px;
-    bottom: 8px;
-    width: 1px;
-    background: var(--border);
+    top: 10px;
+    bottom: 10px;
+    left: 7px;
+    width: 2px;
+    background: var(--color-primary);
+    opacity: 0.78;
   }
 
-  .tl-year {
-    margin: 44px 0 8px;
-    padding-left: 30px;
-    font-size: 20px;
+  .tl-date-group {
+    position: relative;
+    margin: 40px 0 8px;
+    padding-left: 34px;
+    color: var(--color-primary);
+    font-size: var(--text-sm);
     font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
   }
 
-  .tl-year:first-child {
+  .tl-date-group:first-child {
     margin-top: 0;
   }
 
-  .tl-month {
-    margin: 20px 0 4px;
-    padding-left: 30px;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
+  .tl-date-group::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 14px;
+    height: 2px;
+    background: var(--color-primary);
   }
 
   .tl-entry {
     position: relative;
-    padding-left: 30px;
+    padding-left: 34px;
+  }
+
+  .tl-entry.is-marked::after {
+    content: "";
+    position: absolute;
+    top: 24px;
+    left: 29px;
+    width: 7px;
+    height: 18px;
+    background: var(--color-accent);
+    transform: skewY(-7deg);
+    z-index: -1;
   }
 
   .tl-node {
     position: absolute;
-    left: 2px;
-    top: 18px;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--accent-warm);
-    box-shadow: 0 0 0 3px var(--bg-base);
+    top: 26px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    background: var(--color-background);
+    border: 2px solid var(--color-primary);
   }
 
   .tl-entry.is-wip .tl-node {
-    background: var(--bg-base);
-    border: 1.5px solid var(--text-muted);
+    border-style: dashed;
+  }
+
+  .tl-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .tl-body {
+    position: relative;
     display: block;
-    padding: 10px 0;
+    min-width: 0;
+    padding: 13px 4px 14px 0;
+    color: inherit;
     text-decoration: none;
+  }
+
+  .tl-body::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: var(--color-secondary);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .tl-body:hover::after,
+  .tl-body:focus-visible::after {
+    transform: scaleX(1);
   }
 
   .tl-meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    min-height: 18px;
   }
 
-  .tl-date {
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
+  .tl-activity,
+  .tl-wip,
+  .tl-verification {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--color-text-sub);
+  }
+
+  .tl-activity {
+    font-weight: 700;
+    color: var(--color-primary);
   }
 
   .tl-wip {
-    padding: 1px 5px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
     font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-label);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-bottom: 1px dashed currentColor;
+  }
+
+  .tl-activity.is-revision,
+  .tl-verification {
+    background: linear-gradient(transparent 52%, var(--color-accent) 52%);
   }
 
   .tl-title {
     display: block;
-    margin: 3px 0;
-    font-size: 16px;
+    margin-top: 4px;
+    color: var(--color-text);
+    font-size: clamp(1rem, 2vw, 1.125rem);
     font-weight: 500;
-    line-height: 1.5;
-    color: var(--text-primary);
+    line-height: 1.55;
+    opacity: 1;
+    transition: opacity var(--duration-page) ease-out;
+    word-break: auto-phrase;
   }
 
-  .tl-body:hover .tl-title {
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .tl-body:hover .tl-date {
-    color: var(--accent-warm);
+  .tl-entry.is-awaiting-reveal .tl-title {
+    opacity: 0.7;
   }
 
   .tl-tags {
     display: block;
-    font-size: 12px;
-    letter-spacing: 0.01em;
-    color: var(--text-muted);
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 11px;
   }
 
-  .tl-entry.hidden {
+  .tl-context {
     display: none;
   }
 
-  .tl-year.is-hidden,
-  .tl-month.is-hidden {
+  .tl-entry[hidden],
+  .tl-date-group[hidden] {
     display: none;
   }
 
-  .timeline.is-index::before {
+  .timeline-mist-space {
     display: none;
+    height: var(--timeline-mist-height);
   }
 
-  .timeline.is-index .tl-node {
-    display: none;
+  .timeline-root.has-mist .timeline-mist-space {
+    display: block;
   }
 
-  .timeline.is-index .tl-month {
-    display: none;
+  .timeline-mist {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: var(--timeline-mist-height);
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in srgb, var(--color-background) 8%, transparent) 28%,
+      color-mix(in srgb, var(--color-background) 58%, transparent) 72%,
+      color-mix(in srgb, var(--color-background) 96%, transparent) 100%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-feedback) ease-out;
   }
 
-  .timeline.is-index .tl-entry {
-    padding-left: 0;
+  .timeline-mist.is-visible {
+    opacity: 1;
   }
 
-  .timeline.is-index .tl-year {
-    padding-left: 0;
-    margin-top: 36px;
+  @media (max-width: 639px) {
+    .tl-row.has-tags {
+      position: relative;
+      display: block;
+    }
+
+    .tl-row.has-tags .tl-tags {
+      padding-right: 44px;
+    }
+
+    .tl-row.has-tags > :global(.record-mark) {
+      position: absolute;
+      right: 0;
+      bottom: 5px;
+    }
   }
 
-  .timeline.is-index .tl-year:first-child {
-    margin-top: 0;
+  @media (min-width: 1400px) {
+    .tl-context {
+      position: absolute;
+      top: 10px;
+      left: calc(100% + 52px);
+      display: block;
+      width: 220px;
+      padding-left: 16px;
+      color: var(--color-text-muted);
+      font-size: 12px;
+      line-height: 1.7;
+      border-left: 1px solid var(--color-secondary);
+      opacity: 0;
+      transform: translateX(-8px);
+      pointer-events: none;
+      transition:
+        opacity var(--duration-feedback) ease,
+        transform var(--duration-feedback) var(--ease-trace);
+    }
+
+    .tl-context p {
+      margin: 0;
+    }
+
+    .tl-entry:hover .tl-context,
+    .tl-entry:focus-within .tl-context {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (min-width: 760px) {
+    .timeline-root {
+      --timeline-mist-height: 160px;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .timeline-mist,
+    .timeline-mist-space {
+      display: none;
+    }
   }
 </style>
+
+<script>
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const entries = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-record-entry]"),
+  );
+  const timelineRoot = document.querySelector<HTMLElement>(
+    "[data-timeline-root]",
+  );
+  const timelineMist = document.querySelector<HTMLElement>(
+    "[data-timeline-mist]",
+  );
+
+  if (!reducedMotion.matches && "IntersectionObserver" in window) {
+    if (timelineRoot && timelineMist) {
+      timelineRoot.classList.add("has-mist");
+      const mistObserver = new IntersectionObserver(
+        ([timelineEntry]) => {
+          timelineMist.classList.toggle(
+            "is-visible",
+            timelineEntry?.isIntersecting ?? false,
+          );
+        },
+        { rootMargin: "-80% 0px 0px 0px" },
+      );
+      mistObserver.observe(timelineRoot);
+    }
+
+    const revealObserver = new IntersectionObserver(
+      (observedEntries) => {
+        observedEntries.forEach((observedEntry) => {
+          if (!observedEntry.isIntersecting) return;
+          observedEntry.target.classList.remove("is-awaiting-reveal");
+          revealObserver.unobserve(observedEntry.target);
+        });
+      },
+      { rootMargin: "0px 0px -8%", threshold: 0.05 },
+    );
+
+    entries.forEach((entry) => {
+      if (entry.getBoundingClientRect().top <= window.innerHeight * 0.92)
+        return;
+      entry.classList.add("is-awaiting-reveal");
+      revealObserver.observe(entry);
+    });
+  }
+</script>

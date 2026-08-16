@@ -1,0 +1,138 @@
+---
+type RelationRecord = { slug: string; title: string };
+type RelationGroup = {
+  label: string;
+  description: string;
+  records: RelationRecord[];
+};
+type Props = {
+  groups: RelationGroup[];
+  sameField?: RelationRecord[];
+  older?: RelationRecord;
+  newer?: RelationRecord;
+};
+const { groups, sameField = [], older, newer } = Astro.props;
+const meaningfulGroups = groups.filter((group) => group.records.length > 0);
+---
+
+{
+  (meaningfulGroups.length > 0 || sameField.length > 0 || older || newer) && (
+    <nav class="record-relations" aria-label="記録同士の関係">
+      {meaningfulGroups.map((group) => (
+        <section>
+          <p class="relation-label">{group.label}</p>
+          <p class="relation-description">{group.description}</p>
+          <ul>
+            {group.records.map((record) => (
+              <li>
+                <a href={`/blog/${record.slug}`}>→ {record.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {meaningfulGroups.length === 0 && sameField.length > 0 && (
+        <section>
+          <p class="relation-label">関連する記録</p>
+          <ul>
+            {sameField.map((record) => (
+              <li>
+                <a href={`/blog/${record.slug}`}>→ {record.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {(older || newer) && (
+        <div class="sequence">
+          {older && (
+            <a href={`/blog/${older.slug}`}>
+              <small>ひとつ前の記録</small>
+              <span>{older.title}</span>
+            </a>
+          )}
+          {newer && (
+            <a href={`/blog/${newer.slug}`}>
+              <small>ひとつ後の記録</small>
+              <span>{newer.title}</span>
+            </a>
+          )}
+        </div>
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .record-relations {
+    max-width: var(--measure-prose);
+    margin: 64px auto 0;
+    padding-top: 26px;
+    border-top: 2px solid var(--color-primary);
+  }
+
+  .record-relations > * + * {
+    margin-top: 30px;
+  }
+
+  .relation-label {
+    margin: 0;
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  .relation-description {
+    margin: 4px 0 10px;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .record-relations ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .record-relations li {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .record-relations a {
+    color: var(--color-interaction-text);
+    text-decoration: none;
+  }
+
+  .record-relations a:hover,
+  .record-relations a:focus-visible {
+    text-decoration: underline;
+  }
+
+  .sequence {
+    display: grid;
+    gap: 1px;
+    background: var(--color-border);
+  }
+
+  .sequence a {
+    display: grid;
+    gap: 4px;
+    padding: 12px 0;
+    background: var(--color-background);
+  }
+
+  .sequence small {
+    color: var(--color-text-muted);
+  }
+  .sequence span {
+    color: var(--color-text);
+  }
+
+  @media (min-width: 640px) {
+    .sequence {
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      background: none;
+    }
+  }
+</style>

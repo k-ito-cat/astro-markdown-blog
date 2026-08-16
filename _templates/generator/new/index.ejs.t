@@ -15,6 +15,16 @@ categories: []
 status: "private"
 writingStatus: "todo"
 priority: "none"
+# verificationStatus: in_progress | verified | needs_review
+# verificationStatus: "in_progress"
+# relations:
+#   prerequisites: []
+#   related: []
+#   developments: []
+#   replacements: []
+# revisions:
+#   - date: "<%= new Date().toISOString().split("T")[0] %>"
+#     summary: "初版"
 ---
 
 ここに本文を書く

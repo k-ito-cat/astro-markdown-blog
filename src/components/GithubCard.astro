@@ -1,86 +1,63 @@
 ---
 import { Icon } from "astro-icon/components";
 
-type Props = {
-  url: string;
-};
+type Props = { url: string };
 const { url } = Astro.props;
 
-function extractRepoApiUrl(url: string): string {
-  const match = url.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)/);
-  if (!match) throw new Error("GitHubのURLではありません");
-  const [, owner, repo] = match;
-  return `https://api.github.com/repos/${owner}/${repo}`;
+const match = url.match(/^https:\/\/github\.com\/([^/]+)\/([^/#?]+)/);
+const fullName = match ? `${match[1]}/${match[2]}` : url.replace(/^https?:\/\//, "");
+let repoInfo: { full_name: string; description?: string | null; language?: string | null; stargazers_count?: number | null } = {
+  full_name: fullName,
+};
+
+if (match) {
+  const token = import.meta.env.GITHUB_REPO_METADATA_TOKEN;
+  try {
+    const response = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (response.ok) repoInfo = await response.json();
+  } catch {
+    // Repository metadata is enhancement; the GitHub link remains useful offline.
+  }
 }
-const apiUrl = extractRepoApiUrl(url);
-const res = await fetch(apiUrl, {
-  headers: {
-    Authorization: `Bearer ${import.meta.env.GITHUB_REPO_METADATA_TOKEN}`,
-  },
-});
 
-if (!res.ok) {
-  throw new Error(String(res.status));
-}
-
-const repoInfo = await res.json();
-
-const stars =
-  typeof repoInfo.stargazers_count === "number"
-    ? repoInfo.stargazers_count
-    : null;
-const language =
-  typeof repoInfo.language === "string" ? repoInfo.language : null;
-
-function formatCompactNumber(n: number): string {
-  return new Intl.NumberFormat("en", { notation: "compact" }).format(n);
-}
+const stars = typeof repoInfo.stargazers_count === "number" ? repoInfo.stargazers_count : null;
+const language = typeof repoInfo.language === "string" ? repoInfo.language : null;
+const formatCompactNumber = (value: number) =>
+  new Intl.NumberFormat("en", { notation: "compact" }).format(value);
 ---
 
-<a
-  href={url}
-  target="_blank"
-  rel="noopener noreferrer"
-  class="group my-4 flex min-w-0 items-start gap-2 no-underline"
-  aria-label={`Open ${repoInfo.full_name} on GitHub`}
->
-  <span
-    class="text-meta ease group-hover:text-link mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center transition-colors duration-300"
-  >
-    <Icon name="octicon:mark-github-16" width="16" height="16" />
+<a href={url} target="_blank" rel="noopener noreferrer" class="github-reference" aria-label={`${repoInfo.full_name}をGitHubで開く`}>
+  <Icon name="octicon:mark-github-16" aria-hidden="true" />
+  <span class="github-copy">
+    <strong>{repoInfo.full_name}</strong>
+    {repoInfo.description && <span>{repoInfo.description}</span>}
   </span>
-
-  <div class="min-w-0 flex-1">
-    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <span
-        class="text-link ease group-hover:text-link-hover min-w-0 truncate font-medium transition-colors duration-300"
-      >
-        {repoInfo.full_name}
-      </span>
-
-      {
-        (language || typeof stars === "number") && (
-          <span class="text-small text-meta flex items-center gap-2">
-            {language && <span>{language}</span>}
-            {language && typeof stars === "number" && (
-              <span aria-hidden="true">·</span>
-            )}
-            {typeof stars === "number" && (
-              <span class="whitespace-nowrap">
-                ★ {formatCompactNumber(stars)}
-              </span>
-            )}
-          </span>
-        )
-      }
-    </div>
-
-    {
-      repoInfo.description && (
-        <p class="text-small text-secondary mt-1 line-clamp-1">
-          {repoInfo.description}
-        </p>
-      )
-    }
-  </div>
+  {(language || stars !== null) && (
+    <span class="github-meta machine">
+      {language}{language && stars !== null && " · "}{stars !== null && `★ ${formatCompactNumber(stars)}`}
+    </span>
+  )}
 </a>
+
+<style>
+  .github-reference {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    padding: 10px 0;
+    color: var(--color-text-sub);
+    text-decoration: none;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .github-reference:hover,
+  .github-reference:focus-visible { color: var(--color-interaction-text); }
+  .github-copy { display: grid; min-width: 0; gap: 2px; }
+  .github-copy strong { color: var(--color-interaction-text); font-size: var(--text-sm); }
+  .github-copy > span { overflow: hidden; color: var(--color-text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+  .github-meta { color: var(--color-text-muted); font-size: 11px; }
+</style>

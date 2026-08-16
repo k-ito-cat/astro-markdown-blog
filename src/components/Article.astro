@@ -1,35 +1,38 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import { Icon } from "astro-icon/components";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
 import Meta from "./Meta.astro";
-import type { Category } from "~/constants/categories";
 import GithubCard from "./GithubCard.astro";
+import RecordMark from "./RecordMark.astro";
+import RevisionHistory from "./RevisionHistory.astro";
+import type { Category } from "~/constants/categories";
 import {
   PUBLISHED_STATUS,
   type PublishedStatus,
 } from "~/constants/publishedStatus";
+import type { VerificationStatus } from "~/constants/verificationStatus";
 import { HEADING_LEVEL } from "~/constants/headingLevel";
-import { Icon } from "astro-icon/components";
 
 type Props = {
+  slug: string;
   title: string;
   publishedAt: Date;
   updatedAt: Date;
   categories: Category[];
   githubUrl?: string;
   content: AstroComponentFactory;
-  headings?: {
-    depth: number;
-    slug: string;
-    text: string;
-  }[];
+  headings?: { depth: number; slug: string; text: string }[];
   status: PublishedStatus;
+  verificationStatus?: VerificationStatus;
+  revisions?: { date: Date; summary: string }[];
   forceRenderContent?: boolean;
   showGithubCard?: boolean;
 };
 
 const {
+  slug,
   title,
   publishedAt,
   updatedAt,
@@ -38,56 +41,55 @@ const {
   content,
   headings = [],
   status,
+  verificationStatus,
+  revisions,
   forceRenderContent = false,
   showGithubCard = true,
 } = Astro.props;
-
 const tocHeadings = headings.filter(
   (heading) =>
     heading.depth === HEADING_LEVEL.TWO ||
     heading.depth === HEADING_LEVEL.THREE,
 );
-
-const isDraft = status.includes(PUBLISHED_STATUS.DRAFT);
+const isDraft = status === PUBLISHED_STATUS.DRAFT;
 const showContent = !isDraft || forceRenderContent;
-
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
 ---
 
 <article class="article">
   <header class="article-header">
-    <h1 class="article-title">{title}</h1>
-    <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
+    <div class="article-title-row">
+      <h1 class="article-title">{title}</h1>
+      <RecordMark slug={slug} title={title} />
+    </div>
+    <Meta
+      publishedAt={publishedAt}
+      updatedAt={updatedAt}
+      verificationStatus={verificationStatus}
+    />
     <Categories categories={categories} />
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
 
   {
     showContent && tocHeadings.length > 0 && (
-      <details class="mobile-toc">
-        <summary class="mobile-toc-summary">
-          <span class="mobile-toc-label">
-            <Icon name="octicon:list-unordered-16" />
-            目次
+      <details class="article-structure" open>
+        <summary>
+          <span>
+            この記録の構成
+            <small>{tocHeadings.length}項目</small>
           </span>
-          <Icon name="octicon:chevron-down-16" class="mobile-toc-chevron" />
+          <Icon name="octicon:chevron-down-16" aria-hidden="true" />
         </summary>
-        <ul class="mobile-toc-list">
+        <ol>
           {tocHeadings.map((heading) => (
-            <li>
-              <a
-                href={`#${heading.slug}`}
-                class:list={[
-                  "mobile-toc-link",
-                  { "is-h3": heading.depth === HEADING_LEVEL.THREE },
-                ]}
-                data-toc-link
-              >
+            <li class:list={{ "is-h3": heading.depth === HEADING_LEVEL.THREE }}>
+              <a href={`#${heading.slug}`} data-structure-link>
                 {heading.text}
               </a>
             </li>
           ))}
-        </ul>
+        </ol>
       </details>
     )
   }
@@ -96,23 +98,21 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     showContent ? (
       <Prose content={content} status={status} />
     ) : (
-      <p class="article-draft-note">
-        この投稿は下書き状態です。公開されるまでお待ちください。
-      </p>
+      <p class="draft-note">この記録は検討中です。本文は公開されていません。</p>
     )
   }
 
+  {showContent && <RevisionHistory revisions={revisions} />}
+
   <footer class="article-footer">
-    <span class="article-share-label">この記事を共有</span>
+    <span>この記録を共有</span>
     <a
       href={xShareUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Xでシェア"
-      title="Xでシェア"
-      class="share-button"
+      aria-label="Xで共有"
     >
-      <Icon name="x-logo" width={16} height={16} />
+      <Icon name="x-logo" width={16} height={16} aria-hidden="true" />
     </a>
   </footer>
 </article>
@@ -124,174 +124,133 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   .article-header {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: grid;
+    gap: 15px;
     max-width: var(--measure-prose);
-    margin: 0 auto 24px;
+    margin: 0 auto 30px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--color-primary);
+  }
+
+  .article-title-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
   }
 
   .article-title {
     margin: 0;
-    font-size: 28px;
+    color: var(--color-primary);
+    font-size: var(--text-2xl);
     font-weight: 700;
-    line-height: 1.4;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
+    line-height: 1.35;
+    letter-spacing: -0.025em;
     word-break: auto-phrase;
   }
 
-  .mobile-toc {
+  .article-structure {
     max-width: var(--measure-prose);
     margin: 0 auto 24px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .mobile-toc-summary {
+  .article-structure summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
-    list-style: none;
+    min-height: 40px;
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+    font-weight: 700;
     cursor: pointer;
-    font-size: 13px;
-    color: var(--text-secondary);
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
+    list-style: none;
   }
 
-  .mobile-toc-summary::-webkit-details-marker {
+  .article-structure summary small {
+    margin-left: 8px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .article-structure summary::-webkit-details-marker {
     display: none;
   }
-
-  .mobile-toc-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .mobile-toc-chevron {
-    transition: transform 160ms ease-out;
-  }
-
-  .mobile-toc[open] .mobile-toc-chevron {
+  .article-structure[open] summary :global(svg) {
     transform: rotate(180deg);
   }
 
-  .mobile-toc :global(svg) {
-    font-size: 15px;
-  }
-
-  .mobile-toc-list {
+  .article-structure ol {
     display: grid;
-    gap: 2px;
-    margin: 6px 0 0;
-    padding: 8px;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 0;
     list-style: none;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
   }
 
-  .mobile-toc-link {
-    display: block;
-    padding: 4px 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    border-radius: var(--radius-label);
+  .article-structure li.is-h3 {
+    padding-left: 18px;
   }
-
-  .mobile-toc-link:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
+  .article-structure a {
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
     text-decoration: none;
   }
-
-  .mobile-toc-link.is-h3 {
-    padding-left: 20px;
+  .article-structure a:hover {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
   }
 
-  @media (min-width: 1024px) {
-    .mobile-toc {
-      display: none;
-    }
-  }
-
-  .article-draft-note {
+  .draft-note {
     max-width: var(--measure-prose);
-    margin: 32px auto 0;
-    color: var(--text-secondary);
+    margin: 32px auto;
+    padding-left: 14px;
+    color: var(--color-text-sub);
+    border-left: 2px solid var(--color-primary);
   }
 
   .article-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
     max-width: var(--measure-prose);
     margin: 48px auto 0;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    border-top: 1px solid var(--color-border);
   }
 
-  .article-share-label {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-
-  .share-button {
+  .article-footer a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
+    width: 36px;
+    height: 36px;
+    color: var(--color-text-sub);
+    border: 1px solid var(--color-border);
     text-decoration: none;
-    transition:
-      background-color 140ms ease-out,
-      color 140ms ease-out,
-      border-color 140ms ease-out;
-  }
-
-  .share-button:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
-    border-color: var(--accent-warm);
-  }
-
-  @media (min-width: 640px) {
-    .article-title {
-      font-size: 34px;
-    }
   }
 </style>
 
 <style is:global>
-  h2,
-  h3 {
+  .prose h2,
+  .prose h3 {
     scroll-margin-top: 24px;
-  }
-
-  .scroll {
-    overflow: scroll;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scroll::-webkit-scrollbar {
-    display: none;
   }
 </style>
 
 <script>
-  document.querySelectorAll("[data-toc-link]").forEach((link) => {
+  document.querySelectorAll("[data-structure-link]").forEach((link) => {
     link.addEventListener("click", () => {
       const details = link.closest("details");
-      if (details instanceof HTMLDetailsElement) {
+      if (
+        details instanceof HTMLDetailsElement &&
+        matchMedia("(max-width: 639px)").matches
+      )
         details.open = false;
-      }
     });
   });
 </script>

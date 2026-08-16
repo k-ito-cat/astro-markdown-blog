@@ -119,6 +119,7 @@ const { content: Content, status } = Astro.props;
 
   .prose a {
     color: var(--link);
+    overflow-wrap: anywhere;
     text-decoration: underline;
     text-underline-offset: 2px;
     text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
@@ -150,7 +151,7 @@ const { content: Content, status } = Astro.props;
   .prose h2,
   .prose h3,
   .prose h4 {
-    color: var(--text-primary);
+    color: var(--color-primary);
     line-height: var(--leading-heading);
     font-weight: 700;
     scroll-margin-top: 24px;
@@ -160,7 +161,7 @@ const { content: Content, status } = Astro.props;
     font-size: 24px;
     margin: 48px 0 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--color-border-strong);
   }
 
   .prose h3 {
@@ -232,6 +233,10 @@ const { content: Content, status } = Astro.props;
   }
 
   .prose .expressive-code {
+    --ec-codeFontFml: var(--font-machine);
+    --ec-uiFontFml: var(--font-human);
+    width: 100%;
+    max-width: 100%;
     margin: 24px 0;
   }
 
@@ -322,8 +327,8 @@ const { content: Content, status } = Astro.props;
     align-items: stretch;
     gap: 16px;
     border: 1px solid var(--border);
-    background: var(--bg-card);
-    border-radius: var(--radius-card);
+    background: transparent;
+    border-radius: 0;
     overflow: hidden;
     text-decoration: none;
     color: inherit;
@@ -333,8 +338,8 @@ const { content: Content, status } = Astro.props;
   }
 
   .prose .remark-link-card-plus__card:hover {
-    border-color: var(--accent-warm);
-    background: var(--bg-hover);
+    border-color: var(--color-secondary);
+    background: transparent;
   }
 
   .prose .remark-link-card-plus__main {
@@ -425,78 +430,112 @@ const { content: Content, status } = Astro.props;
     }
   }
 
-  /* Callout (GitHub blockquote alert): 淡い面 + 左線 + ラベルで識別し、強い塗りや影に寄せない */
+  /* Callout: 本文の流れを横切る Line と余白で、注釈の開始・終了を示す */
   .prose .markdown-alert {
-    margin: 24px 0;
-    padding: 4px 18px;
-    border-left: 2px solid var(--border-strong);
+    --annotation-color: var(--info);
+    --annotation-line-size: 1px;
+    --annotation-surface: var(--color-annotation-note-surface);
+    margin: 34px 0;
+    padding: 17px clamp(16px, 3vw, 24px) 20px;
+    color: var(--text-primary);
+    background: var(--annotation-surface);
+    border: 0;
   }
 
   .prose .markdown-alert-note {
-    border-left-color: var(--info);
-  }
-  .prose .markdown-alert-note .markdown-alert-title {
-    color: color-mix(in srgb, var(--info) 70%, var(--text-primary));
-  }
-  .prose .markdown-alert-note svg {
-    color: var(--info);
-    fill: var(--info);
+    --annotation-color: var(--info);
+    --annotation-surface: var(--color-annotation-note-surface);
   }
 
   .prose .markdown-alert-tip {
-    border-left-color: var(--success);
+    --annotation-color: var(--success);
+    --annotation-surface: var(--color-annotation-tip-surface);
   }
-  .prose .markdown-alert-tip .markdown-alert-title {
-    color: color-mix(in srgb, var(--success) 70%, var(--text-primary));
-  }
-  .prose .markdown-alert-tip svg {
-    color: var(--success);
-    fill: var(--success);
+
+  .prose .markdown-alert-important {
+    --annotation-color: var(--color-primary);
+    --annotation-line-size: 2px;
+    --annotation-surface: var(--color-annotation-important-surface);
   }
 
   .prose .markdown-alert-warning {
-    border-left-color: var(--warning);
-  }
-  .prose .markdown-alert-warning .markdown-alert-title {
-    color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
-  }
-  .prose .markdown-alert-warning svg {
-    color: var(--warning);
-    fill: var(--warning);
+    --annotation-color: var(--warning);
+    --annotation-line-size: 2px;
+    --annotation-surface: var(--color-annotation-warning-surface);
   }
 
-  .prose .markdown-alert-caution,
-  .prose .markdown-alert-important {
-    border-left-color: var(--danger);
-  }
-  .prose .markdown-alert-caution .markdown-alert-title,
-  .prose .markdown-alert-important .markdown-alert-title {
-    color: color-mix(in srgb, var(--danger) 70%, var(--text-primary));
-  }
-  .prose .markdown-alert-caution svg,
-  .prose .markdown-alert-important svg {
-    color: var(--danger);
-    fill: var(--danger);
+  .prose .markdown-alert-caution {
+    --annotation-color: var(--danger);
+    --annotation-line-size: 3px;
+    --annotation-surface: var(--color-annotation-caution-surface);
+    margin-block: 40px;
   }
 
   .prose .markdown-alert-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 600;
+    gap: 12px;
+    margin: 0 0 13px;
+    color: var(--annotation-color);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
   }
 
-  .prose .markdown-alert p {
+  .prose .markdown-alert-title::after {
+    content: "";
+    flex: 1;
+    height: var(--annotation-line-size);
+    background: currentColor;
+    opacity: 0.82;
+  }
+
+  .prose .markdown-alert-tip .markdown-alert-title::after {
+    background: linear-gradient(
+      to right,
+      var(--color-accent) 0 48px,
+      var(--annotation-color) 48px
+    );
+  }
+
+  .prose .markdown-alert-title svg {
+    display: none;
+  }
+
+  .prose .markdown-alert > :not(.markdown-alert-title) {
     margin: 0;
-    font-size: 15px;
-    line-height: 1.8;
-    color: var(--text-secondary);
+    color: var(--text-primary);
+    font-size: 16px;
+    line-height: 1.85;
+  }
+
+  .prose
+    .markdown-alert
+    > :not(.markdown-alert-title)
+    + :not(.markdown-alert-title) {
+    margin-top: 0.8em;
+  }
+
+  .prose .markdown-alert-warning > :not(.markdown-alert-title),
+  .prose .markdown-alert-caution > :not(.markdown-alert-title) {
+    font-weight: 500;
   }
 
   .prose .markdown-alert :not(pre) > code {
     background: color-mix(in srgb, var(--bg-base) 60%, transparent);
+  }
+
+  @media (max-width: 640px) {
+    .prose .markdown-alert {
+      margin-block: 30px;
+      padding: 15px 16px 18px;
+    }
+
+    .prose .markdown-alert-caution {
+      margin-block: 36px;
+    }
   }
 
   /* 見出し自己リンク: リンクとして装飾せず見出し色を保つ */

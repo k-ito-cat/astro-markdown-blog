@@ -4,6 +4,7 @@ import { CATEGORIES } from "~/constants/categories";
 import { POST_PRIORITY } from "~/constants/postPriority";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { WRITING_STATUS } from "~/constants/writingStatus";
+import { VERIFICATION_STATUS } from "~/constants/verificationStatus";
 
 const posts = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/posts" }),
@@ -31,6 +32,29 @@ const posts = defineCollection({
       POST_PRIORITY.LOW,
       POST_PRIORITY.NONE,
     ]),
+    verificationStatus: z
+      .enum([
+        VERIFICATION_STATUS.IN_PROGRESS,
+        VERIFICATION_STATUS.VERIFIED,
+        VERIFICATION_STATUS.NEEDS_REVIEW,
+      ])
+      .optional(),
+    relations: z
+      .object({
+        prerequisites: z.array(z.string()).optional(),
+        related: z.array(z.string()).optional(),
+        developments: z.array(z.string()).optional(),
+        replacements: z.array(z.string()).optional(),
+      })
+      .optional(),
+    revisions: z
+      .array(
+        z.object({
+          date: z.coerce.date(),
+          summary: z.string(),
+        }),
+      )
+      .optional(),
   }),
 });
 

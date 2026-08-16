@@ -15,27 +15,14 @@ const { title, ogTitle, ogImage } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <script is:inline>
-      (() => {
-        const stored = localStorage.getItem("amb-theme");
-        const pref =
-          stored === "light" || stored === "dark" || stored === "system"
-            ? stored
-            : "system";
-        const dark =
-          pref === "dark" ||
-          (pref === "system" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.theme = dark ? "dark" : "light";
-      })();
-    </script>
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#FFFFFF" />
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <title>{title}</title>
@@ -47,6 +34,15 @@ const { title, ogTitle, ogImage } = Astro.props;
     <slot />
   </body>
 </html>
+
+<script>
+  const absorbSkippedTransition = (event: PageRevealEvent | PageSwapEvent) => {
+    void event.viewTransition?.ready.catch(() => undefined);
+  };
+
+  window.addEventListener("pageswap", absorbSkippedTransition);
+  window.addEventListener("pagereveal", absorbSkippedTransition);
+</script>
 
 <style>
   html,

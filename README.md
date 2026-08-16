@@ -17,7 +17,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - [public/admin/config.yml](public/admin/config.yml) - Sveltia CMS の設定ファイル（リポジトリ連携、コンテンツモデル定義）
 - [netlify.toml](netlify.toml) - Netlify ビルド設定など
 - [.gitmodules](.gitmodules) - Git サブモジュール設定
-- [src/content/config.ts](src/content/config.ts) - Astro Content Collections のスキーマ定義
+- [src/content.config.ts](src/content.config.ts) - Astro Content Collections のスキーマ定義
 - [.github/workflows/update-submodule.yml](.github/workflows/update-submodule.yml) - サブモジュール自動更新のワークフロー
 
 ## 用意している npm script
@@ -40,7 +40,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 `status` は公開側での表示状態を表す。
 
 - `private`: 非公開。公開側の一覧に表示しない
-- `draft`: 公開中（WIP）。公開側の一覧には表示するが、本文は下書き表示にする
+- `draft`: 公開中（WIP）。公開側の一覧ではWIPとして識別できる状態で表示し、本文は下書き表示にする
 - `published`: 公開済み。完成記事として公開する
 
 `writingStatus` は次の順序で確認する。
@@ -56,6 +56,40 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - `medium`: 中。高優先度の後に進める
 - `low`: 低。保持するが当面急がない
 - `none`: 未設定。優先順位をまだ判断していない
+
+### 技術理解の状態・関係・改訂
+
+公開・執筆運用とは別に、必要な記事だけ以下の任意frontmatterを持てる。既存記事へ追加する必要はなく、未入力の場合も従来どおり表示・buildできる。
+
+`verificationStatus` は技術理解の検証状態を表す。
+
+- `in_progress`: 検証中
+- `verified`: 一次資料、実装、実験、挙動確認などの根拠を確認済み
+- `needs_review`: 要再検証
+
+`relations` は記録同士がなぜつながるかをslugで表す。
+
+```yaml
+relations:
+  prerequisites:
+    - http-cache
+  related:
+    - cache-control
+  developments:
+    - conditional-requests
+  replacements:
+    - older-http-note
+```
+
+`revisions` は知識が変化した過程を記録する。
+
+```yaml
+revisions:
+  - date: "2026-08-16"
+    summary: "RFCへの参照と検証結果を追加"
+```
+
+公開画面では`updatedAt`が`publishedAt`より新しい記事を「改訂」として時間軸へ表示する。改訂内容、再検証、置換関係は推測せず、frontmatterに明示された場合だけ表示する。
 
 状態ごとの件数は次のコマンドで確認する。
 
@@ -154,7 +188,7 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 ### フロントマターを変更するとき
 
 - [public/admin/config.yml](public/admin/config.yml) - 管理画面カスタマイズ
-- [src/content/config.ts](src/content/config.ts) - スキーマ
+- [src/content.config.ts](src/content.config.ts) - スキーマ
 - [\_templates/generator/new/index.ejs.t](_templates/generator/new/index.ejs.t) - hygenによって生成するmdファイルのテンプレート（主にフロントマター部分）
 
 場合によっては定数の追加

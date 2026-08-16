@@ -2,10 +2,11 @@
 import { getCollection } from "astro:content";
 import { Icon } from "astro-icon/components";
 import BaseLayout from "~/layouts/BaseLayout.astro";
-import Timeline from "~/components/Timeline.astro";
+import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
-import { WRITING_STATUS } from "~/constants/writingStatus";
+import { VERIFICATION_STATUS_LABELS } from "~/constants/verificationStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
+import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
 const works = [
   {
@@ -15,7 +16,7 @@ const works = [
   },
   {
     name: "dotfiles",
-    description: "chezmoi を軸にしたローカル環境の一元管理。",
+    description: "chezmoiを軸にしたローカル環境の一元管理。",
     repoUrl: "https://github.com/k-ito-cat/dotfiles",
   },
   {
@@ -25,74 +26,88 @@ const works = [
   },
 ];
 
-const posts = await getCollection("posts", ({ data }) => {
-  return data.status !== PUBLISHED_STATUS.PRIVATE;
-});
+const posts = await getCollection(
+  "posts",
+  ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
+);
 
-const sorted = posts.sort((a, b) => {
-  return (
-    new Date(b.data.publishedAt).getTime() -
-    new Date(a.data.publishedAt).getTime()
-  );
-});
+const entries: TimelineEntry[] = posts
+  .map((post) => {
+    const isRevision =
+      post.data.updatedAt.getTime() > post.data.publishedAt.getTime();
+    const activityDate = isRevision
+      ? post.data.updatedAt
+      : post.data.publishedAt;
+    const isoDate = toIsoDate(activityDate);
+    const [year, month] = isoDate.split("-");
+    return {
+      slug: normalizePostSlug(post.id),
+      title: post.data.title,
+      isoDate,
+      displayDate: formatJapaneseDate(activityDate),
+      year,
+      month,
+      categories: post.data.categories.filter(
+        (category) => category !== "すべて",
+      ),
+      activity: isRevision ? "改訂" : "新規",
+      isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
+      verificationLabel: post.data.verificationStatus
+        ? VERIFICATION_STATUS_LABELS[post.data.verificationStatus]
+        : undefined,
+      revisionCount: post.data.revisions?.length ?? (isRevision ? 1 : 0),
+    };
+  })
+  .sort((a, b) => b.isoDate.localeCompare(a.isoDate))
+  .slice(0, 15);
 
-const toIso = (date: Date) => new Date(date).toISOString().split("T")[0];
-
-const entries = sorted.slice(0, 15).map((post) => {
-  const iso = toIso(post.data.publishedAt);
-  const [year, month] = iso.split("-");
-  return {
-    slug: normalizePostSlug(post.id),
-    title: post.data.title,
-    date: iso.replaceAll("-", "."),
-    year,
-    month,
-    categories: post.data.categories.filter(
-      (category) => category !== "すべて",
-    ),
-    wip:
-      post.data.status === PUBLISHED_STATUS.DRAFT ||
-      post.data.writingStatus !== WRITING_STATUS.DONE,
-  };
-});
+const months = Array.from(
+  new Set(entries.map((entry) => `${entry.year}-${entry.month}`)),
+);
 ---
 
-<BaseLayout title="Note">
-  <main class="stream">
-    <header class="stream-intro">
-      <p class="stream-eyebrow"><span class="stream-mark">¶</span> Note</p>
-      <h1 class="stream-title">記録</h1>
-      <p class="stream-lead">
-        新しいものが上。下へ遡るほど、その時々で考えていたこと。
-      </p>
-    </header>
+<BaseLayout title="技術記録">
+  <main class="home">
+    <div class="home-layout">
+      <aside class="month-trace" aria-label="表示中の時期">
+        <span>{entries[0]?.year}</span>
+        {
+          months.map((value) => {
+            const [year, month] = value.split("-");
+            return (
+              <a href={`#month-${value}`}>
+                {year !== entries[0]?.year ? `${year}年 ` : ""}
+                {Number(month)}月
+              </a>
+            );
+          })
+        }
+      </aside>
 
-    <Timeline entries={entries} />
+      <section class="record-flow" aria-labelledby="record-flow-title">
+        <h1 id="record-flow-title" class="sr-only">技術理解の記録</h1>
+        <Timeline entries={entries} />
+        <a href="/blog" class="flow-more">
+          索引からすべての記録を見る
+          <Icon name="octicon:arrow-right-16" aria-hidden="true" />
+        </a>
+      </section>
+    </div>
 
-    <a href="/blog" class="stream-more">
-      過去へさかのぼる
-      <Icon name="octicon:arrow-down-16" />
-    </a>
-
-    <section class="works">
-      <h2 class="works-head"><span class="works-mark">¶</span> 制作物</h2>
-      <ul class="works-list">
+    <section class="works" id="works" aria-labelledby="works-title">
+      <h2 id="works-title">制作物</h2>
+      <ul class="works-list" aria-label="制作物">
         {
           works.map((work) => (
-            <li class="works-item">
-              <div class="works-item-head">
-                <h3>{work.name}</h3>
-                <a
-                  href={work.repoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  class="works-repo"
-                >
-                  <Icon name="octicon:mark-github-16" />
-                  GitHub
-                </a>
+            <li>
+              <div>
+                <span class="machine">{work.name}</span>
+                <p>{work.description}</p>
               </div>
-              <p class="works-desc">{work.description}</p>
+              <a href={work.repoUrl} target="_blank" rel="noreferrer">
+                <Icon name="octicon:mark-github-16" aria-hidden="true" />
+                GitHub
+              </a>
             </li>
           ))
         }
@@ -102,147 +117,123 @@ const entries = sorted.slice(0, 15).map((post) => {
 </BaseLayout>
 
 <style>
-  .stream {
+  .home {
     width: 100%;
-    max-width: 680px;
+    max-width: var(--max-width-content);
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 28px 16px 72px;
   }
 
-  .stream-intro {
-    padding: 56px 0 32px;
+  .home-layout {
+    display: grid;
+    grid-template-columns: minmax(0, var(--layout-stream));
+    justify-content: center;
   }
 
-  .stream-eyebrow {
-    margin: 0 0 14px;
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
+  .month-trace {
+    display: none;
   }
 
-  .stream-mark {
-    color: var(--accent-warm);
-  }
-
-  .stream-title {
-    margin: 0;
-    font-size: 32px;
-    font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
-  }
-
-  .stream-lead {
-    margin: 14px 0 0;
-    font-size: 15px;
-    line-height: 1.9;
-    color: var(--text-secondary);
-  }
-
-  .stream-more {
+  .flow-more {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 24px;
-    padding-left: 30px;
-    font-size: 13px;
-    color: var(--text-secondary);
+    gap: 8px;
+    margin: 28px 0 0 34px;
+    color: var(--color-interaction-text);
+    font-size: var(--text-sm);
     text-decoration: none;
-    transition: color 140ms ease-out;
   }
 
-  .stream-more:hover {
-    color: var(--text-primary);
+  .flow-more::after {
+    content: "";
+    width: 0;
+    height: 1px;
+    background: var(--color-secondary);
+    transition: width var(--duration-feedback) var(--ease-trace);
   }
 
-  .stream-more :global(svg) {
-    font-size: 14px;
+  .flow-more:hover::after,
+  .flow-more:focus-visible::after {
+    width: 32px;
   }
 
   .works {
-    margin-top: 64px;
-    padding-top: 32px;
-    border-top: 1px solid var(--border);
+    max-width: var(--layout-stream);
+    margin: 48px auto 0;
+    padding-top: 28px;
   }
 
-  .works-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: 0 0 16px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .works-mark {
-    color: var(--accent-warm);
+  .works h2 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: var(--text-xs);
+    font-weight: 700;
   }
 
   .works-list {
-    margin: 0;
+    margin: 16px 0 0;
     padding: 0;
     list-style: none;
   }
 
-  .works-item {
-    padding: 16px 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .works-item:first-child {
-    border-top: 0;
-    padding-top: 0;
-  }
-
-  .works-item-head {
+  .works-list li {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
+    gap: 20px;
+    padding: 14px 0;
+    border-top: 1px solid var(--color-border);
   }
 
-  .works-item-head h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
+  .works-list p {
+    margin: 4px 0 0;
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
   }
 
-  .works-repo {
+  .works-list a {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     flex: none;
-    font-size: 13px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color 140ms ease-out;
+    font-size: var(--text-xs);
   }
 
-  .works-repo:hover {
-    color: var(--text-primary);
-  }
-
-  .works-repo :global(svg) {
-    font-size: 15px;
-  }
-
-  .works-desc {
-    margin: 6px 0 0;
-    font-size: 14px;
-    line-height: 1.8;
-    color: var(--text-secondary);
-  }
-
-  @media (min-width: 640px) {
-    .stream {
-      padding: 0 24px;
+  @media (min-width: 760px) {
+    .home {
+      padding: 48px 24px 96px;
     }
 
-    .stream-title {
-      font-size: 36px;
+    .home-layout {
+      grid-template-columns: 88px minmax(0, var(--layout-stream));
+      gap: 32px;
+    }
+
+    .month-trace {
+      position: sticky;
+      top: 32px;
+      align-self: start;
+      display: grid;
+      gap: 6px;
+      padding-top: 2px;
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+
+    .month-trace span {
+      color: var(--color-primary);
+      font-family: var(--font-machine);
+      font-weight: 600;
+    }
+
+    .month-trace a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+    }
+
+    .month-trace a:hover,
+    .month-trace a:focus-visible {
+      color: var(--color-interaction-text);
     }
   }
 </style>

@@ -1,97 +1,528 @@
 ---
+import { Icon } from "astro-icon/components";
 import { HEADING_LEVEL } from "~/constants/headingLevel";
 
+type Heading = { depth: number; slug: string; text: string };
+type Section = Heading & { sectionIndex: number; subheadings: Heading[] };
 type Props = {
-  headings: {
-    depth: number;
-    slug: string;
-    text: string;
-  }[];
+  headings: Heading[];
+  returnHref?: string;
+  returnLabel?: string;
+  returnSourcePaths?: string[];
 };
 
-const { headings } = Astro.props;
-
-const tocHeadings = headings.filter(
+const {
+  headings,
+  returnHref = "/blog",
+  returnLabel = "一覧へ戻る",
+  returnSourcePaths = ["/", "/blog"],
+} = Astro.props;
+const returnPaths = JSON.stringify(returnSourcePaths);
+const outlineHeadings = headings.filter(
   (heading) =>
     heading.depth === HEADING_LEVEL.TWO ||
     heading.depth === HEADING_LEVEL.THREE,
 );
+const sections: Section[] = [];
+
+outlineHeadings.forEach((heading) => {
+  if (heading.depth === HEADING_LEVEL.TWO) {
+    sections.push({
+      ...heading,
+      sectionIndex: sections.length,
+      subheadings: [],
+    });
+    return;
+  }
+
+  sections.at(-1)?.subheadings.push(heading);
+});
+
+const firstSection = sections[0];
 ---
 
+<a
+  href={returnHref}
+  class="mobile-reading-return"
+  data-reading-return
+  data-return-paths={returnPaths}
+>
+  <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+  <span>{returnLabel}</span>
+</a>
+
 {
-  tocHeadings.length > 0 && (
-    <aside class="toc-rail lg:order-2">
-      <div class="toc-sticky">
-        <p class="toc-label">目次</p>
-        <ul class="toc-list">
-          {tocHeadings.map((heading) => (
-            <li>
-              <a
-                href={`#${heading.slug}`}
-                class:list={[
-                  "toc-link",
-                  { "is-h3": heading.depth === HEADING_LEVEL.THREE },
-                ]}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+  firstSection && (
+    <aside class="current-trace" aria-label="記事の構成と現在位置">
+      <a
+        href={returnHref}
+        class="trace-return"
+        data-reading-return
+        data-return-paths={returnPaths}
+      >
+        <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+        <span>{returnLabel}</span>
+      </a>
+
+      <div class="trace-current">
+        <div class="trace-status">
+          <span>現在位置</span>
+          <span data-section-position>{`1 / ${sections.length}`}</span>
+        </div>
+        <p class="current-heading" data-current-heading>
+          {firstSection.text}
+        </p>
       </div>
+
+      <ol
+        class="trace-outline"
+        data-trace-outline
+        style="--trace-progress: 0px"
+      >
+        {sections.map((section) => {
+          const panelId = `trace-subheadings-${section.sectionIndex}`;
+          const hasSubheadings = section.subheadings.length > 0;
+
+          return (
+            <li
+              class:list={[
+                "trace-section",
+                { "is-current": section.sectionIndex === 0 },
+              ]}
+              data-trace-item
+              data-heading-id={section.slug}
+              data-section-index={section.sectionIndex}
+            >
+              <div class="trace-section-row">
+                <a
+                  href={`#${section.slug}`}
+                  data-trace-link
+                  aria-current={
+                    section.sectionIndex === 0 ? "location" : undefined
+                  }
+                >
+                  {section.text}
+                </a>
+                {hasSubheadings && (
+                  <button
+                    type="button"
+                    class="trace-toggle"
+                    aria-expanded="false"
+                    aria-controls={panelId}
+                    aria-label={`「${section.text}」の小見出しを表示`}
+                    data-heading-label={section.text}
+                    data-trace-toggle
+                    hidden
+                  >
+                    <Icon name="octicon:chevron-down-16" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+
+              {hasSubheadings && (
+                <ol
+                  id={panelId}
+                  class="trace-subheadings"
+                  data-trace-subheadings
+                  hidden
+                >
+                  {section.subheadings.map((subheading) => (
+                    <li>
+                      <a href={`#${subheading.slug}`}>{subheading.text}</a>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </aside>
   )
 }
 
 <style>
-  .toc-rail {
+  .mobile-reading-return {
+    position: fixed;
+    z-index: 25;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 3px 12px 0;
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    background: color-mix(in srgb, var(--color-background) 94%, transparent);
+    border-top: 2px solid var(--color-primary);
+  }
+
+  .mobile-reading-return:hover,
+  .mobile-reading-return:focus-visible {
+    color: var(--color-interaction-text);
+    border-top-color: var(--color-secondary);
+  }
+
+  .current-trace {
     display: none;
   }
 
   @media (min-width: 1024px) {
-    .toc-rail {
+    .mobile-reading-return {
+      display: none;
+    }
+
+    .current-trace {
+      position: sticky;
+      top: 32px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      align-self: start;
+      max-height: calc(100vh - 64px);
+    }
+
+    .trace-return {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      justify-self: start;
+      margin-bottom: 19px;
+      color: var(--color-text-sub);
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .trace-return:hover,
+    .trace-return:focus-visible {
+      color: var(--color-interaction-text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .trace-current {
+      min-width: 0;
+    }
+
+    .trace-status {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--color-text-muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .current-heading {
+      display: -webkit-box;
+      height: 3.1em;
+      margin: 5px 0 14px;
+      overflow: hidden;
+      color: var(--color-primary);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      line-height: 1.55;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .trace-outline {
+      --trace-inset: 5px;
+      position: relative;
+      min-height: 0;
+      margin: 0;
+      padding: 0 4px 0 17px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      list-style: none;
+    }
+
+    .trace-outline::before,
+    .trace-outline::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: var(--trace-inset);
+      width: 1px;
+      pointer-events: none;
+    }
+
+    .trace-outline::before {
+      bottom: 8px;
+      background: var(--color-border);
+    }
+
+    .trace-outline::after {
+      height: var(--trace-progress);
+      max-height: calc(100% - 16px);
+      background: var(--color-primary);
+    }
+
+    .trace-section {
+      position: relative;
+      min-width: 0;
+      padding: 4px 0;
+    }
+
+    .trace-section::before {
+      content: "";
+      position: absolute;
+      z-index: 1;
+      top: 14px;
+      left: -16px;
+      width: 7px;
+      height: 7px;
+      box-sizing: border-box;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+    }
+
+    .trace-section.is-past::before {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    .trace-section.is-current::before {
+      width: 9px;
+      height: 9px;
+      top: 13px;
+      left: -17px;
+      background: var(--color-accent);
+      border: 2px solid var(--color-primary);
+      border-radius: 1px;
+      transform: rotate(45deg);
+    }
+
+    .trace-section-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 3px;
+      min-height: 27px;
+    }
+
+    .trace-section a {
+      min-width: 0;
+      color: var(--color-text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+      text-decoration: none;
+      text-wrap: pretty;
+      transition: color var(--duration-feedback) ease;
+    }
+
+    .trace-section.is-past > .trace-section-row > a {
+      color: var(--color-text-sub);
+    }
+
+    .trace-section.is-current > .trace-section-row > a {
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+
+    .trace-section a:hover,
+    .trace-section a:focus-visible {
+      color: var(--color-interaction-text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .trace-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 27px;
+      height: 27px;
+      margin-top: -5px;
+      padding: 0;
+      color: var(--color-text-muted);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .trace-toggle:hover,
+    .trace-toggle:focus-visible {
+      color: var(--color-interaction-text);
+    }
+
+    .trace-toggle[aria-expanded="true"] :global(svg) {
+      transform: rotate(180deg);
+    }
+
+    .trace-subheadings {
+      display: grid;
+      gap: 3px;
+      margin: 1px 0 5px;
+      padding: 0 0 0 11px;
+      list-style: none;
+    }
+
+    .trace-subheadings[hidden] {
+      display: none;
+    }
+
+    .trace-subheadings a {
       display: block;
+      font-size: 11px;
+      line-height: 1.45;
     }
   }
 
-  .toc-sticky {
-    position: sticky;
-    top: 24px;
+  @media (prefers-reduced-motion: reduce) {
+    .trace-section a {
+      transition: none;
+    }
   }
 
-  .toc-label {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-
-  .toc-list {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    padding: 0 0 0 12px;
-    list-style: none;
-    border-left: 1px solid var(--border);
-  }
-
-  .toc-link {
-    display: block;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color 140ms ease-out;
-  }
-
-  .toc-link:hover {
-    color: var(--text-primary);
-    text-decoration: none;
-  }
-
-  .toc-link.is-h3 {
-    padding-left: 12px;
+  @media print {
+    .mobile-reading-return,
+    .current-trace {
+      display: none;
+    }
   }
 </style>
+
+<script>
+  const output = document.querySelector<HTMLElement>("[data-current-heading]");
+  const position = document.querySelector<HTMLElement>(
+    "[data-section-position]",
+  );
+  const outline = document.querySelector<HTMLElement>("[data-trace-outline]");
+  const sections = Array.from(
+    document.querySelectorAll<HTMLElement>(".prose h2[id]"),
+  );
+  const traceItems = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-trace-item]"),
+  );
+
+  const setCurrentSection = (sectionId: string) => {
+    const currentItem = traceItems.find(
+      (item) => item.dataset.headingId === sectionId,
+    );
+    if (!currentItem) return;
+
+    const currentIndex = Number(currentItem.dataset.sectionIndex);
+    output && (output.textContent = sections[currentIndex]?.textContent ?? "");
+    position &&
+      (position.textContent = `${currentIndex + 1} / ${traceItems.length}`);
+
+    traceItems.forEach((item) => {
+      const itemIndex = Number(item.dataset.sectionIndex);
+      const link = item.querySelector("[data-trace-link]");
+
+      item.classList.toggle("is-past", itemIndex < currentIndex);
+      item.classList.toggle("is-current", itemIndex === currentIndex);
+
+      if (link) {
+        if (itemIndex === currentIndex) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      }
+    });
+
+    if (outline) {
+      const progress = Math.max(
+        0,
+        currentItem.offsetTop +
+          currentItem.querySelector(".trace-section-row")!.clientHeight / 2 -
+          8,
+      );
+      outline.style.setProperty("--trace-progress", `${progress}px`);
+    }
+  };
+
+  if (output && sections.length > 0) {
+    const hashId = decodeURIComponent(window.location.hash.slice(1));
+    const hashItem = traceItems.find(
+      (item) => item.dataset.headingId === hashId,
+    );
+    const initialIndex = Number(hashItem?.dataset.sectionIndex ?? 0);
+    setCurrentSection(sections[initialIndex]?.id ?? sections[0].id);
+
+    let updateQueued = false;
+    const updateFromScrollPosition = () => {
+      const readingLine = window.innerHeight * 0.22;
+      const current = sections.reduce(
+        (latest, heading) =>
+          heading.getBoundingClientRect().top <= readingLine ? heading : latest,
+        sections[0],
+      );
+      setCurrentSection(current.id);
+      updateQueued = false;
+    };
+
+    const queueUpdate = () => {
+      if (updateQueued) return;
+      updateQueued = true;
+      requestAnimationFrame(updateFromScrollPosition);
+    };
+
+    window.addEventListener("scroll", queueUpdate, { passive: true });
+    window.addEventListener("hashchange", queueUpdate);
+    updateFromScrollPosition();
+  }
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-trace-toggle]")
+    .forEach((button) => {
+      button.hidden = false;
+      button.addEventListener("click", () => {
+        const panelId = button.getAttribute("aria-controls");
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (!panel) return;
+
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        const nextExpanded = !expanded;
+        const headingLabel = button.dataset.headingLabel ?? "この章";
+        button.setAttribute("aria-expanded", String(nextExpanded));
+        button.setAttribute(
+          "aria-label",
+          `「${headingLabel}」の小見出しを${nextExpanded ? "隠す" : "表示"}`,
+        );
+        panel.hidden = !nextExpanded;
+
+        const currentItem = traceItems.find((item) =>
+          item.classList.contains("is-current"),
+        );
+        if (currentItem?.dataset.headingId)
+          setCurrentSection(currentItem.dataset.headingId);
+      });
+    });
+
+  document
+    .querySelectorAll<HTMLAnchorElement>("[data-reading-return]")
+    .forEach((link) => {
+      const sourcePaths = JSON.parse(
+        link.dataset.returnPaths ?? "[]",
+      ) as string[];
+      if (!document.referrer || sourcePaths.length === 0) return;
+
+      const referrer = new URL(document.referrer);
+      const canReturnToSource =
+        referrer.origin === window.location.origin &&
+        sourcePaths.includes(referrer.pathname);
+      if (!canReturnToSource || window.history.length <= 1) return;
+
+      link.addEventListener("click", (event) => {
+        if (
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+
+        event.preventDefault();
+        window.history.back();
+      });
+    });
+</script>

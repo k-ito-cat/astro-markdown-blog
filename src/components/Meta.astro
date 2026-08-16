@@ -1,27 +1,72 @@
 ---
 import { Icon } from "astro-icon/components";
+import type { VerificationStatus } from "~/constants/verificationStatus";
+import { VERIFICATION_STATUS, VERIFICATION_STATUS_LABELS } from "~/constants/verificationStatus";
+import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
 type Props = {
   publishedAt: Date;
   updatedAt: Date;
+  verificationStatus?: VerificationStatus;
 };
 
-const { publishedAt, updatedAt } = Astro.props;
+const { publishedAt, updatedAt, verificationStatus } = Astro.props;
+const isRevised = updatedAt.getTime() > publishedAt.getTime();
 ---
 
-<div class="text-meta text-small flex flex-wrap items-center gap-x-3 gap-y-2">
-  <span>{publishedAt.toISOString().split("T")[0]} 公開</span>
-  <span aria-hidden="true">·</span>
-  <span>{updatedAt.toISOString().split("T")[0]} 更新</span>
-  <span aria-hidden="true">·</span>
+<dl class="record-meta">
+  <div>
+    <dt><Icon name="octicon:pencil-16" aria-hidden="true" />記録日</dt>
+    <dd><time datetime={toIsoDate(publishedAt)}>{formatJapaneseDate(publishedAt)}</time></dd>
+  </div>
+  {
+    isRevised && (
+      <div>
+        <dt><Icon name="octicon:history-16" aria-hidden="true" />最終改訂</dt>
+        <dd><time datetime={toIsoDate(updatedAt)}>{formatJapaneseDate(updatedAt)}</time></dd>
+      </div>
+    )
+  }
+  {
+    verificationStatus && (
+      <div class:list={["verification", { verified: verificationStatus === VERIFICATION_STATUS.VERIFIED }]}>
+        <dt><Icon name="octicon:check-circle-16" aria-hidden="true" />状態</dt>
+        <dd>{VERIFICATION_STATUS_LABELS[verificationStatus]}</dd>
+      </div>
+    )
+  }
+</dl>
 
-  <a
-    href="https://github.com/k-ito-cat"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="ease text-meta hover:text-link inline-flex items-center gap-2 no-underline transition-colors duration-300"
-  >
-    <Icon name="octicon:mark-github-16" width="16" height="16" />
-    <span>GitHub</span>
-  </a>
-</div>
+<style>
+  .record-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin: 0;
+  }
+
+  .record-meta div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .record-meta dt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+  }
+
+  .record-meta dd {
+    margin: 0;
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+  }
+
+  .record-meta .verified dd {
+    width: max-content;
+    color: var(--color-primary);
+    background: linear-gradient(transparent 52%, var(--color-accent) 52%);
+  }
+</style>

@@ -24,8 +24,8 @@ export default defineConfig({
     astroExpressiveCode({
       themes: ["github-dark"],
       styleOverrides: {
-        codeBackground: "#1f1c18",
-        borderRadius: "6px",
+        codeBackground: "var(--color-code-bg)",
+        borderRadius: "2px",
         borderColor: "var(--border)",
       },
     }),

@@ -1,68 +1,108 @@
+const normalize = (value: string) =>
+  value.normalize("NFKC").toLocaleLowerCase("ja");
+
 const getElements = () => {
   const input = document.querySelector("#post-search-input");
-  if (!(input instanceof HTMLInputElement)) return null;
   const count = document.querySelector("#post-count");
-  if (!(count instanceof HTMLElement)) return null;
-
-  const items = Array.from(
-    document.querySelectorAll<HTMLElement>("li[data-title]"),
-  );
-  const sections = Array.from(
-    document.querySelectorAll<HTMLElement>(".tl-year, .tl-month"),
-  );
-  const emptyState = document.querySelector<HTMLElement>("[data-search-empty]");
-  const clears = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-search-clear]"),
-  );
-  const total = Number(count.getAttribute("data-total") ?? "0");
-
-  return { input, count, items, sections, emptyState, clears, total };
+  if (!(input instanceof HTMLInputElement) || !(count instanceof HTMLElement))
+    return null;
+  return {
+    input,
+    count,
+    items: Array.from(
+      document.querySelectorAll<HTMLElement>("[data-record-entry]"),
+    ),
+    groups: Array.from(
+      document.querySelectorAll<HTMLElement>("[data-date-group]"),
+    ),
+    empty: document.querySelector<HTMLElement>("[data-search-empty]"),
+    clears: Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-search-clear]"),
+    ),
+    categoryFilter: document.querySelector<HTMLElement>(
+      "[data-category-filter]",
+    ),
+    categoryName: document.querySelector<HTMLElement>("[data-category-name]"),
+    total: Number(count.dataset.total ?? "0"),
+  };
 };
 
 const updateView = (
-  elements: ReturnType<typeof getElements>,
+  elements: NonNullable<ReturnType<typeof getElements>>,
   query: string,
+  category: string | null,
 ) => {
-  if (!elements) return;
-  const queryLower = query.trim().toLowerCase();
+  const normalizedQuery = normalize(query.trim());
   let visible = 0;
-
   elements.items.forEach((item) => {
-    const title = item.getAttribute("data-title") ?? "";
-    const match = queryLower.length === 0 || title.includes(queryLower);
-    item.classList.toggle("hidden", !match);
-    item.setAttribute("aria-hidden", String(!match));
+    const categories = JSON.parse(item.dataset.categories ?? "[]") as string[];
+    const matchesCategory = !category || categories.includes(category);
+    const matchesQuery =
+      !normalizedQuery ||
+      normalize(item.dataset.searchText ?? "").includes(normalizedQuery);
+    const match = matchesCategory && matchesQuery;
+    item.hidden = !match;
     if (match) visible += 1;
   });
 
-  elements.count.textContent = `${queryLower ? visible : elements.total} notes`;
-
-  // 検索中は地層（年・月）の見出しを隠し、ヒットしたノートだけを並べる
-  elements.sections.forEach((section) => {
-    section.classList.toggle("is-hidden", queryLower.length > 0);
+  elements.groups.forEach((group) => {
+    let next = group.nextElementSibling;
+    let hasVisibleItem = false;
+    while (next && !next.matches("[data-date-group]")) {
+      if (next.matches("[data-record-entry]:not([hidden])"))
+        hasVisibleItem = true;
+      next = next.nextElementSibling;
+    }
+    group.hidden = !hasVisibleItem;
   });
 
-  if (elements.emptyState) {
-    elements.emptyState.hidden = !(queryLower.length > 0 && visible === 0);
-  }
-  elements.clears.forEach((clear) => {
-    clear.hidden = queryLower.length === 0;
+  const hasCondition = Boolean(normalizedQuery || category);
+  elements.count.textContent = `${hasCondition ? visible : elements.total}件の記録`;
+  if (elements.empty) elements.empty.hidden = !(hasCondition && visible === 0);
+  elements.clears.forEach((button) => {
+    button.hidden = !hasCondition;
   });
+  if (elements.categoryFilter) elements.categoryFilter.hidden = !category;
+  if (elements.categoryName) elements.categoryName.textContent = category ?? "";
 };
 
 export const initPostSearch = () => {
   const elements = getElements();
   if (!elements) return;
+  let category = new URL(window.location.href).searchParams.get("category");
+  const clear = () => {
+    elements.input.value = "";
+    category = null;
+    window.history.replaceState(null, "", "/blog");
+    updateView(elements, "", category);
+    elements.input.focus();
+  };
 
-  updateView(elements, elements.input.value);
-  elements.input.addEventListener("input", () => {
-    updateView(elements, elements.input.value);
-  });
-  elements.clears.forEach((clear) => {
-    clear.addEventListener("click", () => {
-      elements.input.value = "";
-      updateView(elements, "");
+  updateView(elements, elements.input.value, category);
+  elements.input.addEventListener("input", () =>
+    updateView(elements, elements.input.value, category),
+  );
+  elements.clears.forEach((button) => button.addEventListener("click", clear));
+  document.addEventListener("keydown", (event) => {
+    const target = event.target;
+    const isEditing =
+      target instanceof HTMLElement &&
+      (target.matches("input, textarea, select") || target.isContentEditable);
+    if (
+      event.key === "/" &&
+      !isEditing &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
+      event.preventDefault();
       elements.input.focus();
-    });
+    }
+    if (
+      event.key === "Escape" &&
+      document.activeElement === elements.input &&
+      elements.input.value
+    )
+      clear();
   });
 };

@@ -1,0 +1,87 @@
+---
+import { Icon } from "astro-icon/components";
+import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
+
+type Props = { revisions?: { date: Date; summary: string }[] };
+const revisions = [...(Astro.props.revisions ?? [])].sort(
+  (a, b) => b.date.getTime() - a.date.getTime(),
+);
+---
+
+{
+  revisions.length > 0 && (
+    <section class="revision-history" aria-labelledby="revision-history-title">
+      <h2 id="revision-history-title">
+        <Icon name="octicon:history-16" aria-hidden="true" />改訂履歴
+      </h2>
+      <ol>
+        {revisions.map((revision) => (
+          <li>
+            <time datetime={toIsoDate(revision.date)}>{formatJapaneseDate(revision.date)}</time>
+            <p>{revision.summary}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+<style>
+  .revision-history {
+    max-width: var(--measure-prose);
+    margin: 64px auto 0;
+    padding-top: 24px;
+    border-top: 2px solid var(--color-primary);
+  }
+
+  .revision-history h2 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 20px;
+    color: var(--color-primary);
+    font-size: var(--text-lg);
+  }
+
+  .revision-history ol {
+    position: relative;
+    margin: 0;
+    padding: 0 0 0 24px;
+    list-style: none;
+  }
+
+  .revision-history ol::before {
+    content: "";
+    position: absolute;
+    inset: 7px auto 7px 3px;
+    width: 1px;
+    background: var(--color-border-strong);
+  }
+
+  .revision-history li {
+    position: relative;
+    padding: 0 0 20px;
+  }
+
+  .revision-history li::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: -24px;
+    width: 7px;
+    height: 7px;
+    background: var(--color-accent);
+    border: 1px solid var(--color-primary);
+  }
+
+  .revision-history time {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .revision-history p {
+    margin: 3px 0 0;
+    color: var(--color-text-sub);
+    line-height: 1.75;
+  }
+</style>
