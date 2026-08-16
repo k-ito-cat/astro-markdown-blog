@@ -49,6 +49,7 @@ const firstSection = sections[0];
 >
   <Icon name="octicon:arrow-left-16" aria-hidden="true" />
   <span>{returnLabel}</span>
+  <span class="return-trace" aria-hidden="true"></span>
 </a>
 
 {
@@ -143,27 +144,54 @@ const firstSection = sections[0];
 
 <style>
   .mobile-reading-return {
+    --return-resting-width: 44px;
     position: fixed;
     z-index: 25;
     bottom: max(14px, env(safe-area-inset-bottom));
-    left: 16px;
+    left: 0;
     display: inline-flex;
     align-items: center;
     gap: 7px;
     min-height: 44px;
-    padding: 3px 12px 0;
+    padding: 3px 12px 0 14px;
     color: var(--color-primary);
     font-size: var(--text-sm);
     font-weight: 600;
     text-decoration: none;
-    background: color-mix(in srgb, var(--color-background) 94%, transparent);
-    border-top: 2px solid var(--color-primary);
+    opacity: 0.72;
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+    transition:
+      opacity var(--duration-feedback) ease,
+      transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .return-trace {
+    width: 20px;
+    height: 2px;
+    flex: 0 0 auto;
+    background: currentColor;
+  }
+
+  .mobile-reading-return[data-return-state="hidden"] {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(calc(-100% - 8px));
+  }
+
+  .mobile-reading-return[data-return-state="tucked"] {
+    opacity: 0.42;
+    transform: translateX(calc(-100% + var(--return-resting-width)));
+  }
+
+  .mobile-reading-return[data-return-state="revealed"] {
+    opacity: 0.72;
   }
 
   .mobile-reading-return:hover,
   .mobile-reading-return:focus-visible {
     color: var(--color-interaction-text);
-    border-top-color: var(--color-secondary);
+    opacity: 1;
+    transform: none;
   }
 
   .current-trace {
@@ -375,6 +403,7 @@ const firstSection = sections[0];
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .mobile-reading-return,
     .trace-section a {
       transition: none;
     }
@@ -525,4 +554,81 @@ const firstSection = sections[0];
         window.history.back();
       });
     });
+
+  const mobileReadingReturn = document.querySelector<HTMLAnchorElement>(
+    ".mobile-reading-return",
+  );
+  const articleStartReturn = document.querySelector<HTMLAnchorElement>(
+    "[data-reading-return]:not(.mobile-reading-return):not(.trace-return)",
+  );
+
+  if (mobileReadingReturn && articleStartReturn) {
+    const revealScrollDistance = 40;
+    const tuckScrollDistance = 24;
+    let articleStartReturnVisible = true;
+    let lastScrollY = window.scrollY;
+    let scrollDirection = 0;
+    let scrollDistance = 0;
+    let returnUpdateQueued = false;
+
+    const setReturnState = (state: "hidden" | "tucked" | "revealed") => {
+      mobileReadingReturn.dataset.returnState = state;
+      if (state === "hidden") {
+        mobileReadingReturn.tabIndex = -1;
+        mobileReadingReturn.setAttribute("aria-hidden", "true");
+      } else {
+        mobileReadingReturn.removeAttribute("tabindex");
+        mobileReadingReturn.removeAttribute("aria-hidden");
+      }
+    };
+
+    const startReturnRect = articleStartReturn.getBoundingClientRect();
+    articleStartReturnVisible =
+      startReturnRect.bottom > 0 && startReturnRect.top < window.innerHeight;
+    setReturnState(articleStartReturnVisible ? "hidden" : "tucked");
+
+    const startReturnObserver = new IntersectionObserver(([entry]) => {
+      articleStartReturnVisible = entry.isIntersecting;
+      setReturnState(articleStartReturnVisible ? "hidden" : "tucked");
+    });
+    startReturnObserver.observe(articleStartReturn);
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (returnUpdateQueued) return;
+        returnUpdateQueued = true;
+
+        requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          const delta = currentScrollY - lastScrollY;
+          lastScrollY = currentScrollY;
+
+          if (articleStartReturnVisible || Math.abs(delta) < 1) {
+            returnUpdateQueued = false;
+            return;
+          }
+
+          const nextDirection = Math.sign(delta);
+          if (nextDirection !== scrollDirection) {
+            scrollDirection = nextDirection;
+            scrollDistance = 0;
+          }
+          scrollDistance += Math.abs(delta);
+
+          if (scrollDirection > 0 && scrollDistance >= tuckScrollDistance) {
+            setReturnState("tucked");
+          } else if (
+            scrollDirection < 0 &&
+            scrollDistance >= revealScrollDistance
+          ) {
+            setReturnState("revealed");
+          }
+
+          returnUpdateQueued = false;
+        });
+      },
+      { passive: true },
+    );
+  }
 </script>
