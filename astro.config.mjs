@@ -1,4 +1,5 @@
 import { defineConfig } from "astro/config";
+import { unified } from "@astrojs/markdown-remark";
 import tailwindcss from "@tailwindcss/vite";
 import icon from "astro-icon";
 
@@ -17,17 +18,19 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   markdown: {
-    remarkPlugins: [
-      remarkGithubBlockquoteAlert,
-      [remarkLinkCardPlus, { noFavicon: true }],
-      [
-        remarkExternalLinksInHtml,
-        { internalHosts: ["k-ito-blog.netlify.app"] },
+    processor: unified({
+      remarkPlugins: [
+        remarkGithubBlockquoteAlert,
+        [remarkLinkCardPlus, { noFavicon: true }],
+        [
+          remarkExternalLinksInHtml,
+          { internalHosts: ["k-ito-blog.netlify.app"] },
+        ],
       ],
-    ],
-    rehypePlugins: [
-      [rehypeExternalLinks, { internalHosts: ["k-ito-blog.netlify.app"] }],
-    ],
+      rehypePlugins: [
+        [rehypeExternalLinks, { internalHosts: ["k-ito-blog.netlify.app"] }],
+      ],
+    }),
   },
   integrations: [
     icon(),
