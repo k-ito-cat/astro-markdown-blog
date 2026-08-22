@@ -1,5 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
+import { Image } from "astro:assets";
+import reachingPaw from "~/assets/reaching-paw.png";
 
 const pathname = Astro.url.pathname;
 const navItems = [
@@ -106,6 +108,52 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
       </nav>
     </details>
   </div>
+  <span class="menu-scrim" aria-hidden="true"></span>
+
+  {
+    (["right", "left"] as const).map((side) => (
+      <div class="edge-dock" data-edge-dock data-dock-side={side}>
+        <button
+          type="button"
+          class="edge-dock-tab"
+          data-edge-dock-tab
+          aria-expanded="false"
+          aria-controls={`edge-dock-nav-${side}`}
+          aria-label={`サイト内ナビゲーション（${side === "right" ? "右下" : "左下"}）`}
+        >
+          <Image
+            class="edge-dock-paw"
+            src={reachingPaw}
+            alt=""
+            widths={[56, 112, 200, 400]}
+            sizes="(min-width: 960px) 200px, 56px"
+            loading="eager"
+          />
+        </button>
+        <nav
+          id={`edge-dock-nav-${side}`}
+          class="edge-dock-panel"
+          aria-label={`追従ナビゲーション（${side === "right" ? "右下" : "左下"}）`}
+        >
+          {navItems.map((item) => (
+            <a
+              href={item.href}
+              aria-current={item.current ? "page" : undefined}
+            >
+              <Icon name={item.icon} aria-hidden="true" />
+              <span>{item.label}</span>
+            </a>
+          ))}
+          {import.meta.env.DEV && (
+            <a href="/preview/posts">
+              <Icon name="octicon:eye-16" aria-hidden="true" />
+              <span>プレビュー</span>
+            </a>
+          )}
+        </nav>
+      </div>
+    ))
+  }
 </header>
 
 <style>
@@ -134,6 +182,13 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     width: 44px;
     height: 44px;
     color: var(--color-primary);
+  }
+
+  /* 2枚のアイコンを同じセルに重ね、絶対配置に頼らず中央へ揃える */
+  .mobile-menu summary {
+    display: grid;
+    grid-template-areas: "menu-icon";
+    place-items: center;
   }
 
   .mobile-home {
@@ -175,7 +230,7 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
 
   .menu-open-icon,
   .menu-close-icon {
-    position: absolute;
+    grid-area: menu-icon;
     display: inline-flex;
     opacity: 1;
     transition: opacity var(--duration-feedback) ease;
@@ -255,6 +310,22 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     transition: transform var(--duration-feedback) var(--ease-trace);
   }
 
+  /* 展開中は本文にスクリムを敷き、メニューを手前に立たせる */
+  .menu-scrim {
+    position: fixed;
+    z-index: 25;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: rgb(0 0 0 / 50%);
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  .site-header:has(.mobile-menu[open]:not([data-closing])) .menu-scrim {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
   .mobile-menu nav a {
     position: relative;
     display: grid;
@@ -331,8 +402,16 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
   }
 
   @media (min-width: 960px) {
-    .mobile-bar {
+    .mobile-bar,
+    .menu-scrim {
       display: none;
+    }
+
+    .edge-dock {
+      --dock-tab-width: 200px;
+      --dock-tab-height: 195px;
+      --dock-paw-shift: 88px;
+      --dock-paw-hover-shift: 42px;
     }
 
     .desktop-edge {
@@ -414,12 +493,147 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     }
   }
 
+  /* スクロール中に画面の下隅から出る追従タブと、そこから開くドロワー */
+  .edge-dock {
+    /* 右下は 1、左下は -1。向き・位置・反転をこの符号だけで切り替える */
+    --dock-dir: 1;
+    --dock-tab-width: 56px;
+    --dock-tab-height: 55px;
+    --dock-paw-shift: 25px;
+    --dock-paw-hover-shift: 12px;
+
+    display: contents;
+  }
+
+  .edge-dock[data-dock-side="left"] {
+    --dock-dir: -1;
+  }
+
+  .edge-dock-tab,
+  .edge-dock-panel {
+    position: fixed;
+    z-index: 26;
+    bottom: 0;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      translate var(--duration-state) var(--ease-trace),
+      opacity var(--duration-feedback) ease,
+      visibility 0s linear var(--duration-state);
+  }
+
+  .edge-dock[data-dock-side="right"] :is(.edge-dock-tab, .edge-dock-panel) {
+    right: 0;
+  }
+
+  .edge-dock[data-dock-side="left"] :is(.edge-dock-tab, .edge-dock-panel) {
+    left: 0;
+  }
+
+  .edge-dock.is-ready .edge-dock-tab,
+  .edge-dock.is-open .edge-dock-panel {
+    visibility: visible;
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      translate var(--duration-state) var(--ease-trace),
+      opacity var(--duration-feedback) ease,
+      visibility 0s;
+  }
+
+  /* ドロワーが開いている間は手を画面外へ引っ込め、閉じたらまた出す */
+  .edge-dock.is-open .edge-dock-tab {
+    visibility: hidden;
+    opacity: 0;
+    translate: calc(100% * var(--dock-dir)) 100%;
+    transition:
+      translate var(--duration-state) var(--ease-trace),
+      opacity var(--duration-feedback) ease,
+      visibility 0s linear var(--duration-state);
+  }
+
+  /* 猫の手そのものがタブ。下隅の外から斜めに覗かせる */
+  .edge-dock-tab {
+    display: block;
+    width: var(--dock-tab-width);
+    height: var(--dock-tab-height);
+    padding: 0;
+    overflow: visible;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    translate: calc(100% * var(--dock-dir)) 100%;
+  }
+
+  .edge-dock-paw {
+    display: block;
+    width: 100%;
+    height: auto;
+    translate: calc(var(--dock-paw-shift) * var(--dock-dir));
+    rotate: calc(-10deg * var(--dock-dir));
+    transform: scaleX(calc(var(--dock-dir) * -1));
+    transition: translate var(--duration-feedback) var(--ease-trace);
+  }
+
+  /* 触れると手をもう少しだけ伸ばす */
+  .edge-dock-tab:hover .edge-dock-paw,
+  .edge-dock-tab:focus-visible .edge-dock-paw {
+    translate: calc(var(--dock-paw-hover-shift) * var(--dock-dir));
+  }
+
+  .edge-dock-panel {
+    display: grid;
+    width: 180px;
+    padding: 8px;
+    background: var(--color-background);
+    box-shadow: 0 0 12px rgb(0 0 0 / 8%);
+    translate: calc(100% * var(--dock-dir)) 0;
+  }
+
+  .edge-dock-panel a {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 8px 10px;
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    border-radius: 6px;
+  }
+
+  .edge-dock-panel a svg {
+    color: var(--color-secondary);
+  }
+
+  .edge-dock-panel a:hover,
+  .edge-dock-panel a:focus-visible {
+    color: var(--color-interaction-text);
+    background: var(--bg-hover);
+  }
+
+  .edge-dock-panel a[aria-current="page"] {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  @media (forced-colors: active) {
+    .menu-scrim {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .menu-open-icon,
     .menu-close-icon,
     .mobile-menu nav,
     .mobile-menu nav::before,
-    .mobile-menu nav::after {
+    .mobile-menu nav::after,
+    .menu-scrim,
+    .edge-dock-tab,
+    .edge-dock-panel,
+    .edge-dock-paw {
       animation: none !important;
       transition: none !important;
     }
@@ -435,6 +649,11 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const closeDuration = 160;
   const closeScrollDistance = 72;
+  const edgeDocks = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-edge-dock]"),
+  );
+  const mobileBar = document.querySelector<HTMLElement>(".mobile-bar");
+  const dockRevealOffset = 120;
 
   if (mobileMenu && mobileMenuSummary) {
     let closeTimer = 0;
@@ -495,5 +714,85 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
       },
       { passive: true },
     );
+  }
+
+  if (edgeDocks.length > 0) {
+    let dockOpenedAtScrollY = window.scrollY;
+    let dockScrollUpdateQueued = false;
+
+    const closeEdgeDocks = () => {
+      edgeDocks.forEach((dock) => {
+        if (!dock.classList.contains("is-open")) return;
+        dock.classList.remove("is-open");
+        dock
+          .querySelector("[data-edge-dock-tab]")
+          ?.setAttribute("aria-expanded", "false");
+      });
+    };
+
+    // ヘッダーが画面外へ出て、さらに dockRevealOffset ぶん進んだら出す
+    // （PC ではヘッダーバーが非表示なので高さ 0 として扱う）
+    const syncEdgeDockReady = () => {
+      const ready =
+        window.scrollY > (mobileBar?.offsetHeight ?? 0) + dockRevealOffset;
+      edgeDocks.forEach((dock) => dock.classList.toggle("is-ready", ready));
+      if (!ready) closeEdgeDocks();
+    };
+
+    edgeDocks.forEach((dock) => {
+      const tab = dock.querySelector<HTMLButtonElement>("[data-edge-dock-tab]");
+      if (!tab) return;
+
+      // 開くとパネルがタブを覆うため、タブは開く操作だけを担う
+      tab.addEventListener("click", () => {
+        if (dock.classList.contains("is-open")) return;
+        closeEdgeDocks();
+        dock.classList.add("is-open");
+        tab.setAttribute("aria-expanded", "true");
+        dockOpenedAtScrollY = window.scrollY;
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (edgeDocks.some((dock) => dock.contains(target))) return;
+      closeEdgeDocks();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const openDock = edgeDocks.find((dock) =>
+        dock.classList.contains("is-open"),
+      );
+      if (!openDock) return;
+      closeEdgeDocks();
+      openDock
+        .querySelector<HTMLButtonElement>("[data-edge-dock-tab]")
+        ?.focus();
+    });
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (dockScrollUpdateQueued) return;
+        dockScrollUpdateQueued = true;
+
+        requestAnimationFrame(() => {
+          syncEdgeDockReady();
+          if (
+            edgeDocks.some((dock) => dock.classList.contains("is-open")) &&
+            Math.abs(window.scrollY - dockOpenedAtScrollY) >=
+              closeScrollDistance
+          ) {
+            closeEdgeDocks();
+          }
+          dockScrollUpdateQueued = false;
+        });
+      },
+      { passive: true },
+    );
+
+    syncEdgeDockReady();
   }
 </script>
