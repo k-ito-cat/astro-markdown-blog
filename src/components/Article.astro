@@ -5,7 +5,6 @@ import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
 import Meta from "./Meta.astro";
 import GithubCard from "./GithubCard.astro";
-import RecordMark from "./RecordMark.astro";
 import RevisionHistory from "./RevisionHistory.astro";
 import type { Category } from "~/constants/categories";
 import type { Tag } from "~/constants/tags";
@@ -17,7 +16,6 @@ import type { VerificationStatus } from "~/constants/verificationStatus";
 import { HEADING_LEVEL } from "~/constants/headingLevel";
 
 type Props = {
-  slug: string;
   title: string;
   publishedAt: Date;
   updatedAt: Date;
@@ -34,7 +32,6 @@ type Props = {
 };
 
 const {
-  slug,
   title,
   publishedAt,
   updatedAt,
@@ -61,10 +58,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
 <article class="article">
   <header class="article-header">
-    <div class="article-title-row">
-      <h1 class="article-title">{title}</h1>
-      <RecordMark slug={slug} title={title} />
-    </div>
+    <h1 class="article-title">{title}</h1>
     <Meta
       publishedAt={publishedAt}
       updatedAt={updatedAt}
@@ -133,13 +127,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     margin: 0 auto 30px;
     padding-bottom: 24px;
     border-bottom: 2px solid var(--color-primary);
-  }
-
-  .article-title-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 12px;
   }
 
   .article-title {

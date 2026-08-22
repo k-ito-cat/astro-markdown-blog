@@ -68,7 +68,6 @@ const posts = await getCollection("posts");
           ]}
         >
           <Article
-            slug={normalizePostSlug(post.id)}
             title={post.data.title}
             publishedAt={post.data.publishedAt}
             updatedAt={post.data.updatedAt}

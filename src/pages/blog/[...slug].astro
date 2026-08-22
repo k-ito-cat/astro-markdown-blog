@@ -29,7 +29,6 @@ if (!post) return Astro.redirect("/404");
 
 const { Content, headings } = await render(post);
 const isDraft = post.data.status === PUBLISHED_STATUS.DRAFT;
-const currentSlug = normalizePostSlug(post.id);
 const publishedPosts = await getCollection(
   "posts",
   ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
@@ -140,7 +139,6 @@ const toSequenceRecord = (entry: typeof olderPost) =>
       ]}
     >
       <Article
-        slug={currentSlug}
         title={post.data.title}
         publishedAt={post.data.publishedAt}
         updatedAt={post.data.updatedAt}

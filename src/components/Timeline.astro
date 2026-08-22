@@ -1,6 +1,4 @@
 ---
-import RecordMark from "./RecordMark.astro";
-
 export type TimelineEntry = {
   slug: string;
   title: string;
@@ -90,7 +88,6 @@ const { entries, variant = "stream" } = Astro.props;
                     <span class="tl-tags">{entry.categories.join("・")}</span>
                   )}
                 </a>
-                <RecordMark slug={entry.slug} title={entry.title} />
               </div>
               <aside class="tl-context" id={`record-context-${index}`}>
                 <p>{entry.displayDate}の記録</p>
