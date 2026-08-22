@@ -75,11 +75,7 @@ const firstSection = sections[0];
         </p>
       </div>
 
-      <ol
-        class="trace-outline"
-        data-trace-outline
-        style="--trace-progress: 0px"
-      >
+      <ol class="trace-outline">
         {sections.map((section) => {
           const panelId = `trace-subheadings-${section.sectionIndex}`;
           const hasSubheadings = section.subheadings.length > 0;
@@ -104,35 +100,18 @@ const firstSection = sections[0];
                 >
                   {section.text}
                 </a>
-                {hasSubheadings && (
-                  <button
-                    type="button"
-                    class="trace-toggle"
-                    aria-expanded="false"
-                    aria-controls={panelId}
-                    aria-label={`「${section.text}」の小見出しを表示`}
-                    data-heading-label={section.text}
-                    data-trace-toggle
-                    hidden
-                  >
-                    <Icon name="octicon:chevron-down-16" aria-hidden="true" />
-                  </button>
-                )}
               </div>
 
               {hasSubheadings && (
-                <ol
-                  id={panelId}
-                  class="trace-subheadings"
-                  data-trace-subheadings
-                  hidden
-                >
-                  {section.subheadings.map((subheading) => (
-                    <li>
-                      <a href={`#${subheading.slug}`}>{subheading.text}</a>
-                    </li>
-                  ))}
-                </ol>
+                <div class="trace-sub-wrap">
+                  <ol id={panelId} class="trace-subheadings">
+                    {section.subheadings.map((subheading) => (
+                      <li>
+                        <a href={`#${subheading.slug}`}>{subheading.text}</a>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               )}
             </li>
           );
@@ -217,9 +196,9 @@ const firstSection = sections[0];
       align-items: center;
       gap: 6px;
       justify-self: start;
-      margin-bottom: 19px;
+      margin-bottom: 20px;
       color: var(--color-text-sub);
-      font-size: 12px;
+      font-size: 13px;
       text-decoration: none;
     }
 
@@ -232,6 +211,7 @@ const firstSection = sections[0];
 
     .trace-current {
       min-width: 0;
+      border-bottom: 1px solid var(--color-border);
     }
 
     .trace-status {
@@ -240,17 +220,16 @@ const firstSection = sections[0];
       justify-content: space-between;
       gap: 12px;
       color: var(--color-text-muted);
-      font-size: 11px;
+      font-size: 12px;
       font-variant-numeric: tabular-nums;
     }
 
     .current-heading {
       display: -webkit-box;
-      height: 3.1em;
-      margin: 5px 0 14px;
+      margin: 5px 0 16px;
       overflow: hidden;
       color: var(--color-primary);
-      font-size: var(--text-sm);
+      font-size: var(--text-md);
       font-weight: 700;
       line-height: 1.55;
       -webkit-box-orient: vertical;
@@ -258,36 +237,15 @@ const firstSection = sections[0];
     }
 
     .trace-outline {
-      --trace-inset: 5px;
       position: relative;
       min-height: 0;
-      margin: 0;
-      padding: 0 4px 0 17px;
+      /* 罫線の上下を 16px で揃える（項目自身の padding 4px と合わせて 12px + 4px） */
+      margin: 12px 0 0;
+      padding: 0 4px;
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-width: thin;
       list-style: none;
-    }
-
-    .trace-outline::before,
-    .trace-outline::after {
-      content: "";
-      position: absolute;
-      top: 8px;
-      left: var(--trace-inset);
-      width: 1px;
-      pointer-events: none;
-    }
-
-    .trace-outline::before {
-      bottom: 8px;
-      background: var(--color-border);
-    }
-
-    .trace-outline::after {
-      height: var(--trace-progress);
-      max-height: calc(100% - 16px);
-      background: var(--color-primary);
     }
 
     .trace-section {
@@ -296,39 +254,9 @@ const firstSection = sections[0];
       padding: 4px 0;
     }
 
-    .trace-section::before {
-      content: "";
-      position: absolute;
-      z-index: 1;
-      top: 14px;
-      left: -16px;
-      width: 7px;
-      height: 7px;
-      box-sizing: border-box;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 50%;
-    }
-
-    .trace-section.is-past::before {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-    }
-
-    .trace-section.is-current::before {
-      width: 9px;
-      height: 9px;
-      top: 13px;
-      left: -17px;
-      background: var(--color-accent);
-      border: 2px solid var(--color-primary);
-      border-radius: 1px;
-      transform: rotate(45deg);
-    }
-
     .trace-section-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr);
       align-items: start;
       gap: 3px;
       min-height: 27px;
@@ -337,7 +265,7 @@ const firstSection = sections[0];
     .trace-section a {
       min-width: 0;
       color: var(--color-text-muted);
-      font-size: 12px;
+      font-size: var(--text-sm);
       line-height: 1.45;
       text-decoration: none;
       text-wrap: pretty;
@@ -360,51 +288,50 @@ const firstSection = sections[0];
       text-underline-offset: 3px;
     }
 
-    .trace-toggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 27px;
-      height: 27px;
-      margin-top: -5px;
-      padding: 0;
-      color: var(--color-text-muted);
-      background: transparent;
-      border: 0;
-      cursor: pointer;
+    /* 小見出しは現在地の章だけ開く。0fr→1fr で高さを、opacity で濃さを送る */
+    .trace-sub-wrap {
+      display: grid;
+      grid-template-rows: 0fr;
+      visibility: hidden;
+      opacity: 0;
+      transition:
+        grid-template-rows var(--duration-state) var(--ease-trace),
+        opacity var(--duration-state) ease,
+        visibility 0s linear var(--duration-state);
     }
 
-    .trace-toggle:hover,
-    .trace-toggle:focus-visible {
-      color: var(--color-interaction-text);
-    }
-
-    .trace-toggle[aria-expanded="true"] :global(svg) {
-      transform: rotate(180deg);
+    .trace-section.is-current .trace-sub-wrap {
+      grid-template-rows: 1fr;
+      visibility: visible;
+      opacity: 1;
+      transition:
+        grid-template-rows var(--duration-state) var(--ease-trace),
+        opacity var(--duration-state) ease,
+        visibility 0s;
     }
 
     .trace-subheadings {
       display: grid;
-      gap: 3px;
-      margin: 1px 0 5px;
-      padding: 0 0 0 11px;
+      gap: 6px;
+      /* 畳んだときに余白が残らないよう、間隔は内側の padding で持つ */
+      min-height: 0;
+      margin: 0;
+      padding: 8px 0 10px 11px;
+      overflow: hidden;
       list-style: none;
-    }
-
-    .trace-subheadings[hidden] {
-      display: none;
     }
 
     .trace-subheadings a {
       display: block;
-      font-size: 11px;
-      line-height: 1.45;
+      font-size: 13px;
+      line-height: 1.7;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .mobile-reading-return,
-    .trace-section a {
+    .trace-section a,
+    .trace-sub-wrap {
       transition: none;
     }
   }
@@ -422,7 +349,6 @@ const firstSection = sections[0];
   const position = document.querySelector<HTMLElement>(
     "[data-section-position]",
   );
-  const outline = document.querySelector<HTMLElement>("[data-trace-outline]");
   const sections = Array.from(
     document.querySelectorAll<HTMLElement>(".prose h2[id]"),
   );
@@ -456,16 +382,6 @@ const firstSection = sections[0];
         }
       }
     });
-
-    if (outline) {
-      const progress = Math.max(
-        0,
-        currentItem.offsetTop +
-          currentItem.querySelector(".trace-section-row")!.clientHeight / 2 -
-          8,
-      );
-      outline.style.setProperty("--trace-progress", `${progress}px`);
-    }
   };
 
   if (output && sections.length > 0) {
@@ -498,33 +414,6 @@ const firstSection = sections[0];
     window.addEventListener("hashchange", queueUpdate);
     updateFromScrollPosition();
   }
-
-  document
-    .querySelectorAll<HTMLButtonElement>("[data-trace-toggle]")
-    .forEach((button) => {
-      button.hidden = false;
-      button.addEventListener("click", () => {
-        const panelId = button.getAttribute("aria-controls");
-        const panel = panelId ? document.getElementById(panelId) : null;
-        if (!panel) return;
-
-        const expanded = button.getAttribute("aria-expanded") === "true";
-        const nextExpanded = !expanded;
-        const headingLabel = button.dataset.headingLabel ?? "この章";
-        button.setAttribute("aria-expanded", String(nextExpanded));
-        button.setAttribute(
-          "aria-label",
-          `「${headingLabel}」の小見出しを${nextExpanded ? "隠す" : "表示"}`,
-        );
-        panel.hidden = !nextExpanded;
-
-        const currentItem = traceItems.find((item) =>
-          item.classList.contains("is-current"),
-        );
-        if (currentItem?.dataset.headingId)
-          setCurrentSection(currentItem.dataset.headingId);
-      });
-    });
 
   document
     .querySelectorAll<HTMLAnchorElement>("[data-reading-return]")
