@@ -33,10 +33,8 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
       ))}
       {sameField.length > 0 && (
         <section>
-          <p class="relation-label">近い分野・タグの記録</p>
-          <p class="relation-description">
-            共通するタグや分野から近いと判断した記録です。
-          </p>
+          <p class="relation-label">関連する記録</p>
+          <p class="relation-description">共通する分野やタグと近い記録</p>
           <ul>
             {sameField.map((record) => (
               <li>
