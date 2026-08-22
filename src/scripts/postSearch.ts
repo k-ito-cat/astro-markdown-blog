@@ -17,6 +17,21 @@ const clearReveal = (event: AnimationEvent) => {
     event.target.classList.remove(REVEAL_CLASS);
 };
 
+const SP_QUERY = "(max-width: 639px)";
+
+const isSmallScreen = () => window.matchMedia(SP_QUERY).matches;
+
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// SP では検索欄の下にタグ一覧が続き記録が見えないので、一覧の先頭まで送る
+const scrollToRecords = (list: HTMLElement) => {
+  list.scrollIntoView({
+    behavior: prefersReducedMotion() ? "instant" : "smooth",
+    block: "start",
+  });
+};
+
 const getElements = () => {
   const input = document.querySelector("#post-search-input");
   const count = document.querySelector("#post-count");
@@ -41,6 +56,7 @@ const getElements = () => {
     terms: Array.from(
       document.querySelectorAll<HTMLAnchorElement>("[data-filter-term]"),
     ),
+    list: document.querySelector<HTMLElement>("[data-record-list]"),
     total: Number(count.dataset.total ?? "0"),
   };
 };
@@ -135,6 +151,16 @@ export const initPostSearch = () => {
   if (initialQuery) syncUrl();
 
   elements.input.addEventListener("input", apply);
+  // 手入力後に検索欄を離れたときも、SP なら結果まで送る
+  elements.input.addEventListener("blur", (event) => {
+    if (!isSmallScreen() || !elements.list) return;
+    if (!elements.input.value.trim()) return;
+    const next = event.relatedTarget;
+    // 条件を外す操作でフォーカスが移った場合は送らない
+    if (next instanceof HTMLElement && next.closest("[data-search-clear]"))
+      return;
+    scrollToRecords(elements.list);
+  });
   elements.clears.forEach((button) => button.addEventListener("click", clear));
   // 索引ページ内の分野・タグは、遷移せず検索語として検索窓へ入れる
   elements.terms.forEach((link) => {
@@ -144,6 +170,11 @@ export const initPostSearch = () => {
       event.preventDefault();
       elements.input.value = term;
       apply();
+      // SP でフォーカスするとソフトキーボードが出て一覧が潰れるため送りだけ行う
+      if (isSmallScreen()) {
+        if (elements.list) scrollToRecords(elements.list);
+        return;
+      }
       elements.input.focus();
     });
   });

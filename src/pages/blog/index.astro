@@ -157,13 +157,13 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
       </button>
     </nav>
 
-    <section class="index-records" aria-label="記録">
-      <Timeline entries={entries} variant="index" />
+    <section class="index-records" aria-label="記録" data-record-list>
       <p class="index-empty" data-search-empty hidden>
         該当する記録はありません。<button type="button" data-search-clear
           >条件を外す</button
         >
       </p>
+      <Timeline entries={entries} variant="index" />
     </section>
   </main>
 </BaseLayout>
