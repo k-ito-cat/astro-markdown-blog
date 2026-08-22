@@ -52,7 +52,12 @@ const previewPosts = posts
       memoState,
       issues,
       searchText: normalizeSearchText(
-        [post.data.title, previewSlug, ...post.data.categories].join(" "),
+        [
+          post.data.title,
+          previewSlug,
+          ...post.data.categories,
+          ...post.data.tags,
+        ].join(" "),
       ),
     };
   })
@@ -76,6 +81,10 @@ const priorities = Object.values(POST_PRIORITY).sort(
 
 const categories = Array.from(
   new Set(previewPosts.flatMap((post) => post.data.categories)),
+).sort((a, b) => a.localeCompare(b, "ja"));
+
+const tags = Array.from(
+  new Set(previewPosts.flatMap((post) => post.data.tags)),
 ).sort((a, b) => a.localeCompare(b, "ja"));
 
 const publishedMemoCount = previewPosts.filter(
@@ -271,6 +280,25 @@ const publishedMemoFilterParams = new URLSearchParams({
             </div>
           </fieldset>
 
+          <fieldset class="preview-filter-group preview-category-filter">
+            <legend>タグ</legend>
+            <div class="preview-checkbox-list preview-category-list">
+              {
+                tags.map((tag) => (
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="tag"
+                      value={tag}
+                      data-filter-key="tag"
+                    />
+                    <span>{tag}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
           <label class="preview-review-filter">
             <input
               type="checkbox"
@@ -355,6 +383,7 @@ const publishedMemoFilterParams = new URLSearchParams({
                       data-categories={JSON.stringify(
                         previewPost.data.categories,
                       )}
+                      data-tags={JSON.stringify(previewPost.data.tags)}
                       data-updated={previewPost.data.updatedAt
                         .toISOString()
                         .slice(0, 10)}

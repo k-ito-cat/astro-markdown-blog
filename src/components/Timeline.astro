@@ -9,6 +9,7 @@ export type TimelineEntry = {
   year: string;
   month: string;
   categories: string[];
+  tags: string[];
   activity: "新規" | "改訂";
   isWip: boolean;
   verificationLabel?: string;
@@ -49,10 +50,9 @@ const { entries, variant = "stream" } = Astro.props;
             <li
               class:list={["tl-entry", { "is-wip": entry.isWip }]}
               data-record-entry
-              data-search-text={`${entry.title} ${entry.categories.join(" ")}`.toLocaleLowerCase(
+              data-search-text={`${entry.title} ${entry.categories.join(" ")} ${entry.tags.join(" ")}`.toLocaleLowerCase(
                 "ja",
               )}
-              data-categories={JSON.stringify(entry.categories)}
               data-year={entry.year}
               data-month={entry.month}
             >
@@ -97,6 +97,7 @@ const { entries, variant = "stream" } = Astro.props;
                 {entry.categories.length > 0 && (
                   <p>分野: {entry.categories.join("・")}</p>
                 )}
+                {entry.tags.length > 0 && <p>タグ: {entry.tags.join("・")}</p>}
                 {entry.verificationLabel && (
                   <p>状態: {entry.verificationLabel}</p>
                 )}
@@ -380,6 +381,23 @@ const { entries, variant = "stream" } = Astro.props;
   @media (min-width: 760px) {
     .timeline-root {
       --timeline-mist-height: 160px;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .tl-entry.is-search-revealed,
+    .tl-date-group.is-search-revealed {
+      animation: tl-search-reveal var(--duration-feedback) ease-out;
+    }
+
+    @keyframes tl-search-reveal {
+      from {
+        opacity: 0.35;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
   }
 

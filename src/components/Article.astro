@@ -8,6 +8,7 @@ import GithubCard from "./GithubCard.astro";
 import RecordMark from "./RecordMark.astro";
 import RevisionHistory from "./RevisionHistory.astro";
 import type { Category } from "~/constants/categories";
+import type { Tag } from "~/constants/tags";
 import {
   PUBLISHED_STATUS,
   type PublishedStatus,
@@ -21,6 +22,7 @@ type Props = {
   publishedAt: Date;
   updatedAt: Date;
   categories: Category[];
+  tags: Tag[];
   githubUrl?: string;
   content: AstroComponentFactory;
   headings?: { depth: number; slug: string; text: string }[];
@@ -37,6 +39,7 @@ const {
   publishedAt,
   updatedAt,
   categories,
+  tags,
   githubUrl,
   content,
   headings = [],
@@ -67,7 +70,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       updatedAt={updatedAt}
       verificationStatus={verificationStatus}
     />
-    <Categories categories={categories} />
+    <Categories categories={categories} tags={tags} />
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
 

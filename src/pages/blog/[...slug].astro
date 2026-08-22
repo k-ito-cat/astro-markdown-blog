@@ -81,16 +81,34 @@ const relationGroups = [
   },
 ];
 
+// 関連記事は「共通タグ2点 + 共通カテゴリ1点」で採点する。
+// カテゴリが1つ重なるだけ（=同じ分野というだけ）では関連として扱わない。
+const TAG_SCORE = 2;
+const CATEGORY_SCORE = 1;
+const MIN_RELATION_SCORE = 2;
+const RELATION_LIMIT = 3;
+
+const currentCategories = new Set<string>(post.data.categories);
+const currentTags = new Set<string>(post.data.tags);
 const sameField = timeline
-  .filter(
-    (entry) =>
-      entry.id !== post.id &&
-      entry.data.categories.some((category) =>
-        post.data.categories.includes(category),
-      ),
-  )
-  .slice(0, 4)
+  .filter((entry) => entry.id !== post.id)
   .map((entry) => ({
+    entry,
+    score:
+      entry.data.tags.filter((tag) => currentTags.has(tag)).length * TAG_SCORE +
+      entry.data.categories.filter((category) =>
+        currentCategories.has(category),
+      ).length *
+        CATEGORY_SCORE,
+  }))
+  .filter(({ score }) => score >= MIN_RELATION_SCORE)
+  .sort(
+    (a, b) =>
+      b.score - a.score ||
+      b.entry.data.publishedAt.getTime() - a.entry.data.publishedAt.getTime(),
+  )
+  .slice(0, RELATION_LIMIT)
+  .map(({ entry }) => ({
     slug: normalizePostSlug(entry.id),
     title: entry.data.title,
   }));
@@ -127,6 +145,7 @@ const toSequenceRecord = (entry: typeof olderPost) =>
         publishedAt={post.data.publishedAt}
         updatedAt={post.data.updatedAt}
         categories={post.data.categories}
+        tags={post.data.tags}
         githubUrl={post.data.githubUrl}
         content={Content}
         headings={headings}

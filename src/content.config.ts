@@ -1,6 +1,7 @@
 import { z, defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
-import { CATEGORIES } from "~/constants/categories";
+import { CATEGORIES, MAX_CATEGORIES_PER_POST } from "~/constants/categories";
+import { TAGS } from "~/constants/tags";
 import { POST_PRIORITY } from "~/constants/postPriority";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { WRITING_STATUS } from "~/constants/writingStatus";
@@ -12,7 +13,11 @@ const posts = defineCollection({
     title: z.string(),
     publishedAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
-    categories: z.array(z.enum([...CATEGORIES])),
+    categories: z
+      .array(z.enum([...CATEGORIES]))
+      .min(1)
+      .max(MAX_CATEGORIES_PER_POST),
+    tags: z.array(z.enum([...TAGS])).min(1),
     thumbnail: z.string().optional(),
     githubUrl: z.string().optional(),
     status: z.enum([

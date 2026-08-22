@@ -1,6 +1,22 @@
 const normalize = (value: string) =>
   value.normalize("NFKC").toLocaleLowerCase("ja");
 
+const toTerms = (query: string) =>
+  normalize(query).split(/\s+/u).filter(Boolean);
+
+const REVEAL_CLASS = "is-search-revealed";
+
+// 非表示から表示に変わった要素にだけ、ごく短いフェードを掛ける
+const reveal = (element: HTMLElement) => {
+  element.classList.remove(REVEAL_CLASS);
+  element.classList.add(REVEAL_CLASS);
+};
+
+const clearReveal = (event: AnimationEvent) => {
+  if (event.target instanceof HTMLElement)
+    event.target.classList.remove(REVEAL_CLASS);
+};
+
 const getElements = () => {
   const input = document.querySelector("#post-search-input");
   const count = document.querySelector("#post-count");
@@ -19,10 +35,9 @@ const getElements = () => {
     clears: Array.from(
       document.querySelectorAll<HTMLButtonElement>("[data-search-clear]"),
     ),
-    categoryFilter: document.querySelector<HTMLElement>(
-      "[data-category-filter]",
+    terms: Array.from(
+      document.querySelectorAll<HTMLAnchorElement>("[data-filter-term]"),
     ),
-    categoryName: document.querySelector<HTMLElement>("[data-category-name]"),
     total: Number(count.dataset.total ?? "0"),
   };
 };
@@ -30,19 +45,19 @@ const getElements = () => {
 const updateView = (
   elements: NonNullable<ReturnType<typeof getElements>>,
   query: string,
-  category: string | null,
 ) => {
-  const normalizedQuery = normalize(query.trim());
+  // 分野・タグ・タイトルをまとめた検索テキストに対する AND 検索
+  const terms = toTerms(query);
   let visible = 0;
   elements.items.forEach((item) => {
-    const categories = JSON.parse(item.dataset.categories ?? "[]") as string[];
-    const matchesCategory = !category || categories.includes(category);
-    const matchesQuery =
-      !normalizedQuery ||
-      normalize(item.dataset.searchText ?? "").includes(normalizedQuery);
-    const match = matchesCategory && matchesQuery;
+    const searchText = normalize(item.dataset.searchText ?? "");
+    const match = terms.every((term) => searchText.includes(term));
+    const wasHidden = item.hidden;
     item.hidden = !match;
-    if (match) visible += 1;
+    if (match) {
+      visible += 1;
+      if (wasHidden) reveal(item);
+    }
   });
 
   elements.groups.forEach((group) => {
@@ -53,36 +68,68 @@ const updateView = (
         hasVisibleItem = true;
       next = next.nextElementSibling;
     }
+    const wasHidden = group.hidden;
     group.hidden = !hasVisibleItem;
+    if (hasVisibleItem && wasHidden) reveal(group);
   });
 
-  const hasCondition = Boolean(normalizedQuery || category);
+  const hasCondition = terms.length > 0;
   elements.count.textContent = `${hasCondition ? visible : elements.total}件の記録`;
   if (elements.empty) elements.empty.hidden = !(hasCondition && visible === 0);
   elements.clears.forEach((button) => {
     button.hidden = !hasCondition;
   });
-  if (elements.categoryFilter) elements.categoryFilter.hidden = !category;
-  if (elements.categoryName) elements.categoryName.textContent = category ?? "";
 };
 
 export const initPostSearch = () => {
   const elements = getElements();
   if (!elements) return;
-  let category = new URL(window.location.href).searchParams.get("category");
+
+  const params = new URL(window.location.href).searchParams;
+  // 記事詳細などから ?q= で渡された分野・タグをそのまま検索語として扱う
+  const initialQuery = params.get("q");
+  if (initialQuery) elements.input.value = initialQuery;
+
+  const syncUrl = () => {
+    const query = elements.input.value.trim();
+    window.history.replaceState(
+      null,
+      "",
+      query ? `/blog?q=${encodeURIComponent(query)}` : "/blog",
+    );
+  };
+
+  const apply = () => {
+    updateView(elements, elements.input.value);
+    syncUrl();
+  };
+
   const clear = () => {
     elements.input.value = "";
-    category = null;
-    window.history.replaceState(null, "", "/blog");
-    updateView(elements, "", category);
+    apply();
     elements.input.focus();
   };
 
-  updateView(elements, elements.input.value, category);
-  elements.input.addEventListener("input", () =>
-    updateView(elements, elements.input.value, category),
+  [...elements.items, ...elements.groups].forEach((element) =>
+    element.addEventListener("animationend", clearReveal),
   );
+
+  updateView(elements, elements.input.value);
+  if (initialQuery) syncUrl();
+
+  elements.input.addEventListener("input", apply);
   elements.clears.forEach((button) => button.addEventListener("click", clear));
+  // 索引ページ内の分野・タグは、遷移せず検索語として検索窓へ入れる
+  elements.terms.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const term = link.dataset.filterTerm;
+      if (!term || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      event.preventDefault();
+      elements.input.value = term;
+      apply();
+      elements.input.focus();
+    });
+  });
   document.addEventListener("keydown", (event) => {
     const target = event.target;
     const isEditing =

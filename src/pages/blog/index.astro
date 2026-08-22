@@ -29,7 +29,8 @@ const entries: TimelineEntry[] = allPosts
       displayDate: formatJapaneseDate(activityDate),
       year,
       month,
-      categories: post.data.categories.filter((item) => item !== "すべて"),
+      categories: post.data.categories,
+      tags: post.data.tags,
       activity: isRevision ? "改訂" : "新規",
       isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
       verificationLabel: post.data.verificationStatus
@@ -40,14 +41,16 @@ const entries: TimelineEntry[] = allPosts
   })
   .sort((a, b) => b.isoDate.localeCompare(a.isoDate));
 
-const fieldCounts = Array.from(
-  allPosts.reduce((map, post) => {
-    post.data.categories
-      .filter((item) => item !== "すべて")
-      .forEach((item) => map.set(item, (map.get(item) ?? 0) + 1));
-    return map;
-  }, new Map<string, number>()),
-).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
+const countBy = (lists: string[][]) =>
+  Array.from(
+    lists.reduce((map, items) => {
+      items.forEach((item) => map.set(item, (map.get(item) ?? 0) + 1));
+      return map;
+    }, new Map<string, number>()),
+  ).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
+
+const fieldCounts = countBy(allPosts.map((post) => post.data.categories));
+const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 ---
 
 <BaseLayout title="索引">
@@ -59,7 +62,9 @@ const fieldCounts = Array.from(
           {entries.length}件の記録
         </span>
       </div>
-      <p>言葉が決まっていれば検索、まだ決まっていなければ分野から辿れます。</p>
+      <p>
+        言葉が決まっていれば検索、まだ決まっていなければ分野やタグから辿れます。
+      </p>
 
       <div class="search-field">
         <Icon name="octicon:search-16" aria-hidden="true" />
@@ -68,8 +73,8 @@ const fieldCounts = Array.from(
           type="search"
           inputmode="search"
           autocomplete="off"
-          placeholder="記録名・分野を検索 /"
-          aria-label="記録名と分野を検索"
+          placeholder="記録名・分野・タグを検索 /"
+          aria-label="記録名と分野とタグを検索"
         />
         <button
           type="button"
@@ -80,11 +85,6 @@ const fieldCounts = Array.from(
           <Icon name="octicon:x-16" aria-hidden="true" />
         </button>
       </div>
-
-      <p class="active-filter" data-category-filter hidden>
-        分野「<span data-category-name></span>」を表示中 <a href="/blog">解除</a
-        >
-      </p>
     </header>
 
     <nav class="fields" id="fields" aria-label="分野">
@@ -92,9 +92,32 @@ const fieldCounts = Array.from(
         {
           fieldCounts.map(([field, count]) => (
             <li>
-              <a href={`/blog?category=${encodeURIComponent(field)}`}>
+              <a
+                href={`/blog?q=${encodeURIComponent(field)}`}
+                data-filter-term={field}
+              >
                 <>
                   <span>{field}</span>
+                  <span>{count}</span>
+                </>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <nav class="fields tags" id="tags" aria-label="タグ">
+      <ul>
+        {
+          tagCounts.map(([tag, count]) => (
+            <li>
+              <a
+                href={`/blog?q=${encodeURIComponent(tag)}`}
+                data-filter-term={tag}
+              >
+                <>
+                  <span>#{tag}</span>
                   <span>{count}</span>
                 </>
               </a>
@@ -195,10 +218,6 @@ const fieldCounts = Array.from(
     cursor: pointer;
   }
 
-  .active-filter {
-    color: var(--color-primary) !important;
-  }
-
   .fields {
     margin-top: 32px;
   }
@@ -227,6 +246,28 @@ const fieldCounts = Array.from(
     color: var(--color-text-muted);
     font-family: var(--font-machine);
     font-size: 11px;
+  }
+
+  .tags {
+    margin-top: 24px;
+  }
+
+  .tags ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+
+  .tags a {
+    gap: 6px;
+    padding: 4px 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    border-bottom: 0;
+  }
+
+  .tags a:hover {
+    color: var(--color-text-sub);
   }
 
   .index-records {

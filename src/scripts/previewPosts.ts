@@ -25,7 +25,13 @@ type SortName =
   | "updated-asc"
   | "title"
   | "priority";
-type FilterKey = "priority" | "writing" | "publication" | "memo" | "category";
+type FilterKey =
+  | "priority"
+  | "writing"
+  | "publication"
+  | "memo"
+  | "category"
+  | "tag";
 
 type PreviewState = {
   query: string;
@@ -36,6 +42,7 @@ type PreviewState = {
   publication: PublishedStatus[];
   memo: MemoState[];
   category: string[];
+  tag: string[];
   issuesOnly: boolean;
 };
 
@@ -48,6 +55,7 @@ type PreviewRow = {
   publication: PublishedStatus;
   memo: MemoState;
   categories: string[];
+  tags: string[];
   updated: number;
   issues: string[];
 };
@@ -91,6 +99,7 @@ const createBaseState = (): PreviewState => ({
   publication: [],
   memo: [],
   category: [],
+  tag: [],
   issuesOnly: false,
 });
 
@@ -140,6 +149,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
       element.dataset.categories ?? "[]",
       "categories",
     ),
+    tags: parseStringArray(element.dataset.tags ?? "[]", "tags"),
     updated,
     issues: parseStringArray(element.dataset.issues ?? "[]", "issues"),
   };
@@ -160,7 +170,10 @@ const getAllowedValues = <T extends string>(
     .getAll(key)
     .filter((value): value is T => allowed.includes(value as T));
 
-const readStateFromUrl = (categories: string[]): PreviewState => {
+const readStateFromUrl = (
+  categories: string[],
+  tags: string[],
+): PreviewState => {
   const params = new URLSearchParams(window.location.search);
   const state = createBaseState();
   const group = params.get("group");
@@ -185,6 +198,7 @@ const readStateFromUrl = (categories: string[]): PreviewState => {
   );
   state.memo = getAllowedValues(params, "memo", MEMO_STATES);
   state.category = getAllowedValues(params, "category", categories);
+  state.tag = getAllowedValues(params, "tag", tags);
   state.issuesOnly = params.get("issues") === "only";
   return state;
 };
@@ -203,6 +217,7 @@ const writeStateToUrl = (state: PreviewState) => {
   );
   state.memo.forEach((value) => url.searchParams.append("memo", value));
   state.category.forEach((value) => url.searchParams.append("category", value));
+  state.tag.forEach((value) => url.searchParams.append("tag", value));
   if (state.issuesOnly) url.searchParams.set("issues", "only");
   window.history.replaceState(null, "", url);
 };
@@ -252,6 +267,12 @@ const matchesState = (row: PreviewRow, state: PreviewState) => {
   if (
     state.category.length > 0 &&
     !state.category.some((category) => row.categories.includes(category))
+  ) {
+    return false;
+  }
+  if (
+    state.tag.length > 0 &&
+    !state.tag.some((tag) => row.tags.includes(tag))
   ) {
     return false;
   }
@@ -340,6 +361,7 @@ const getFilterLabel = (key: FilterKey, value: string) => {
     return `公開: ${PUBLISHED_STATUS_LABELS[value as PublishedStatus]}`;
   }
   if (key === "memo") return `メモ: ${MEMO_STATE_LABELS[value as MemoState]}`;
+  if (key === "tag") return `タグ: ${value}`;
   return `カテゴリ: ${value}`;
 };
 
@@ -395,9 +417,13 @@ const initializePreviewPosts = (root: HTMLElement) => {
     ),
     (input) => input.value,
   );
+  const tagValues = Array.from(
+    root.querySelectorAll<HTMLInputElement>('input[data-filter-key="tag"]'),
+    (input) => input.value,
+  );
   const total = rows.length;
   const collapsedGroups = new Set<string>();
-  let state = readStateFromUrl(categoryValues);
+  let state = readStateFromUrl(categoryValues, tagValues);
 
   const getFilterInputs = () =>
     Array.from(
@@ -409,6 +435,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     if (key === "writing") return state.writing;
     if (key === "publication") return state.publication;
     if (key === "memo") return state.memo;
+    if (key === "tag") return state.tag;
     return state.category;
   };
 
@@ -441,6 +468,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         }
         if (key === "memo") next.memo.push(input.value as MemoState);
         if (key === "category") next.category.push(input.value);
+        if (key === "tag") next.tag.push(input.value);
       });
     next.issuesOnly = issuesOnlyInput.checked;
     return next;
@@ -462,6 +490,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         "category",
         value,
       ]),
+      ...state.tag.map((value): [FilterKey, string] => ["tag", value]),
     ];
     const count = filterEntries.length + Number(state.issuesOnly);
     filterCount.textContent = String(count);
@@ -540,6 +569,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         next.publication = [];
         next.memo = [];
         next.category = [];
+        next.tag = [];
         next.issuesOnly = false;
         applyState(next);
       });
@@ -613,7 +643,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     }
   });
   window.addEventListener("popstate", () => {
-    state = readStateFromUrl(categoryValues);
+    state = readStateFromUrl(categoryValues, tagValues);
     syncControls();
     render();
   });

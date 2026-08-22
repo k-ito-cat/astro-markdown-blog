@@ -57,6 +57,32 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - `low`: 低。保持するが当面急がない
 - `none`: 未設定。優先順位をまだ判断していない
 
+### カテゴリとタグ
+
+記事の分類は `categories` と `tags` の2軸で持つ。どちらも必須で、値は定数に定義されたものだけを使える（未定義の値を書くとbuildが落ちるので、表記ゆれはbuild時に検知できる）。
+
+`categories` は「記事を辿るための分野」を表す。**1〜2件必須**。技術名や製品名は入れない。
+
+- 定義: [src/constants/categories.ts](src/constants/categories.ts)
+- 値: `フロントエンド` / `バックエンド` / `Web基盤` / `セキュリティ` / `設計・アーキテクチャ` / `開発環境・ツール` / `AI` / `UI・UX` / `開発プロセス`
+
+`tags` は「固有名詞と個別の論点」を表す。**1件以上必須**、件数の上限はない。
+
+- 定義: [src/constants/tags.ts](src/constants/tags.ts)
+- 例: `Astro` / `TypeScript` / `devcontainer` / `GitHub Actions` / `認証・認可` / `パフォーマンス`
+
+```yaml
+categories:
+  - フロントエンド
+tags:
+  - Astro
+  - Headless CMS
+```
+
+索引ページでは `categories` を「分野」、`tags` を「タグ」として別々に並べる。絞り込みは検索ボックスに一本化していて、分野やタグをクリックするとその値が検索語として検索ボックスに入る（ページ遷移はしない）。検索はタイトル・分野・タグをまとめたテキストを対象にし、スペース区切りで複数語を入れるとAND条件になる。記事詳細の分野・タグからは `/blog?q=<値>` へ遷移し、同じく検索語として扱われる。
+
+記事詳細の「近い分野・タグの記録」は、`共通タグ1件につき2点 + 共通カテゴリ1件につき1点` で採点し、2点以上の記事を上位3件まで表示する。同じカテゴリが1つ重なるだけでは関連として扱わない。`relations` を明示した場合は、そちらと併記される。
+
 ### 技術理解の状態・関係・改訂
 
 公開・執筆運用とは別に、必要な記事だけ以下の任意frontmatterを持てる。既存記事へ追加する必要はなく、未入力の場合も従来どおり表示・buildできる。
@@ -179,11 +205,15 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 
 ## メンテナンス
 
-### カテゴリを追加したいとき
+### カテゴリ・タグを追加したいとき
 
-- [src/constants/categories.ts](src/constants/categories.ts) - フロントマターでのバリデーションで使われる（主にエディタ編集時に活用）
+カテゴリとタグはどちらもenum運用のため、定数に無い値は使えない。追加するときは以下の2箇所を同時に更新する（二重管理）。
 
-- [public/admin/config.yml](public/admin/config.yml) - 管理画面でカテゴリ選択時のサジェスト
+- [src/constants/categories.ts](src/constants/categories.ts) / [src/constants/tags.ts](src/constants/tags.ts) - フロントマターでのバリデーションで使われる（主にエディタ編集時に活用）
+
+- [public/admin/config.yml](public/admin/config.yml) - 管理画面でカテゴリ・タグ選択時のサジェスト
+
+カテゴリは分野を表すため、増やす前に既存の9件で表せないかを先に検討する。技術名・製品名・個別の論点はカテゴリではなくタグに追加する。
 
 ### フロントマターを変更するとき
 

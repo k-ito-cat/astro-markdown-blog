@@ -1,35 +1,54 @@
 ---
 import type { Category } from "~/constants/categories";
+import type { Tag } from "~/constants/tags";
 
 type Props = {
   categories: Category[];
+  tags?: Tag[];
 };
-const { categories } = Astro.props;
+const { categories, tags = [] } = Astro.props;
+const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
 ---
 
 {
-  categories && categories.length > 0 && (
-    <ul class="category-list">
-      {categories.map((category: Category) => (
-        <li>
-          <a
-            href={
-              category === "すべて"
-                ? "/blog"
-                : `/blog?category=${encodeURIComponent(category)}`
-            }
-            class="category-label"
-          >
-            {category}
-          </a>
-        </li>
-      ))}
-    </ul>
+  (categories.length > 0 || tags.length > 0) && (
+    <div class="classification">
+      {categories.length > 0 && (
+        <ul class="category-list">
+          {categories.map((category: Category) => (
+            <li>
+              <a href={toSearchHref(category)} class="category-label">
+                {category}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {tags.length > 0 && (
+        <ul class="tag-list">
+          {tags.map((tag: Tag) => (
+            <li>
+              <a href={toSearchHref(tag)} class="tag-label">
+                {tag}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
 <style>
-  .category-list {
+  .classification {
+    display: flex;
+    flex-direction: column;
+    /* 1段目にカテゴリ、2段目にタグ。タグ行を折り返しと誤読させないよう段の間隔を空ける */
+    gap: 10px;
+  }
+
+  .category-list,
+  .tag-list {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -39,22 +58,50 @@ const { categories } = Astro.props;
     list-style: none;
   }
 
+  .tag-list {
+    gap: 4px 12px;
+  }
+
   .category-label {
     display: inline-flex;
     align-items: center;
     padding: 2px 0;
     font-size: 12px;
     color: var(--text-secondary);
-    background: linear-gradient(transparent 58%, color-mix(in srgb, var(--color-accent) 58%, transparent) 58%);
+    background: linear-gradient(
+      transparent 58%,
+      color-mix(in srgb, var(--color-accent) 58%, transparent) 58%
+    );
     border: 0;
     text-decoration: none;
-    transition:
-      color var(--duration-feedback) ease;
+    transition: color var(--duration-feedback) ease;
   }
 
   .category-label:hover {
     color: var(--text-primary);
     background: linear-gradient(transparent 58%, var(--color-accent) 58%);
+    text-decoration: none;
+  }
+
+  .tag-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border: 0;
+    transition: color var(--duration-feedback) ease;
+  }
+
+  .tag-label::before {
+    content: "#";
+    margin-right: 1px;
+    opacity: 0.6;
+  }
+
+  .tag-label:hover {
+    color: var(--text-primary);
     text-decoration: none;
   }
 </style>

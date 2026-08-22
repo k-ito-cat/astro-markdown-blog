@@ -47,9 +47,8 @@ const entries: TimelineEntry[] = posts
       displayDate: formatJapaneseDate(activityDate),
       year,
       month,
-      categories: post.data.categories.filter(
-        (category) => category !== "すべて",
-      ),
+      categories: post.data.categories,
+      tags: post.data.tags,
       activity: isRevision ? "改訂" : "新規",
       isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
       verificationLabel: post.data.verificationStatus
