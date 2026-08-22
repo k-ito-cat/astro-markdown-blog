@@ -7,7 +7,6 @@ import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { VERIFICATION_STATUS_LABELS } from "~/constants/verificationStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
-import leftStretchingCat from "~/assets/left-stretching-cat.png";
 import leftReachingCat from "~/assets/left-reaching-cat.png";
 import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
@@ -90,14 +89,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
         <span class="search-rest" aria-hidden="true">
           <Image
             class="search-cat"
-            src={leftStretchingCat}
-            alt=""
-            widths={[112, 224]}
-            sizes="112px"
-            loading="eager"
-          />
-          <Image
-            class="search-cat is-alt"
             src={leftReachingCat}
             alt=""
             widths={[112, 224]}
@@ -245,12 +236,11 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     position: relative;
     flex: none;
     width: var(--search-cat-width);
-    /* 猫（1355:839）が幅いっぱいになる高さ。2匹とも同じ箱に収めて接地させる */
+    /* 猫（1355:839）が幅いっぱいになる高さ。箱の底に接地させる */
     height: calc(var(--search-cat-width) * 839 / 1355);
     pointer-events: none;
   }
 
-  /* 2匹を同じ箱に重ね、長いフェードで交互に入れ替える */
   .search-cat {
     position: absolute;
     inset: 0;
@@ -259,38 +249,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     object-fit: contain;
     object-position: bottom center;
     opacity: 0.8;
-    animation: cat-swap 8s ease-in-out infinite;
-  }
-
-  .search-cat.is-alt {
-    opacity: 0;
-    animation-delay: -4s;
-  }
-
-  @keyframes cat-swap {
-    0%,
-    40% {
-      opacity: 0.8;
-    }
-
-    50%,
-    90% {
-      opacity: 0;
-    }
-
-    100% {
-      opacity: 0.8;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .search-cat {
-      animation: none;
-    }
-
-    .search-cat.is-alt {
-      display: none;
-    }
   }
 
   /* 入力欄だけで幅が埋まる画面では猫を出さない */
