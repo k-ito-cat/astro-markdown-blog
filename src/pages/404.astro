@@ -1,0 +1,100 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import wipCat from "~/assets/wip-cat.png";
+---
+
+<BaseLayout title="記事が存在しません">
+  <main id="main-content" class="notfound">
+    <p class="notfound-code">404</p>
+    <h1>対象の記事は存在しません。</h1>
+
+    <Image
+      class="notfound-mark"
+      src={wipCat}
+      alt=""
+      widths={[160, 320]}
+      sizes="160px"
+      loading="eager"
+    />
+
+    <nav class="notfound-links" aria-label="行き先">
+      <a href="/blog">索引へ</a>
+      <a href="/">時間を遡る</a>
+    </nav>
+  </main>
+</BaseLayout>
+
+<style>
+  .notfound {
+    /* ヘッダー(min-height 52px / 760px以上で64px)を引いた1画面ぶんに収める */
+    --notfound-cat-width: 10rem;
+
+    display: grid;
+    place-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: var(--measure-prose);
+    min-height: calc(100dvh - 52px);
+    margin: 0 auto;
+    padding: 32px 16px 80px;
+    text-align: center;
+  }
+
+  @media (min-width: 760px) {
+    .notfound {
+      min-height: calc(100dvh - 64px);
+    }
+  }
+
+  /* 数字を視線の起点にし、文はその説明として静かに置く。
+     h1 を大きく色付きにすると、404 という状況に対して語調が強すぎる */
+  .notfound-code {
+    margin: 0;
+    color: var(--color-secondary);
+    font-family: var(--font-machine);
+    font-size: var(--text-2xl);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.08em;
+  }
+
+  .notfound h1 {
+    margin: 0;
+    color: var(--color-text-sub);
+    font-size: var(--text-md);
+    font-weight: 400;
+    line-height: var(--leading-body);
+  }
+
+  .notfound-mark {
+    /* 文言のすぐ下に猫を寄せ、リンクとの間で区切る */
+    width: var(--notfound-cat-width);
+    height: auto;
+    margin: 0 0 20px;
+    opacity: 0.8;
+  }
+
+  .notfound-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 24px;
+  }
+
+  .notfound-links a {
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    background: linear-gradient(
+      transparent 58%,
+      color-mix(in srgb, var(--color-accent) 58%, transparent) 58%
+    );
+    transition: color var(--duration-feedback) ease;
+  }
+
+  .notfound-links a:hover {
+    color: var(--text-primary);
+    background: linear-gradient(transparent 58%, var(--color-accent) 58%);
+  }
+</style>

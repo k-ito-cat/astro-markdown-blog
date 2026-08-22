@@ -1,6 +1,8 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import { Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
+import wipCat from "~/assets/wip-cat.png";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
 import Meta from "./Meta.astro";
@@ -95,7 +97,19 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     showContent ? (
       <Prose content={content} status={status} />
     ) : (
-      <p class="draft-note">この記録は検討中です。本文は公開されていません。</p>
+      <div class="draft-placeholder">
+        <Image
+          class="draft-mark"
+          src={wipCat}
+          alt=""
+          widths={[176, 352]}
+          sizes="176px"
+          loading="eager"
+        />
+        <p class="draft-note">
+          この記録は検討中です。本文は公開されていません。
+        </p>
+      </div>
     )
   }
 
@@ -193,12 +207,32 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     text-decoration: underline;
   }
 
-  .draft-note {
+  .draft-placeholder {
+    /* 高さと猫の大きさは目視で詰める前提の暫定値。ここ2つだけ触れば調整できる */
+    --wip-area-height: min(46vh, 420px);
+    --wip-cat-width: 11rem;
+
+    display: grid;
+    place-items: center;
+    gap: 20px;
     max-width: var(--measure-prose);
-    margin: 32px auto;
-    padding-left: 14px;
+    min-height: var(--wip-area-height);
+    margin: 40px auto;
+    padding: 24px 16px;
+  }
+
+  .draft-mark {
+    width: var(--wip-cat-width);
+    height: auto;
+    opacity: 0.8;
+  }
+
+  .draft-note {
+    max-width: 28ch;
+    margin: 0;
     color: var(--color-text-sub);
-    border-left: 2px solid var(--color-primary);
+    line-height: 1.9;
+    text-align: center;
   }
 
   .article-footer {
