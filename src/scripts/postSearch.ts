@@ -31,6 +31,9 @@ const getElements = () => {
     groups: Array.from(
       document.querySelectorAll<HTMLElement>("[data-date-group]"),
     ),
+    years: Array.from(
+      document.querySelectorAll<HTMLElement>("[data-year-group]"),
+    ),
     empty: document.querySelector<HTMLElement>("[data-search-empty]"),
     clears: Array.from(
       document.querySelectorAll<HTMLButtonElement>("[data-search-clear]"),
@@ -73,6 +76,20 @@ const updateView = (
     if (hasVisibleItem && wasHidden) reveal(group);
   });
 
+  // 年の断層線は、その年に表示中の記録が1件も無ければ隠す
+  elements.years.forEach((year) => {
+    let next = year.nextElementSibling;
+    let hasVisibleItem = false;
+    while (next && !next.matches("[data-year-group]")) {
+      if (next.matches("[data-record-entry]:not([hidden])"))
+        hasVisibleItem = true;
+      next = next.nextElementSibling;
+    }
+    const wasHidden = year.hidden;
+    year.hidden = !hasVisibleItem;
+    if (hasVisibleItem && wasHidden) reveal(year);
+  });
+
   const hasCondition = terms.length > 0;
   elements.count.textContent = `${hasCondition ? visible : elements.total}件の記録`;
   if (elements.empty) elements.empty.hidden = !(hasCondition && visible === 0);
@@ -110,8 +127,8 @@ export const initPostSearch = () => {
     elements.input.focus();
   };
 
-  [...elements.items, ...elements.groups].forEach((element) =>
-    element.addEventListener("animationend", clearReveal),
+  [...elements.items, ...elements.groups, ...elements.years].forEach(
+    (element) => element.addEventListener("animationend", clearReveal),
   );
 
   updateView(elements, elements.input.value);

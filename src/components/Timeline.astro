@@ -28,12 +28,18 @@ const { entries, variant = "stream" } = Astro.props;
       entries.map((entry, index) => {
         const previous = entries[index - 1];
         const showDate = index === 0 || previous.isoDate !== entry.isoDate;
+        const showYear = index === 0 || previous.year !== entry.year;
         const showMonth =
           index === 0 ||
           previous.year !== entry.year ||
           previous.month !== entry.month;
         return (
           <Fragment>
+            {showYear && (
+              <li class="tl-year" data-year-group>
+                <span>{entry.year}</span>
+              </li>
+            )}
             {showDate && (
               <li
                 class="tl-date-group"
@@ -54,13 +60,7 @@ const { entries, variant = "stream" } = Astro.props;
               data-year={entry.year}
               data-month={entry.month}
             >
-              <span class="tl-node" aria-hidden="true" />
-              <div
-                class:list={[
-                  "tl-row",
-                  { "has-tags": entry.categories.length > 0 },
-                ]}
-              >
+              <div class="tl-row">
                 <a
                   href={`/blog/${entry.slug}`}
                   class="tl-body"
@@ -68,6 +68,7 @@ const { entries, variant = "stream" } = Astro.props;
                   aria-describedby={`record-context-${index}`}
                 >
                   <span class="tl-meta">
+                    <span class="tl-node" aria-hidden="true" />
                     <span
                       class:list={[
                         "tl-activity",
@@ -128,75 +129,67 @@ const { entries, variant = "stream" } = Astro.props;
     list-style: none;
   }
 
-  .timeline::before {
+  /* 年の境界だけを断層線として引く。時系列の連続を示す縦レールは持たない */
+  .tl-year {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 72px 0 0;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: var(--text-sm);
+    letter-spacing: 0.1em;
+  }
+
+  .tl-year:first-child {
+    margin-top: 0;
+  }
+
+  .tl-year::after {
     content: "";
-    position: absolute;
-    top: 10px;
-    bottom: 10px;
-    left: 7px;
-    width: 2px;
+    flex: 1;
+    height: 1px;
     background: var(--color-primary);
-    opacity: 0.78;
+    opacity: 0.32;
   }
 
   .tl-date-group {
-    position: relative;
-    margin: 40px 0 8px;
-    padding-left: 34px;
+    margin: 32px 0 4px;
     color: var(--color-primary);
     font-size: var(--text-sm);
     font-weight: 700;
   }
 
+  .tl-year + .tl-date-group,
   .tl-date-group:first-child {
-    margin-top: 0;
-  }
-
-  .tl-date-group::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 1px;
-    width: 14px;
-    height: 2px;
-    background: var(--color-primary);
+    margin-top: 20px;
   }
 
   .tl-entry {
     position: relative;
-    padding-left: 34px;
   }
 
-  .tl-entry.is-marked::after {
-    content: "";
-    position: absolute;
-    top: 24px;
-    left: 29px;
-    width: 7px;
-    height: 18px;
-    background: var(--color-accent);
-    transform: skewY(-7deg);
-    z-index: -1;
-  }
-
+  /* 状態記号。縦レールを廃したので、メタ行の先頭に文字と並べて置く */
   .tl-node {
-    position: absolute;
-    top: 26px;
-    left: 4px;
+    flex: none;
     width: 8px;
     height: 8px;
     background: var(--color-background);
     border: 2px solid var(--color-primary);
   }
 
+  /* WIP は「まだ固まっていない」= 破線 の語彙で揃える。
+     記号（ノード）・言葉（WIPバッジの下線）・線（行の罫）の3層すべてを破線にする。
+     明度は落とさない（索引の過半数がWIPのため、落とすとページ全体が沈む） */
   .tl-entry.is-wip .tl-node {
     border-style: dashed;
   }
 
+  .tl-entry.is-wip .tl-row {
+    border-bottom-style: dashed;
+  }
+
   .tl-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -204,7 +197,8 @@ const { entries, variant = "stream" } = Astro.props;
     position: relative;
     display: block;
     min-width: 0;
-    padding: 13px 4px 14px 0;
+    /* 記録どうしが詰まって見えないよう、罫の上下に余白を取る */
+    padding: 22px 4px 24px 0;
     color: inherit;
     text-decoration: none;
   }
@@ -264,7 +258,7 @@ const { entries, variant = "stream" } = Astro.props;
 
   .tl-title {
     display: block;
-    margin-top: 4px;
+    margin-top: 7px;
     color: var(--color-text);
     font-size: clamp(1rem, 2vw, 1.125rem);
     font-weight: 500;
@@ -280,7 +274,7 @@ const { entries, variant = "stream" } = Astro.props;
 
   .tl-tags {
     display: block;
-    margin-top: 3px;
+    margin-top: 5px;
     color: var(--color-text-muted);
     font-family: var(--font-machine);
     font-size: 11px;
@@ -325,23 +319,6 @@ const { entries, variant = "stream" } = Astro.props;
 
   .timeline-mist.is-visible {
     opacity: 1;
-  }
-
-  @media (max-width: 639px) {
-    .tl-row.has-tags {
-      position: relative;
-      display: block;
-    }
-
-    .tl-row.has-tags .tl-tags {
-      padding-right: 44px;
-    }
-
-    .tl-row.has-tags > :global(.record-mark) {
-      position: absolute;
-      right: 0;
-      bottom: 5px;
-    }
   }
 
   @media (min-width: 1400px) {
