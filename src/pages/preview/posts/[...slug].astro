@@ -50,7 +50,7 @@ const posts = await getCollection("posts");
 <BaseLayout title={post ? `Preview｜${post.data.title}` : "Preview Posts"}>
   {
     post && Content ? (
-      <main class="preview-detail">
+      <main id="main-content" class="preview-detail">
         <header class="preview-toolbar">
           <a
             href="/preview/posts"
