@@ -31,6 +31,10 @@ const posts = await getCollection(
   ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
 );
 
+// 時系列順は年ごとの直近 ENTRIES_PER_YEAR 件まで。全件は索引ページが担う
+const ENTRIES_PER_YEAR = 10;
+const countsByYear = new Map<string, number>();
+
 const entries: TimelineEntry[] = posts
   .map((post) => {
     const isRevision =
@@ -58,10 +62,25 @@ const entries: TimelineEntry[] = posts
     };
   })
   .sort((a, b) => b.isoDate.localeCompare(a.isoDate))
-  .slice(0, 15);
+  .filter((entry) => {
+    const count = (countsByYear.get(entry.year) ?? 0) + 1;
+    countsByYear.set(entry.year, count);
+    return count <= ENTRIES_PER_YEAR;
+  });
 
-const months = Array.from(
-  new Set(entries.map((entry) => `${entry.year}-${entry.month}`)),
+// どの年からも、索引のその年へ送れるようにする
+const yearLinks = Object.fromEntries(
+  Array.from(countsByYear.keys()).map((year) => [year, `/blog?year=${year}`]),
+);
+
+// 目次は全期間同じ形にするため、年ごとに月をまとめる
+const monthsByYear = Array.from(
+  entries.reduce((map, entry) => {
+    const months = map.get(entry.year) ?? [];
+    if (!months.includes(entry.month)) months.push(entry.month);
+    map.set(entry.year, months);
+    return map;
+  }, new Map<string, string[]>()),
 );
 ---
 
@@ -69,23 +88,23 @@ const months = Array.from(
   <main id="main-content" class="home">
     <div class="home-layout">
       <aside class="month-trace" aria-label="表示中の時期">
-        <span>{entries[0]?.year}</span>
         {
-          months.map((value) => {
-            const [year, month] = value.split("-");
-            return (
-              <a href={`#month-${value}`}>
-                {year !== entries[0]?.year ? `${year}年 ` : ""}
-                {Number(month)}月
-              </a>
-            );
-          })
+          monthsByYear.map(([year, months]) => (
+            <>
+              <span>{year}</span>
+              {months.map((month) => (
+                <a href={`#month-${year}-${month}`} data-month-link>
+                  {Number(month)}月
+                </a>
+              ))}
+            </>
+          ))
         }
       </aside>
 
       <section class="record-flow" aria-labelledby="record-flow-title">
         <h1 id="record-flow-title" class="sr-only">技術理解の記録</h1>
-        <Timeline entries={entries} />
+        <Timeline entries={entries} yearLinks={yearLinks} />
         <a href="/blog" class="flow-more">
           索引からすべての記録を見る
           <Icon name="octicon:arrow-right-16" aria-hidden="true" />
@@ -225,6 +244,11 @@ const months = Array.from(
       font-weight: 600;
     }
 
+    /* 2年目以降の見出しは、前の年の月から離して束を分ける */
+    .month-trace span:not(:first-child) {
+      margin-top: 12px;
+    }
+
     .month-trace a {
       color: var(--color-text-muted);
       text-decoration: none;
@@ -234,5 +258,60 @@ const months = Array.from(
     .month-trace a:focus-visible {
       color: var(--color-interaction-text);
     }
+
+    /* 読んでいる位置に応じて、通過済みと現在の月を描き分ける */
+    .month-trace a.is-past {
+      color: var(--color-text-sub);
+    }
+
+    .month-trace a.is-current {
+      color: var(--color-primary);
+      font-weight: 700;
+    }
   }
 </style>
+
+<script>
+  const monthLinks = Array.from(
+    document.querySelectorAll<HTMLAnchorElement>("[data-month-link]"),
+  );
+  const monthTargets = monthLinks.map((link) =>
+    document.getElementById(decodeURIComponent(link.hash.slice(1))),
+  );
+
+  if (monthLinks.length > 0) {
+    let updateQueued = false;
+
+    const syncCurrentMonth = () => {
+      updateQueued = false;
+      // 画面上部を読み取り線とし、それを最後に越えた月を現在地とする
+      const readingLine = window.innerHeight * 0.22;
+      let currentIndex = 0;
+      monthTargets.forEach((target, index) => {
+        if (!target || target.hidden) return;
+        if (target.getBoundingClientRect().top <= readingLine)
+          currentIndex = index;
+      });
+
+      monthLinks.forEach((link, index) => {
+        link.classList.toggle("is-past", index < currentIndex);
+        link.classList.toggle("is-current", index === currentIndex);
+        if (index === currentIndex) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    const queueUpdate = () => {
+      if (updateQueued) return;
+      updateQueued = true;
+      requestAnimationFrame(syncCurrentMonth);
+    };
+
+    window.addEventListener("scroll", queueUpdate, { passive: true });
+    window.addEventListener("resize", queueUpdate);
+    syncCurrentMonth();
+  }
+</script>

@@ -8,6 +8,7 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { VERIFICATION_STATUS_LABELS } from "~/constants/verificationStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
 import leftReachingCat from "~/assets/left-reaching-cat.png";
+import leftSleepingCat from "~/assets/left-sleeping-cat.png";
 import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
 const allPosts = await getCollection(
@@ -51,6 +52,24 @@ const countBy = (lists: string[][]) =>
     }, new Map<string, number>()),
   ).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
 
+const countsByYear = entries.reduce((map, entry) => {
+  map.set(entry.year, (map.get(entry.year) ?? 0) + 1);
+  return map;
+}, new Map<string, number>());
+
+// 軸は最古年の2年前から最新年の1年後まで。記録の無い年も目盛として置く
+// （選択年の右には常に1年ぶんの枠を見せるため、最新年の先も1年用意する）
+const recordedYears = Array.from(countsByYear.keys()).map(Number);
+const axisStart = Math.min(...recordedYears) - 2;
+const axisEnd = Math.max(...recordedYears) + 1;
+const axisYears = Array.from(
+  { length: axisEnd - axisStart + 1 },
+  (_, index) => {
+    const year = String(axisStart + index);
+    return { year, count: countsByYear.get(year) ?? 0 };
+  },
+);
+
 const fieldCounts = countBy(allPosts.map((post) => post.data.categories));
 const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 ---
@@ -86,18 +105,65 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
             <Icon name="octicon:x-16" aria-hidden="true" />
           </button>
         </div>
-        <span class="search-rest" aria-hidden="true">
-          <Image
-            class="search-cat"
-            src={leftReachingCat}
-            alt=""
-            widths={[112, 224]}
-            sizes="112px"
-            loading="eager"
-          />
-        </span>
       </div>
     </header>
+
+    <nav class="years is-closed" id="years" aria-label="年" data-years>
+      <button
+        type="button"
+        class="years-toggle"
+        data-year-toggle
+        aria-expanded="false"
+        aria-controls="year-axis"
+      >
+        期間で絞る
+      </button>
+      <span class="years-sleeper" aria-hidden="true">
+        <Image
+          src={leftSleepingCat}
+          alt=""
+          widths={[160, 320]}
+          sizes="160px"
+          loading="eager"
+        />
+      </span>
+      <span class="years-cat" aria-hidden="true">
+        <Image
+          src={leftReachingCat}
+          alt=""
+          widths={[112, 224]}
+          sizes="112px"
+          loading="eager"
+        />
+      </span>
+      <div class="years-window" id="year-axis">
+        <ul data-year-track>
+          {
+            axisYears.map(({ year, count }) =>
+              count > 0 ? (
+                <li>
+                  <a href={`/blog?year=${year}`} data-year-filter={year}>
+                    <>
+                      <span class="year-label">{year}</span>
+                      <span class="year-count">（{count}件）</span>
+                    </>
+                  </a>
+                </li>
+              ) : (
+                <li>
+                  <span class="year-empty" aria-disabled="true">
+                    <>
+                      <span class="year-label">{year}</span>
+                      <span class="year-count">（0件）</span>
+                    </>
+                  </span>
+                </li>
+              ),
+            )
+          }
+        </ul>
+      </div>
+    </nav>
 
     <nav class="fields" id="fields" aria-label="分野">
       <ul>
@@ -143,21 +209,28 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
             ))
           }
         </ul>
-        <span class="tags-veil" aria-hidden="true"></span>
       </div>
-      <button
-        type="button"
-        class="tags-toggle"
-        data-tag-toggle
-        aria-expanded="true"
-        aria-controls="tag-list"
-        hidden
-      >
-        すべてのタグを表示
-      </button>
+      <div class="tags-foot">
+        <button
+          type="button"
+          class="tags-toggle"
+          data-tag-toggle
+          aria-expanded="true"
+          aria-controls="tag-list"
+          hidden
+        >
+          すべてのタグを表示
+        </button>
+        <span class="tags-hint">
+          <span class="tags-hint-mouse">Shift + スクロール</span>
+          <span class="tags-hint-touch">横スワイプ</span>
+          <span class="tags-hint-arrow" aria-hidden="true">→</span>
+        </span>
+      </div>
     </nav>
 
     <section class="index-records" aria-label="記録" data-record-list>
+      <p class="index-filter" data-search-label hidden></p>
       <p class="index-empty" data-search-empty hidden>
         該当する記録はありません。<button type="button" data-search-clear
           >条件を外す</button
@@ -178,6 +251,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 
   .index-head,
   .fields,
+  .years,
   .index-records {
     max-width: var(--layout-stream);
     margin-right: auto;
@@ -211,8 +285,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   /* 下線だけを横幅いっぱいに伸ばし、入力できる範囲は 360px のまま。
      余った線の上に猫を乗せる（入力不可領域） */
   .search-field {
-    --search-cat-width: 6.5rem;
-
     display: flex;
     align-items: flex-end;
     width: 100%;
@@ -229,33 +301,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     min-width: 0;
     min-height: 42px;
     padding: 0 2px;
-  }
-
-  /* 入力不可領域は猫1匹ぶんだけ。残りの線はすべて入力領域が使う */
-  .search-rest {
-    position: relative;
-    flex: none;
-    width: var(--search-cat-width);
-    /* 猫（1355:839）が幅いっぱいになる高さ。箱の底に接地させる */
-    height: calc(var(--search-cat-width) * 839 / 1355);
-    pointer-events: none;
-  }
-
-  .search-cat {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: bottom center;
-    opacity: 0.8;
-  }
-
-  /* 入力欄だけで幅が埋まる画面では猫を出さない */
-  @media (max-width: 639px) {
-    .search-rest {
-      display: none;
-    }
   }
 
   .search-field:focus-within {
@@ -278,12 +323,31 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 
   .search-field button,
   .index-empty button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 32px;
     min-height: 32px;
+    padding: 0;
     color: var(--color-interaction-text);
     background: transparent;
     border: 0;
     cursor: pointer;
+  }
+
+  /* 送り先が天井に張り付かないよう、着地位置に余白を持たせる */
+  .index-records {
+    scroll-margin-top: 24px;
+  }
+
+  /* 絞り込み中の語を、年の断層線より上に見出しとして置く */
+  .index-filter {
+    margin: 0 0 12px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
 
   .fields {
@@ -301,6 +365,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 
   .fields a {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
     gap: 12px;
     padding: 6px 0;
@@ -314,6 +379,284 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     color: var(--color-text-muted);
     font-family: var(--font-machine);
     font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 期間フィルタは年表の調子で。全期間 → 区切り → 年の軸、と並べる */
+  .years {
+    /* 猫（1355:839）。軸線の下、ぶら下がる年次の側に置く */
+    --years-cat-width: 4.5rem;
+    --years-cat-height: calc(var(--years-cat-width) * 839 / 1355);
+    /* 眠り猫（1264:469）。高さを基準にして帯の中に収める */
+    --years-sleeper-height: 2.5rem;
+
+    position: relative;
+    /* 猫の高さ + 上の軸線から離すぶん */
+    min-height: calc(var(--years-cat-height) + 16px);
+
+    /*
+     * 窓の左半分に「過去2枠 + 選択枠の手前の間隔 + 選択枠の半分0.5枠」が入る幅。
+     * --axis-visible = (2 + --axis-gap + 0.5) * 2 の関係を保つこと
+     */
+    --axis-gap: 0;
+    --axis-visible: 5;
+    --axis-slot: calc(100% / var(--axis-visible));
+
+    margin-top: 32px;
+  }
+
+  /* 窓。軌道はこの中を横に滑る */
+  .years-toggle {
+    display: block;
+    margin-bottom: 10px;
+    padding: 4px 0;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .years-toggle:hover,
+  .years-toggle:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  /* 全期間のときは年次を伏せ、空いた軸の中央で猫が眠る */
+  .years.is-closed .years-window > ul {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .years-sleeper {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: calc(var(--years-sleeper-height) * 1264 / 469);
+    height: var(--years-sleeper-height);
+    visibility: hidden;
+    opacity: 0;
+    /* 出るときはゆったり */
+    transform: translateX(-50%);
+    transition:
+      opacity 700ms ease-out,
+      visibility 0s linear 700ms;
+    pointer-events: none;
+  }
+
+  .years.is-closed .years-sleeper {
+    visibility: visible;
+    opacity: 0.8;
+    transition:
+      opacity 700ms ease-out,
+      visibility 0s;
+  }
+
+  .years-sleeper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+  }
+
+  /* 手を出す猫は年次と一緒に、こちらは素早く消える */
+  .years.is-closed .years-cat {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  /* 地面の罫線 */
+  .years::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: var(--color-border);
+  }
+
+  /* 軸線の下、右の余白で地面に立たせる。左を向いた前足が年次の側へ伸びる */
+  .years-cat {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: var(--years-cat-width);
+    height: var(--years-cat-height);
+    pointer-events: none;
+  }
+
+  .years-cat img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+    opacity: 0.8;
+  }
+
+  .years-cat {
+    visibility: visible;
+    opacity: 1;
+    transition:
+      opacity var(--duration-feedback) ease,
+      visibility 0s;
+  }
+
+  @media (min-width: 640px) {
+    .years {
+      --years-cat-width: 6.5rem;
+      --years-sleeper-height: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .years-sleeper,
+    .years-cat,
+    .years-window > ul {
+      transition: none;
+    }
+  }
+
+  .years-window {
+    position: relative;
+    overflow: hidden;
+    /* 上は軸線ぶん、下は地面の罫線と年次が近づきすぎないぶん */
+    padding: 9px 0 20px;
+  }
+
+  .years-window::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--color-primary);
+    opacity: 0.32;
+  }
+
+  .years-window > ul {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: translate var(--duration-state) var(--ease-trace);
+  }
+
+  .years-window > ul > li {
+    flex: 0 0 var(--axis-slot);
+    min-width: 0;
+  }
+
+  /* 選択中の年は手前を広く空け、過去側の詰まった間隔と差をつける */
+  .years-window > ul > li.is-focus {
+    margin-left: calc(var(--axis-slot) * var(--axis-gap));
+  }
+
+  .years a,
+  .years .year-empty {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 11px 4px 0;
+    color: var(--color-text-sub);
+    text-decoration: none;
+  }
+
+  /* 軸から降ろす目盛 */
+  .years-window a::before,
+  .years-window .year-empty::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 1px;
+    height: 9px;
+    background: var(--color-primary);
+    opacity: 0.32;
+  }
+
+  /* 記録の無い年は目盛だけ残して沈める */
+  .years .year-empty {
+    color: var(--color-text-muted);
+    opacity: 0.45;
+  }
+
+  /* 未来側は枠自体が薄いので、0件ぶんの減衰は掛けない */
+  .years-window > ul > li.is-ahead .year-empty {
+    opacity: 1;
+  }
+
+  /* フォーカスより先（新しい側）は1年だけ薄く覗かせ、その先は隠す */
+  .years-window > ul > li.is-ahead {
+    opacity: 0.55;
+  }
+
+  .years-window > ul > li.is-beyond {
+    visibility: hidden;
+  }
+
+  .years a:hover,
+  .years a:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .years-window a:hover::before,
+  .years-window a:focus-visible::before {
+    opacity: 0.6;
+  }
+
+  .years .year-label {
+    font-family: var(--font-machine);
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
+  }
+
+  /* 大きく出すのは選択中の年だけ。前後の年は同じ小さい字で並べる */
+  .years-window > ul > li:not(.is-focus) .year-label {
+    font-size: 11px;
+  }
+
+  .years .year-count {
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .years a.is-selected {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  .years-window a.is-selected::before {
+    top: -13px;
+    width: 2px;
+    height: 13px;
+    opacity: 1;
+  }
+
+  .years a.is-selected .year-count {
+    color: var(--color-primary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .years-window > ul {
+      transition: none;
+    }
+  }
+
+  /* 選択中の年・分野・タグ */
+  .fields a.is-selected {
+    color: var(--color-primary);
+    font-weight: 700;
+    border-bottom-color: var(--color-primary);
+  }
+
+  .fields a.is-selected span:last-child {
+    color: var(--color-primary);
   }
 
   .tags {
@@ -338,57 +681,148 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     color: var(--color-text-sub);
   }
 
+  .tags a.is-selected {
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-primary);
+  }
+
   .tags-body {
     position: relative;
   }
 
-  /* 折りたたみ時は3行 + 4行目のさわりだけ見せる */
-  #tag-list {
-    max-height: var(--tags-expanded-height, none);
-    overflow: hidden;
-  }
-
+  /* 折りたたみ時は3行の横並び。溢れた分は横スクロールで辿る */
   .tags.is-collapsed #tag-list {
-    max-height: var(--tags-collapsed-height, 5.5rem);
+    display: grid;
+    /* .fields ul の 150px 等幅の列指定を打ち消し、全列を内容幅で並べる */
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    grid-template-rows: repeat(3, auto);
+    gap: 10px 28px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    /* 終端まで送ったとき、最後のタグが右端のぼかしに隠れないぶんの余白 */
+    padding-right: 64px;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 28%, transparent)
+      transparent;
   }
 
-  /* 初回計測が終わってから開閉アニメーションを有効にする（読み込み時に動かさない） */
-  .tags.is-animated #tag-list {
-    transition: max-height var(--duration-state) ease-out;
+  /* 明示スタイルにすると、Chrome / Safari の出したり消したりする挙動が外れて常時出る */
+  .tags.is-collapsed #tag-list::-webkit-scrollbar {
+    height: 6px;
   }
 
-  /* JS が無い環境では開く手段が無いので、折りたたまない */
-  @media (scripting: none) {
-    .tags.is-collapsed #tag-list {
-      max-height: none;
-    }
-
-    .tags-veil {
-      display: none;
-    }
+  .tags.is-collapsed #tag-list::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  /* ページ下部の timeline-mist と同じ、多段のグラデーションで裾を消す */
-  .tags-veil {
+  .tags.is-collapsed #tag-list::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    border-radius: 2px;
+  }
+
+  .tags.is-collapsed #tag-list::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
+
+  /* スクロールバーを消したぶん、右端の裾を消して横に続くことを示す */
+  .tags.is-collapsed.is-overflowing .tags-body::after {
+    content: "";
     position: absolute;
+    top: 0;
     right: 0;
-    bottom: 0;
-    left: 0;
-    height: 56px;
+    bottom: 10px;
+    width: 56px;
+    pointer-events: none;
     background: linear-gradient(
-      to bottom,
+      to right,
       transparent 0%,
       color-mix(in srgb, var(--color-background) 8%, transparent) 28%,
       color-mix(in srgb, var(--color-background) 58%, transparent) 72%,
       color-mix(in srgb, var(--color-background) 96%, transparent) 100%
     );
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--duration-feedback) ease-out;
   }
 
-  .tags.is-collapsed .tags-veil {
-    opacity: 1;
+  /* JS が無い環境では開く手段が無いので、折りたたまない */
+  @media (scripting: none) {
+    .tags.is-collapsed #tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+
+  .tags-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  /* 横に溢れているときだけ出し、文言は入力機器に合わせて出し分ける */
+  .tags-hint {
+    display: none;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 11px;
+  }
+
+  .tags.is-collapsed.is-overflowing .tags-hint {
+    display: inline-flex;
+  }
+
+  .tags-hint-touch {
+    display: none;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .tags-hint-mouse {
+      display: none;
+    }
+
+    .tags-hint-touch {
+      display: inline;
+    }
+  }
+
+  /* 矢印だけを軽く2回突いて、横に送れることを示す */
+  .tags-hint-arrow {
+    display: inline-block;
+    animation: tag-hint-nudge 3.2s ease-in-out infinite;
+  }
+
+  @keyframes tag-hint-nudge {
+    0%,
+    62%,
+    100% {
+      transform: translateX(0);
+    }
+
+    70% {
+      transform: translateX(3px);
+    }
+
+    78% {
+      transform: translateX(0);
+    }
+
+    86% {
+      transform: translateX(3px);
+    }
+
+    94% {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tags-hint-arrow {
+      animation: none;
+    }
   }
 
   .tags-toggle {

@@ -1,14 +1,3 @@
-const VISIBLE_ROWS = 3;
-// 4行目をどれだけ覗かせるか（ぼかし帯の下に隠れる量）
-const PEEK = 12;
-
-const getRowOffsets = (list: HTMLElement) =>
-  Array.from(
-    new Set(
-      Array.from(list.children, (item) => (item as HTMLElement).offsetTop),
-    ),
-  ).sort((a, b) => a - b);
-
 export const initTagCollapse = () => {
   const nav = document.querySelector<HTMLElement>("[data-tag-nav]");
   const list = document.querySelector<HTMLElement>("#tag-list");
@@ -23,26 +12,30 @@ export const initTagCollapse = () => {
     toggle.textContent = expanded ? "タグを折りたたむ" : "すべてのタグを表示";
   };
 
+  // 折りたたみ（3行の横並び）で溢れないなら、開く必要が無いので誘導を出さない
   const measure = () => {
-    // 行数の判定は展開状態で行う
-    nav.classList.remove("is-collapsed");
-    const rows = getRowOffsets(list);
-    if (rows.length <= VISIBLE_ROWS) {
-      toggle.hidden = true;
-      expanded = true;
-      render();
-      return;
-    }
-    list.style.setProperty(
-      "--tags-collapsed-height",
-      `${rows[VISIBLE_ROWS] + PEEK}px`,
-    );
-    toggle.hidden = false;
+    const wasExpanded = expanded;
+    expanded = false;
+    render();
+    const overflows = list.scrollWidth > list.clientWidth + 1;
+    nav.classList.toggle("is-overflowing", overflows);
+    toggle.hidden = !overflows;
+    expanded = overflows ? wasExpanded : false;
     render();
   };
 
   toggle.addEventListener("click", () => {
     expanded = !expanded;
+    render();
+  });
+
+  // 折りたたみ中にタグを選んだら、隠れている行も見えるよう開く
+  list.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest("[data-filter-term]"))
+      return;
+    if (expanded) return;
+    expanded = true;
     render();
   });
 

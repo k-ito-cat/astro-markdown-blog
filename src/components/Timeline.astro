@@ -17,9 +17,16 @@ export type TimelineEntry = {
 type Props = {
   entries: TimelineEntry[];
   variant?: "stream" | "index";
+  /* 年ごとに件数を絞っている場合の、その年の続きへの導線 */
+  yearLinks?: Record<string, string>;
 };
 
-const { entries, variant = "stream" } = Astro.props;
+const { entries, variant = "stream", yearLinks } = Astro.props;
+
+const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
+  counts[entry.year] = (counts[entry.year] ?? 0) + 1;
+  return counts;
+}, {});
 ---
 
 <div class="timeline-root" data-timeline-root>
@@ -36,8 +43,22 @@ const { entries, variant = "stream" } = Astro.props;
         return (
           <Fragment>
             {showYear && (
-              <li class="tl-year" data-year-group>
+              <li class="tl-year" id={`year-${entry.year}`} data-year-group>
                 <span>{entry.year}</span>
+                {variant === "index" && (
+                  <span
+                    class="tl-year-count"
+                    data-year-count
+                    data-total={String(countsByYear[entry.year])}
+                  >
+                    {countsByYear[entry.year]}件
+                  </span>
+                )}
+                {yearLinks?.[entry.year] && (
+                  <a class="tl-year-more" href={yearLinks[entry.year]}>
+                    {entry.year}年をすべて見る →
+                  </a>
+                )}
               </li>
             )}
             {showDate && (
@@ -141,16 +162,50 @@ const { entries, variant = "stream" } = Astro.props;
     letter-spacing: 0.1em;
   }
 
-  .tl-year:first-child {
+  /* 絞り込みで前の年が消えたときも、先頭に立つ年は上の余白を持たない */
+  .tl-year:first-child,
+  .tl-year.is-first-visible {
     margin-top: 0;
+  }
+
+  .tl-year {
+    scroll-margin-top: 24px;
   }
 
   .tl-year::after {
     content: "";
+    order: 1;
     flex: 1;
     height: 1px;
     background: var(--color-primary);
     opacity: 0.32;
+  }
+
+  /* 断層線の右端に、その年の件数を置く */
+  .tl-year-count {
+    order: 2;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* 断層線の右端に、その年の続きへの導線を置く */
+  .tl-year-more {
+    order: 2;
+    color: var(--color-interaction-text);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    letter-spacing: 0;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .tl-year-more:hover,
+  .tl-year-more:focus-visible {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .tl-date-group {
@@ -285,7 +340,8 @@ const { entries, variant = "stream" } = Astro.props;
   }
 
   .tl-entry[hidden],
-  .tl-date-group[hidden] {
+  .tl-date-group[hidden],
+  .tl-year[hidden] {
     display: none;
   }
 

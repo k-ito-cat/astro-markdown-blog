@@ -7,21 +7,15 @@ const pathname = Astro.url.pathname;
 const navItems = [
   {
     href: "/",
-    label: "記録",
+    label: "時系列順に見る",
     icon: "octicon:pencil-16",
     current: pathname === "/",
   },
   {
     href: "/blog",
-    label: "索引",
+    label: "索引から引く",
     icon: "octicon:list-unordered-16",
     current: pathname.startsWith("/blog"),
-  },
-  {
-    href: "/blog#fields",
-    label: "分野",
-    icon: "octicon:hash-16",
-    current: false,
   },
   {
     href: "/#works",
@@ -30,7 +24,6 @@ const navItems = [
     current: false,
   },
 ];
-const mobileNavItems = navItems.filter((item) => item.href !== "/");
 ---
 
 <header class="site-header">
@@ -87,7 +80,7 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
       </summary>
       <nav aria-label="モバイルナビゲーション" data-mobile-menu-panel>
         {
-          mobileNavItems.map((item) => (
+          navItems.map((item) => (
             <a
               href={item.href}
               aria-current={item.current ? "page" : undefined}
@@ -347,16 +340,6 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
     color: var(--color-secondary);
   }
 
-  .mobile-menu nav a::before {
-    content: "";
-    position: absolute;
-    top: 12px;
-    bottom: 12px;
-    left: 0;
-    width: 2px;
-    background: transparent;
-  }
-
   .mobile-menu nav a:hover,
   .mobile-menu nav a:focus-visible {
     color: var(--color-interaction-text);
@@ -365,10 +348,6 @@ const mobileNavItems = navItems.filter((item) => item.href !== "/");
   .mobile-menu nav a[aria-current="page"] {
     color: var(--color-primary);
     font-weight: 600;
-  }
-
-  .mobile-menu nav a[aria-current="page"]::before {
-    background: var(--color-primary);
   }
 
   @keyframes mobile-menu-surface-in {
