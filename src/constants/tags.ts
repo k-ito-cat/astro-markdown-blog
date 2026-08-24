@@ -15,11 +15,13 @@ export const TAGS = [
   "React",
   "React Native",
   "Expo",
+  "Angular",
   "Hono",
   "Kysely",
   "XState",
   "Storybook",
   "zod",
+  "TanStack Query",
   // CMS・ホスティング
   "Headless CMS",
   "microCMS",
