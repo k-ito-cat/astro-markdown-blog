@@ -6,7 +6,13 @@ import { detectMemoState } from "../src/utils/postMemo.js";
 const POSTS_DIR = path.join(process.cwd(), "src/content/posts/blog");
 const VALID_STATUSES = ["published", "private", "draft"];
 const STATUS_LABELS = [...VALID_STATUSES, "missing", "unknown"];
-const VALID_WRITING_STATUSES = ["writing", "planned", "todo", "done"];
+const VALID_WRITING_STATUSES = [
+  "writing",
+  "planned",
+  "todo",
+  "on_hold",
+  "done",
+];
 const WRITING_STATUS_LABELS = [...VALID_WRITING_STATUSES, "missing", "unknown"];
 const VALID_PRIORITIES = ["high", "medium", "low", "none"];
 const PRIORITY_LABELS = [...VALID_PRIORITIES, "missing", "unknown"];
@@ -162,6 +168,7 @@ const writingStatusColor = (writingStatus) => {
   if (writingStatus === "planned") return "yellow";
   if (writingStatus === "done") return "green";
   if (writingStatus === "todo") return "dim";
+  if (writingStatus === "on_hold") return "dim";
   return "red";
 };
 

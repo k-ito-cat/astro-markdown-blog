@@ -29,6 +29,7 @@ const posts = defineCollection({
       WRITING_STATUS.WRITING,
       WRITING_STATUS.PLANNED,
       WRITING_STATUS.TODO,
+      WRITING_STATUS.ON_HOLD,
       WRITING_STATUS.DONE,
     ]),
     priority: z.enum([

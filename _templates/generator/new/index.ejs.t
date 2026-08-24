@@ -13,7 +13,7 @@ categories: []
 # tags は src/constants/tags.ts の値から1件以上（必須）。無ければ定数に追加する
 tags: []
 # status: draft | private | published
-# writingStatus: writing | planned | todo | done
+# writingStatus: writing | planned | todo | on_hold | done
 # priority: high | medium | low | none
 status: "private"
 writingStatus: "todo"
