@@ -1,0 +1,421 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { CATEGORIES, MAX_CATEGORIES_PER_POST } from "~/constants/categories";
+import {
+  POST_PRIORITY,
+  POST_PRIORITY_LABELS,
+  POST_PRIORITY_ORDER,
+} from "~/constants/postPriority";
+import {
+  PUBLISHED_STATUS,
+  PUBLISHED_STATUS_LABELS,
+  PUBLISHED_STATUS_ORDER,
+} from "~/constants/publishedStatus";
+import { TAGS } from "~/constants/tags";
+import {
+  VERIFICATION_STATUS,
+  VERIFICATION_STATUS_LABELS,
+} from "~/constants/verificationStatus";
+import {
+  WRITING_STATUS,
+  WRITING_STATUS_LABELS,
+  WRITING_STATUS_ORDER,
+} from "~/constants/writingStatus";
+import { toIsoDate } from "~/utils/formatDate";
+
+type Props = {
+  entryId: string;
+  data: CollectionEntry<"posts">["data"];
+};
+
+const { entryId, data } = Astro.props;
+
+const publishedStatuses = Object.values(PUBLISHED_STATUS).sort(
+  (a, b) => PUBLISHED_STATUS_ORDER[a] - PUBLISHED_STATUS_ORDER[b],
+);
+const writingStatuses = Object.values(WRITING_STATUS).sort(
+  (a, b) => WRITING_STATUS_ORDER[a] - WRITING_STATUS_ORDER[b],
+);
+const priorities = Object.values(POST_PRIORITY).sort(
+  (a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b],
+);
+const verificationStatuses = Object.values(VERIFICATION_STATUS);
+const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
+---
+
+<frontmatter-editor
+  class="fm-editor"
+  data-entry-id={entryId}
+  data-max-categories={MAX_CATEGORIES_PER_POST}
+>
+  <details class="fm-details">
+    <summary class="fm-summary">
+      <span>フロントマターを編集</span>
+      <span class="fm-summary-hint">相関・改訂履歴はファイルを直接編集</span>
+    </summary>
+
+    <form class="fm-form" data-fm-form>
+      <div class="fm-grid">
+        <label class="fm-field fm-field-wide">
+          <span class="fm-label">タイトル</span>
+          <input
+            type="text"
+            name="title"
+            class="fm-input"
+            value={data.title}
+            required
+          />
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">公開日</span>
+          <input
+            type="date"
+            name="publishedAt"
+            class="fm-input"
+            value={toIsoDate(data.publishedAt)}
+            required
+          />
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">更新日</span>
+          <input
+            type="date"
+            name="updatedAt"
+            class="fm-input"
+            value={toIsoDate(data.updatedAt)}
+            required
+          />
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">公開状態</span>
+          <select name="status" class="fm-input">
+            {
+              publishedStatuses.map((value) => (
+                <option value={value} selected={value === data.status}>
+                  {PUBLISHED_STATUS_LABELS[value]}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">執筆状態</span>
+          <select name="writingStatus" class="fm-input">
+            {
+              writingStatuses.map((value) => (
+                <option value={value} selected={value === data.writingStatus}>
+                  {WRITING_STATUS_LABELS[value]}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">優先度</span>
+          <select name="priority" class="fm-input">
+            {
+              priorities.map((value) => (
+                <option value={value} selected={value === data.priority}>
+                  {POST_PRIORITY_LABELS[value]}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+
+        <label class="fm-field">
+          <span class="fm-label">検証状態</span>
+          <select name="verificationStatus" class="fm-input">
+            <option value="" selected={!data.verificationStatus}>未設定</option>
+            {
+              verificationStatuses.map((value) => (
+                <option
+                  value={value}
+                  selected={value === data.verificationStatus}
+                >
+                  {VERIFICATION_STATUS_LABELS[value]}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+
+        <label class="fm-field fm-field-wide">
+          <span class="fm-label">サムネイル</span>
+          <input
+            type="text"
+            name="thumbnail"
+            class="fm-input"
+            value={data.thumbnail ?? ""}
+          />
+        </label>
+
+        <label class="fm-field fm-field-wide">
+          <span class="fm-label">GitHub URL</span>
+          <input
+            type="text"
+            name="githubUrl"
+            class="fm-input"
+            value={data.githubUrl ?? ""}
+          />
+        </label>
+      </div>
+
+      <fieldset class="fm-fieldset">
+        <legend class="fm-legend">
+          カテゴリ
+          <span class="fm-legend-hint">
+            1〜{MAX_CATEGORIES_PER_POST}件
+          </span>
+        </legend>
+        <div class="fm-choices">
+          {
+            CATEGORIES.map((category) => (
+              <label class="fm-choice">
+                <input
+                  type="checkbox"
+                  name="categories"
+                  value={category}
+                  checked={data.categories.includes(category)}
+                  data-fm-category
+                />
+                <span>{category}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="fm-fieldset">
+        <legend class="fm-legend">
+          タグ
+          <span class="fm-legend-hint">1件以上</span>
+        </legend>
+        <input
+          type="search"
+          class="fm-input fm-tag-filter"
+          placeholder="タグを絞り込む"
+          autocomplete="off"
+          data-fm-tag-filter
+        />
+        <div class="fm-choices fm-choices-scroll">
+          {
+            sortedTags.map((tag) => (
+              <label class="fm-choice" data-fm-tag-choice={tag}>
+                <input
+                  type="checkbox"
+                  name="tags"
+                  value={tag}
+                  checked={data.tags.includes(tag)}
+                />
+                <span>{tag}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <footer class="fm-actions">
+        <button type="submit" class="fm-submit" data-fm-submit>保存</button>
+        <button type="button" class="fm-reset" data-fm-reset>入力を戻す</button>
+        <p class="fm-status" data-fm-status role="status" aria-live="polite">
+        </p>
+      </footer>
+    </form>
+  </details>
+</frontmatter-editor>
+
+<style>
+  .fm-editor {
+    display: block;
+    margin-bottom: 28px;
+  }
+
+  .fm-details {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .fm-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .fm-summary-hint {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 400;
+  }
+
+  .fm-form {
+    display: grid;
+    gap: 18px;
+    padding: 4px 14px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .fm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .fm-field {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .fm-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .fm-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .fm-input {
+    width: 100%;
+    padding: 6px 8px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+  }
+
+  .fm-input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .fm-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .fm-legend {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .fm-legend-hint {
+    color: var(--text-muted);
+    opacity: 0.8;
+  }
+
+  .fm-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+
+  .fm-choices-scroll {
+    max-height: 168px;
+    margin-top: 6px;
+    padding: 8px;
+    overflow-y: auto;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+  }
+
+  .fm-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+
+  .fm-choice[hidden] {
+    display: none;
+  }
+
+  .fm-choice input:disabled + span {
+    color: var(--text-muted);
+    opacity: 0.55;
+  }
+
+  .fm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fm-submit,
+  .fm-reset {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .fm-submit {
+    color: var(--bg-base);
+    background: var(--text-primary);
+    border-color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .fm-submit:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .fm-reset {
+    color: var(--text-primary);
+    background: var(--bg-base);
+  }
+
+  .fm-reset:hover {
+    background: var(--bg-hover);
+  }
+
+  .fm-status {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .fm-status[data-tone="success"] {
+    color: var(--success-text);
+  }
+
+  .fm-status[data-tone="error"] {
+    color: var(--danger-text);
+  }
+</style>
+
+<script>
+  import { initPreviewFrontmatter } from "~/scripts/previewFrontmatter";
+
+  initPreviewFrontmatter();
+</script>

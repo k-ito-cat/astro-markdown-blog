@@ -3,6 +3,7 @@ import { getCollection, getEntry, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
+import PreviewFrontmatterEditor from "~/components/preview/PreviewFrontmatterEditor.astro";
 import PreviewPostsIndex from "~/components/preview/PreviewPostsIndex.astro";
 import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
 
@@ -60,6 +61,8 @@ const posts = await getCollection("posts");
             一覧へ戻る
           </a>
         </header>
+
+        <PreviewFrontmatterEditor entryId={post.id} data={post.data} />
 
         <div
           class:list={[

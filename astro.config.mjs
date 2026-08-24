@@ -8,6 +8,7 @@ import remarkLinkCardPlus from "remark-link-card-plus";
 import rehypeExternalLinks, {
   remarkExternalLinksInHtml,
 } from "./src/plugins/rehypeExternalLinks.mjs";
+import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 
 import astroExpressiveCode from "astro-expressive-code";
 
@@ -15,7 +16,7 @@ import astroExpressiveCode from "astro-expressive-code";
 export default defineConfig({
   output: "static",
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), frontmatterEditor()],
   },
   markdown: {
     processor: unified({

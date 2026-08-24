@@ -16,15 +16,24 @@ import {
   WRITING_STATUS_ORDER,
   type WritingStatus,
 } from "~/constants/writingStatus";
-import type { MemoState } from "~/utils/previewPost";
+import {
+  normalizeSearchText,
+  MEMO_STATE_LABELS,
+  MEMO_STATE_ORDER,
+  type MemoState,
+} from "~/utils/previewPost";
+import { initPreviewInlineEdit } from "~/scripts/previewInlineEdit";
 
 type GroupName = "priority" | "writing" | "publication" | "none";
-type SortName =
-  | "recommended"
-  | "updated-desc"
-  | "updated-asc"
+type SortColumn =
   | "title"
-  | "priority";
+  | "priority"
+  | "writing"
+  | "publication"
+  | "memo"
+  | "updated";
+type SortDirection = "asc" | "desc";
+type SortName = "recommended" | `${SortColumn}-${SortDirection}`;
 type FilterKey =
   | "priority"
   | "writing"
@@ -44,6 +53,7 @@ type PreviewState = {
   category: string[];
   tag: string[];
   issuesOnly: boolean;
+  recentDays: number;
 };
 
 type PreviewRow = {
@@ -56,6 +66,7 @@ type PreviewRow = {
   memo: MemoState;
   categories: string[];
   tags: string[];
+  published: string;
   updated: number;
   issues: string[];
 };
@@ -65,21 +76,24 @@ type GroupDefinition = {
   label: string;
 };
 
-const MEMO_STATE_LABELS: Record<MemoState, string> = {
-  HAS_MEMO: "メモあり",
-  EMPTY_MEMO: "空メモ",
-  NO_MEMO: "メモなし",
-  BROKEN_MEMO: "メモ不正",
-};
-
 const GROUP_NAMES = ["priority", "writing", "publication", "none"] as const;
-const SORT_NAMES = [
-  "recommended",
-  "updated-desc",
-  "updated-asc",
+const SORT_COLUMNS = [
   "title",
   "priority",
+  "writing",
+  "publication",
+  "memo",
+  "updated",
 ] as const;
+const DEFAULT_SORT_DIRECTION: Record<SortColumn, SortDirection> = {
+  title: "asc",
+  priority: "asc",
+  writing: "asc",
+  publication: "asc",
+  memo: "asc",
+  updated: "desc",
+};
+const TABLE_COLUMN_COUNT = SORT_COLUMNS.length;
 const MEMO_STATES = [
   "HAS_MEMO",
   "EMPTY_MEMO",
@@ -87,12 +101,22 @@ const MEMO_STATES = [
   "BROKEN_MEMO",
 ] as const;
 
-const normalizeSearchText = (value: string) =>
-  value.normalize("NFKC").toLocaleLowerCase("ja");
+const formatLocalDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getRecentCutoff = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() - (days - 1));
+  return formatLocalDate(date);
+};
 
 const createBaseState = (): PreviewState => ({
   query: "",
-  group: "priority",
+  group: "none",
   sort: "recommended",
   priority: [],
   writing: [],
@@ -101,6 +125,7 @@ const createBaseState = (): PreviewState => ({
   category: [],
   tag: [],
   issuesOnly: false,
+  recentDays: 0,
 });
 
 const parseStringArray = (value: string, field: string) => {
@@ -150,6 +175,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
       "categories",
     ),
     tags: parseStringArray(element.dataset.tags ?? "[]", "tags"),
+    published: element.dataset.published ?? "",
     updated,
     issues: parseStringArray(element.dataset.issues ?? "[]", "issues"),
   };
@@ -158,8 +184,30 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
 const isGroupName = (value: string | null): value is GroupName =>
   value !== null && GROUP_NAMES.includes(value as GroupName);
 
-const isSortName = (value: string | null): value is SortName =>
-  value !== null && SORT_NAMES.includes(value as SortName);
+const isSortColumn = (value: string): value is SortColumn =>
+  SORT_COLUMNS.includes(value as SortColumn);
+
+const isSortName = (value: string | null): value is SortName => {
+  if (value === null) return false;
+  if (value === "recommended") return true;
+
+  const [column, direction] = value.split("-");
+  return (
+    column !== undefined &&
+    isSortColumn(column) &&
+    (direction === "asc" || direction === "desc")
+  );
+};
+
+const parseSort = (sort: SortName) => {
+  if (sort === "recommended") return null;
+
+  const [column, direction] = sort.split("-");
+  if (column === undefined || !isSortColumn(column)) {
+    throw new Error(`Unknown sort column: ${sort}`);
+  }
+  return { column, direction: direction as SortDirection };
+};
 
 const getAllowedValues = <T extends string>(
   params: URLSearchParams,
@@ -173,13 +221,14 @@ const getAllowedValues = <T extends string>(
 const readStateFromUrl = (
   categories: string[],
   tags: string[],
+  recentDayOptions: number[],
 ): PreviewState => {
   const params = new URLSearchParams(window.location.search);
   const state = createBaseState();
   const group = params.get("group");
   const sort = params.get("sort");
   state.query = params.get("q") ?? "";
-  state.group = isGroupName(group) ? group : "priority";
+  state.group = isGroupName(group) ? group : "none";
   state.sort = isSortName(sort) ? sort : "recommended";
   state.priority = getAllowedValues(
     params,
@@ -200,6 +249,8 @@ const readStateFromUrl = (
   state.category = getAllowedValues(params, "category", categories);
   state.tag = getAllowedValues(params, "tag", tags);
   state.issuesOnly = params.get("issues") === "only";
+  const recent = Number(params.get("recent"));
+  state.recentDays = recentDayOptions.includes(recent) ? recent : 0;
   return state;
 };
 
@@ -208,7 +259,7 @@ const writeStateToUrl = (state: PreviewState) => {
   url.search = "";
 
   if (state.query) url.searchParams.set("q", state.query);
-  if (state.group !== "priority") url.searchParams.set("group", state.group);
+  if (state.group !== "none") url.searchParams.set("group", state.group);
   if (state.sort !== "recommended") url.searchParams.set("sort", state.sort);
   state.priority.forEach((value) => url.searchParams.append("priority", value));
   state.writing.forEach((value) => url.searchParams.append("writing", value));
@@ -219,6 +270,9 @@ const writeStateToUrl = (state: PreviewState) => {
   state.category.forEach((value) => url.searchParams.append("category", value));
   state.tag.forEach((value) => url.searchParams.append("tag", value));
   if (state.issuesOnly) url.searchParams.set("issues", "only");
+  if (state.recentDays > 0) {
+    url.searchParams.set("recent", String(state.recentDays));
+  }
   window.history.replaceState(null, "", url);
 };
 
@@ -248,7 +302,11 @@ const getGroupValue = (row: PreviewRow, group: GroupName) => {
   return "all";
 };
 
-const matchesState = (row: PreviewRow, state: PreviewState) => {
+const matchesState = (
+  row: PreviewRow,
+  state: PreviewState,
+  recentCutoff: string,
+) => {
   const query = normalizeSearchText(state.query.trim());
   if (query && !row.search.includes(query)) return false;
   if (state.priority.length > 0 && !state.priority.includes(row.priority)) {
@@ -277,6 +335,7 @@ const matchesState = (row: PreviewRow, state: PreviewState) => {
     return false;
   }
   if (state.issuesOnly && row.issues.length === 0) return false;
+  if (state.recentDays > 0 && row.published < recentCutoff) return false;
   return true;
 };
 
@@ -294,18 +353,51 @@ const compareRecommended = (a: PreviewRow, b: PreviewRow) => {
   return compareTitle(a, b);
 };
 
-const sortRows = (rows: PreviewRow[], sort: SortName) =>
-  rows.sort((a, b) => {
-    if (sort === "updated-desc") {
-      return b.updated - a.updated || compareTitle(a, b);
-    }
-    if (sort === "updated-asc") {
-      return a.updated - b.updated || compareTitle(a, b);
-    }
-    if (sort === "title") return compareTitle(a, b);
-    if (sort === "priority") return compareRecommended(a, b);
-    return compareRecommended(a, b);
+const compareColumn = (a: PreviewRow, b: PreviewRow, column: SortColumn) => {
+  if (column === "title") return compareTitle(a, b);
+  if (column === "priority") {
+    return POST_PRIORITY_ORDER[a.priority] - POST_PRIORITY_ORDER[b.priority];
+  }
+  if (column === "writing") {
+    return WRITING_STATUS_ORDER[a.writing] - WRITING_STATUS_ORDER[b.writing];
+  }
+  if (column === "publication") {
+    return (
+      PUBLISHED_STATUS_ORDER[a.publication] -
+      PUBLISHED_STATUS_ORDER[b.publication]
+    );
+  }
+  if (column === "memo") {
+    return MEMO_STATE_ORDER[a.memo] - MEMO_STATE_ORDER[b.memo];
+  }
+  return a.updated - b.updated;
+};
+
+const sortRows = (rows: PreviewRow[], sort: SortName) => {
+  const parsed = parseSort(sort);
+  if (parsed === null) return rows.sort(compareRecommended);
+
+  const { column, direction } = parsed;
+  return rows.sort((a, b) => {
+    const columnDiff = compareColumn(a, b, column);
+    if (columnDiff !== 0)
+      return direction === "desc" ? -columnDiff : columnDiff;
+    return compareTitle(a, b);
   });
+};
+
+const getNextSort = (current: SortName, column: SortColumn): SortName => {
+  const parsed = parseSort(current);
+  const defaultDirection = DEFAULT_SORT_DIRECTION[column];
+
+  if (parsed === null || parsed.column !== column) {
+    return `${column}-${defaultDirection}`;
+  }
+  if (parsed.direction === defaultDirection) {
+    return `${column}-${defaultDirection === "asc" ? "desc" : "asc"}`;
+  }
+  return "recommended";
+};
 
 const createGroupBody = (
   definition: GroupDefinition,
@@ -321,7 +413,7 @@ const createGroupBody = (
     const headingRow = document.createElement("tr");
     headingRow.className = "preview-group-row";
     const heading = document.createElement("th");
-    heading.colSpan = 5;
+    heading.colSpan = TABLE_COLUMN_COUNT;
     heading.scope = "rowgroup";
     const button = document.createElement("button");
     button.type = "button";
@@ -369,7 +461,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const controls = root.querySelector("[data-preview-controls]");
   const searchInput = root.querySelector("[data-search-input]");
   const groupSelect = root.querySelector("[data-group-select]");
-  const sortSelect = root.querySelector("[data-sort-select]");
   const resultCount = root.querySelector("[data-result-count]");
   const table = root.querySelector("table");
   const tableWrap = root.querySelector("[data-table-wrap]");
@@ -386,8 +477,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
     throw new Error("Search input not found");
   if (!(groupSelect instanceof HTMLSelectElement))
     throw new Error("Group select not found");
-  if (!(sortSelect instanceof HTMLSelectElement))
-    throw new Error("Sort select not found");
   if (!(resultCount instanceof HTMLElement))
     throw new Error("Result count not found");
   if (!(table instanceof HTMLTableElement))
@@ -421,9 +510,19 @@ const initializePreviewPosts = (root: HTMLElement) => {
     root.querySelectorAll<HTMLInputElement>('input[data-filter-key="tag"]'),
     (input) => input.value,
   );
+  const recentButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-recent-button]"),
+  );
+  const recentDayOptions = recentButtons.map((button) => {
+    const days = Number(button.dataset.recentButton);
+    if (!Number.isInteger(days) || days < 1) {
+      throw new Error(`Invalid recent days: ${button.dataset.recentButton}`);
+    }
+    return days;
+  });
   const total = rows.length;
   const collapsedGroups = new Set<string>();
-  let state = readStateFromUrl(categoryValues, tagValues);
+  let state = readStateFromUrl(categoryValues, tagValues, recentDayOptions);
 
   const getFilterInputs = () =>
     Array.from(
@@ -439,24 +538,57 @@ const initializePreviewPosts = (root: HTMLElement) => {
     return state.category;
   };
 
+  const sortButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-sort-column]"),
+  );
+
+  const getSortColumn = (button: HTMLButtonElement) => {
+    const column = button.dataset.sortColumn ?? "";
+    if (!isSortColumn(column)) {
+      throw new Error(`Unknown sort column: ${column}`);
+    }
+    return column;
+  };
+
+  const syncSortHeaders = () => {
+    const parsed = parseSort(state.sort);
+    sortButtons.forEach((button) => {
+      const header = button.closest("th");
+      if (!(header instanceof HTMLTableCellElement)) {
+        throw new Error("Sort header not found");
+      }
+
+      if (parsed === null || parsed.column !== getSortColumn(button)) {
+        header.setAttribute("aria-sort", "none");
+        return;
+      }
+      header.setAttribute(
+        "aria-sort",
+        parsed.direction === "asc" ? "ascending" : "descending",
+      );
+    });
+  };
+
   const syncControls = () => {
     searchInput.value = state.query;
     groupSelect.value = state.group;
-    sortSelect.value = state.sort;
+    syncSortHeaders();
     getFilterInputs().forEach((input) => {
       const key = input.dataset.filterKey as FilterKey;
       input.checked = getStateValues(key).includes(input.value as never);
     });
     issuesOnlyInput.checked = state.issuesOnly;
+    recentButtons.forEach((button) => {
+      const days = Number(button.dataset.recentButton);
+      button.setAttribute("aria-pressed", String(state.recentDays === days));
+    });
   };
 
   const readStateFromControls = () => {
     const next = createBaseState();
     next.query = searchInput.value;
-    next.group = isGroupName(groupSelect.value)
-      ? groupSelect.value
-      : "priority";
-    next.sort = isSortName(sortSelect.value) ? sortSelect.value : "recommended";
+    next.group = isGroupName(groupSelect.value) ? groupSelect.value : "none";
+    next.sort = state.sort;
     getFilterInputs()
       .filter((input) => input.checked)
       .forEach((input) => {
@@ -471,6 +603,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         if (key === "tag") next.tag.push(input.value);
       });
     next.issuesOnly = issuesOnlyInput.checked;
+    next.recentDays = state.recentDays;
     return next;
   };
 
@@ -492,7 +625,10 @@ const initializePreviewPosts = (root: HTMLElement) => {
       ]),
       ...state.tag.map((value): [FilterKey, string] => ["tag", value]),
     ];
-    const count = filterEntries.length + Number(state.issuesOnly);
+    const count =
+      filterEntries.length +
+      Number(state.issuesOnly) +
+      Number(state.recentDays > 0);
     filterCount.textContent = String(count);
     filterCount.hidden = count === 0;
 
@@ -501,6 +637,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     );
     if (state.query) labels.unshift(`検索: ${state.query}`);
     if (state.issuesOnly) labels.push("要確認のみ");
+    if (state.recentDays > 0) labels.push(`最近の記事: ${state.recentDays}日`);
     filterChips.replaceChildren(
       ...labels.map((text) => {
         const chip = document.createElement("span");
@@ -513,8 +650,10 @@ const initializePreviewPosts = (root: HTMLElement) => {
   };
 
   const render = () => {
+    const recentCutoff =
+      state.recentDays > 0 ? getRecentCutoff(state.recentDays) : "";
     const visibleRows = sortRows(
-      rows.filter((row) => matchesState(row, state)),
+      rows.filter((row) => matchesState(row, state, recentCutoff)),
       state.sort,
     );
     const definitions = getGroupDefinitions(state.group);
@@ -553,6 +692,23 @@ const initializePreviewPosts = (root: HTMLElement) => {
   };
 
   controls.addEventListener("submit", (event) => event.preventDefault());
+  sortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      applyState({
+        ...state,
+        sort: getNextSort(state.sort, getSortColumn(button)),
+      });
+    });
+  });
+  recentButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const days = Number(button.dataset.recentButton);
+      applyState({
+        ...state,
+        recentDays: state.recentDays === days ? 0 : days,
+      });
+    });
+  });
   searchInput.addEventListener("input", () => {
     applyState(readStateFromControls());
   });
@@ -571,6 +727,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         next.category = [];
         next.tag = [];
         next.issuesOnly = false;
+        next.recentDays = 0;
         applyState(next);
       });
     });
@@ -643,14 +800,26 @@ const initializePreviewPosts = (root: HTMLElement) => {
     }
   });
   window.addEventListener("popstate", () => {
-    state = readStateFromUrl(categoryValues, tagValues);
+    state = readStateFromUrl(categoryValues, tagValues, recentDayOptions);
     syncControls();
     render();
+  });
+
+  recentButtons.forEach((button) => {
+    const days = Number(button.dataset.recentButton);
+    const cutoff = getRecentCutoff(days);
+    const total = rows.filter((row) => row.published >= cutoff).length;
+    const count = button.querySelector("[data-recent-count]");
+    if (!(count instanceof HTMLElement)) {
+      throw new Error("Recent count not found");
+    }
+    count.textContent = total > 0 ? String(total) : "";
   });
 
   syncControls();
   render();
   writeStateToUrl(state);
+  initPreviewInlineEdit(root);
 };
 
 export const initPreviewPosts = () => {

@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
+import { CATEGORIES, MAX_CATEGORIES_PER_POST } from "~/constants/categories";
 import {
   POST_PRIORITY,
   POST_PRIORITY_LABELS,
@@ -9,6 +10,7 @@ import {
 import {
   PUBLISHED_STATUS,
   PUBLISHED_STATUS_LABELS,
+  PUBLISHED_STATUS_ORDER,
 } from "~/constants/publishedStatus";
 import {
   WRITING_STATUS,
@@ -16,7 +18,12 @@ import {
   WRITING_STATUS_ORDER,
 } from "~/constants/writingStatus";
 import { detectMemoState } from "~/utils/postMemo.js";
-import { getPreviewPostIssues, type MemoState } from "~/utils/previewPost";
+import {
+  getPreviewPostIssues,
+  normalizeSearchText,
+  MEMO_STATE_LABELS,
+  type MemoState,
+} from "~/utils/previewPost";
 import { normalizePostSlug } from "~/utils/postSlug";
 
 type Props = {
@@ -25,15 +32,16 @@ type Props = {
 
 const { posts } = Astro.props;
 
-const MEMO_STATE_LABELS = {
-  HAS_MEMO: "メモあり",
-  EMPTY_MEMO: "空メモ",
-  NO_MEMO: "メモなし",
-  BROKEN_MEMO: "メモ不正",
-} as const;
+const RECENT_DAY_OPTIONS = [1, 3, 7] as const;
 
-const normalizeSearchText = (value: string) =>
-  value.normalize("NFKC").toLocaleLowerCase("ja");
+const SORT_COLUMNS = [
+  { value: "title", label: "タイトル" },
+  { value: "priority", label: "優先度" },
+  { value: "writing", label: "執筆状態" },
+  { value: "publication", label: "公開状態" },
+  { value: "memo", label: "メモ状態" },
+  { value: "updated", label: "更新日" },
+] as const;
 
 const previewPosts = posts
   .map((post) => {
@@ -79,6 +87,14 @@ const priorities = Object.values(POST_PRIORITY).sort(
   (a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b],
 );
 
+const writingStatuses = Object.values(WRITING_STATUS).sort(
+  (a, b) => WRITING_STATUS_ORDER[a] - WRITING_STATUS_ORDER[b],
+);
+
+const publishedStatuses = Object.values(PUBLISHED_STATUS).sort(
+  (a, b) => PUBLISHED_STATUS_ORDER[a] - PUBLISHED_STATUS_ORDER[b],
+);
+
 const categories = Array.from(
   new Set(previewPosts.flatMap((post) => post.data.categories)),
 ).sort((a, b) => a.localeCompare(b, "ja"));
@@ -103,7 +119,8 @@ const publishedMemoFilterParams = new URLSearchParams({
 <preview-posts
   class="preview-posts"
   data-total={previewPosts.length}
-  data-group="priority"
+  data-group="none"
+  data-max-categories={MAX_CATEGORIES_PER_POST}
 >
   <main class="preview-shell">
     <header class="preview-header">
@@ -161,23 +178,31 @@ const publishedMemoFilterParams = new URLSearchParams({
       <label class="preview-field">
         <span class="preview-field-label">グループ</span>
         <select name="group" class="preview-select" data-group-select>
+          <option value="none">グループなし</option>
           <option value="priority">優先度</option>
           <option value="writing">執筆状態</option>
           <option value="publication">公開状態</option>
-          <option value="none">グループなし</option>
         </select>
       </label>
 
-      <label class="preview-field">
-        <span class="preview-field-label">並び順</span>
-        <select name="sort" class="preview-select" data-sort-select>
-          <option value="recommended">推奨順</option>
-          <option value="updated-desc">更新日が新しい順</option>
-          <option value="updated-asc">更新日が古い順</option>
-          <option value="title">タイトル順</option>
-          <option value="priority">優先度順</option>
-        </select>
-      </label>
+      <div class="preview-field" role="group" aria-label="最近の記事で絞り込み">
+        <span class="preview-field-label">最近の記事</span>
+        <div class="preview-recent-options">
+          {
+            RECENT_DAY_OPTIONS.map((days) => (
+              <button
+                type="button"
+                class="preview-recent-button"
+                aria-pressed="false"
+                data-recent-button={days}
+              >
+                {days}日
+                <span class="preview-recent-count" data-recent-count={days} />
+              </button>
+            ))
+          }
+        </div>
+      </div>
 
       <details class="preview-filters" data-filter-details>
         <summary class="preview-filter-summary">
@@ -328,144 +353,243 @@ const publishedMemoFilterParams = new URLSearchParams({
         <caption class="sr-only"> ローカルプレビュー用の記事管理一覧 </caption>
         <thead>
           <tr>
-            <th scope="col">タイトル</th>
-            <th scope="col" class="preview-priority-column">優先度</th>
-            <th scope="col">執筆状態</th>
-            <th scope="col">公開状態</th>
-            <th scope="col">更新日</th>
+            {
+              SORT_COLUMNS.map((column) => (
+                <th
+                  scope="col"
+                  class:list={[
+                    { "preview-priority-column": column.value === "priority" },
+                  ]}
+                  aria-sort="none"
+                  data-sort-header
+                >
+                  <button
+                    type="button"
+                    class="preview-sort-button"
+                    data-sort-column={column.value}
+                  >
+                    {column.label}
+                    <span class="preview-sort-indicator" aria-hidden="true" />
+                  </button>
+                </th>
+              ))
+            }
           </tr>
         </thead>
-        {
-          priorities.map((priority) => {
-            const groupPosts = previewPosts.filter(
-              (post) => post.data.priority === priority,
-            );
-            const visibleCount = groupPosts.length;
-
-            if (groupPosts.length === 0) return null;
-
-            return (
-              <tbody
-                class="preview-post-group"
-                data-post-group
-                hidden={visibleCount === 0}
-              >
-                <tr class="preview-group-row">
-                  <th colspan="5" scope="rowgroup">
+        <tbody class="preview-post-group" data-post-group="all">
+          {
+            previewPosts.map((previewPost) => {
+              const rowKey = encodeURIComponent(previewPost.id).replaceAll(
+                "%",
+                "",
+              );
+              const issueTooltipId = `preview-issues-${rowKey}`;
+              const categoryPopoverId = `preview-categories-${rowKey}`;
+              return (
+                <tr
+                  class="preview-post-row"
+                  data-post-row
+                  data-entry-id={previewPost.id}
+                  data-slug={previewPost.previewSlug}
+                  data-title={previewPost.data.title}
+                  data-search={previewPost.searchText}
+                  data-priority={previewPost.data.priority}
+                  data-writing={previewPost.data.writingStatus}
+                  data-publication={previewPost.data.status}
+                  data-memo={previewPost.memoState}
+                  data-categories={JSON.stringify(previewPost.data.categories)}
+                  data-tags={JSON.stringify(previewPost.data.tags)}
+                  data-published={previewPost.data.publishedAt
+                    .toISOString()
+                    .slice(0, 10)}
+                  data-updated={previewPost.data.updatedAt
+                    .toISOString()
+                    .slice(0, 10)}
+                  data-issues={JSON.stringify(previewPost.issues)}
+                >
+                  <th
+                    scope="row"
+                    class="preview-title-cell"
+                    data-label="タイトル"
+                  >
+                    <span class="preview-title-line">
+                      <a
+                        href={`/preview/posts/${previewPost.previewSlug}`}
+                        class="preview-post-link"
+                        data-title-display
+                      >
+                        {previewPost.data.title}
+                      </a>
+                      <button
+                        type="button"
+                        class="preview-edit-trigger"
+                        aria-label={`${previewPost.data.title} のタイトルを編集`}
+                        data-title-trigger
+                      >
+                        <Icon
+                          name="octicon:pencil-16"
+                          class="preview-edit-icon"
+                        />
+                      </button>
+                      <input
+                        type="text"
+                        class="preview-title-input"
+                        value={previewPost.data.title}
+                        aria-label={`${previewPost.data.title} のタイトル`}
+                        data-title-input
+                        hidden
+                      />
+                      {previewPost.issues.length > 0 && (
+                        <span
+                          class="preview-issue preview-tooltip-anchor"
+                          data-tooltip-anchor
+                        >
+                          <button
+                            type="button"
+                            class="preview-issue-trigger"
+                            aria-describedby={issueTooltipId}
+                          >
+                            要確認
+                          </button>
+                          <span
+                            id={issueTooltipId}
+                            class="preview-tooltip preview-issue-tooltip"
+                            role="tooltip"
+                          >
+                            <strong>確認理由</strong>
+                            {previewPost.issues.map((issue) => (
+                              <span class="preview-tooltip-item">
+                                ・{issue}
+                              </span>
+                            ))}
+                          </span>
+                        </span>
+                      )}
+                      <span
+                        class="preview-edit-status"
+                        role="status"
+                        aria-live="polite"
+                        data-edit-status
+                      />
+                    </span>
+                    <span class="preview-title-meta">
+                      <code class="preview-slug">
+                        {previewPost.previewSlug}
+                      </code>
+                    </span>
                     <button
                       type="button"
-                      class="preview-group-toggle"
-                      data-group-toggle={priority}
-                      aria-expanded="true"
+                      class="preview-title-meta preview-category-trigger"
+                      popovertarget={categoryPopoverId}
+                      aria-label={`${previewPost.data.title} のカテゴリを編集`}
+                      data-category-trigger
                     >
-                      <span class="preview-group-chevron" aria-hidden="true">
-                        ▾
+                      <span data-category-label>
+                        {previewPost.data.categories.join(" · ")}
                       </span>
-                      <span>{POST_PRIORITY_LABELS[priority]}</span>
-                      <span class="preview-group-count">{visibleCount}件</span>
+                      <Icon
+                        name="octicon:pencil-16"
+                        class="preview-edit-icon"
+                      />
                     </button>
+                    <div
+                      id={categoryPopoverId}
+                      popover="auto"
+                      class="preview-category-popover"
+                      data-category-popover
+                    >
+                      {CATEGORIES.map((category) => (
+                        <label class="preview-category-choice">
+                          <input
+                            type="checkbox"
+                            value={category}
+                            checked={previewPost.data.categories.includes(
+                              category,
+                            )}
+                            data-category-input
+                          />
+                          <span>{category}</span>
+                        </label>
+                      ))}
+                    </div>
                   </th>
-                </tr>
-                {groupPosts.map((previewPost) => {
-                  const issueTooltipId = `preview-issues-${encodeURIComponent(
-                    previewPost.id,
-                  ).replaceAll("%", "")}`;
-                  return (
-                    <tr
-                      class="preview-post-row"
-                      data-post-row
-                      data-title={previewPost.data.title}
-                      data-search={previewPost.searchText}
-                      data-priority={previewPost.data.priority}
-                      data-writing={previewPost.data.writingStatus}
-                      data-publication={previewPost.data.status}
-                      data-memo={previewPost.memoState}
-                      data-categories={JSON.stringify(
-                        previewPost.data.categories,
-                      )}
-                      data-tags={JSON.stringify(previewPost.data.tags)}
-                      data-updated={previewPost.data.updatedAt
+                  <td class="preview-priority-column" data-label="優先度">
+                    <span class="preview-priority">
+                      <span
+                        class="preview-priority-dot"
+                        data-priority-value={previewPost.data.priority}
+                        aria-hidden="true"
+                        data-priority-dot
+                      />
+                      <select
+                        class="preview-cell-select"
+                        aria-label={`${previewPost.data.title} の優先度`}
+                        data-edit-select="priority"
+                      >
+                        {priorities.map((value) => (
+                          <option
+                            value={value}
+                            selected={value === previewPost.data.priority}
+                          >
+                            {POST_PRIORITY_LABELS[value]}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  </td>
+                  <td data-label="執筆状態">
+                    <select
+                      class="preview-cell-select"
+                      aria-label={`${previewPost.data.title} の執筆状態`}
+                      data-edit-select="writingStatus"
+                    >
+                      {writingStatuses.map((value) => (
+                        <option
+                          value={value}
+                          selected={value === previewPost.data.writingStatus}
+                        >
+                          {WRITING_STATUS_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td data-label="公開状態">
+                    <select
+                      class="preview-cell-select"
+                      aria-label={`${previewPost.data.title} の公開状態`}
+                      data-edit-select="status"
+                    >
+                      {publishedStatuses.map((value) => (
+                        <option
+                          value={value}
+                          selected={value === previewPost.data.status}
+                        >
+                          {PUBLISHED_STATUS_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td data-label="メモ状態">
+                    <span class="preview-status-badge preview-memo-badge">
+                      {MEMO_STATE_LABELS[previewPost.memoState]}
+                    </span>
+                  </td>
+                  <td class="preview-date-cell" data-label="更新日">
+                    <input
+                      type="date"
+                      class="preview-cell-date"
+                      value={previewPost.data.updatedAt
                         .toISOString()
                         .slice(0, 10)}
-                      data-issues={JSON.stringify(previewPost.issues)}
-                    >
-                      <th
-                        scope="row"
-                        class="preview-title-cell"
-                        data-label="タイトル"
-                      >
-                        <a
-                          href={`/preview/posts/${previewPost.previewSlug}`}
-                          class="preview-post-link"
-                        >
-                          {previewPost.data.title}
-                        </a>
-                        {previewPost.issues.length > 0 && (
-                          <span
-                            class="preview-issue preview-tooltip-anchor"
-                            data-tooltip-anchor
-                          >
-                            <button
-                              type="button"
-                              class="preview-issue-trigger"
-                              aria-describedby={issueTooltipId}
-                            >
-                              要確認
-                            </button>
-                            <span
-                              id={issueTooltipId}
-                              class="preview-tooltip preview-issue-tooltip"
-                              role="tooltip"
-                            >
-                              <strong>確認理由</strong>
-                              {previewPost.issues.map((issue) => (
-                                <span class="preview-tooltip-item">
-                                  ・{issue}
-                                </span>
-                              ))}
-                            </span>
-                          </span>
-                        )}
-                        <span class="preview-title-meta">
-                          {previewPost.data.categories.join(" · ")}
-                        </span>
-                      </th>
-                      <td class="preview-priority-column" data-label="優先度">
-                        <span class="preview-priority">
-                          <span
-                            class="preview-priority-dot"
-                            data-priority-value={previewPost.data.priority}
-                            aria-hidden="true"
-                          />
-                          <span>
-                            {POST_PRIORITY_LABELS[previewPost.data.priority]}
-                          </span>
-                        </span>
-                      </td>
-                      <td data-label="執筆状態">
-                        <span class="preview-status-text">
-                          {
-                            WRITING_STATUS_LABELS[
-                              previewPost.data.writingStatus
-                            ]
-                          }
-                        </span>
-                      </td>
-                      <td data-label="公開状態">
-                        <span class="preview-status-text">
-                          {PUBLISHED_STATUS_LABELS[previewPost.data.status]}
-                        </span>
-                      </td>
-                      <td class="preview-date-cell" data-label="更新日">
-                        {previewPost.data.updatedAt.toISOString().slice(0, 10)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            );
-          })
-        }
+                      aria-label={`${previewPost.data.title} の更新日`}
+                      data-edit-date
+                    />
+                  </td>
+                </tr>
+              );
+            })
+          }
+        </tbody>
       </table>
     </div>
 
@@ -814,7 +938,6 @@ const publishedMemoFilterParams = new URLSearchParams({
 
   .preview-table-wrap {
     margin-top: 16px;
-    overflow-x: auto;
   }
 
   .preview-table-wrap[hidden] {
@@ -835,12 +958,62 @@ const publishedMemoFilterParams = new URLSearchParams({
     position: sticky;
     top: 0;
     z-index: 2;
-    padding: 9px 10px;
+    padding: 0;
     color: var(--text-muted);
     background: var(--bg-base);
     border-bottom: 1px solid var(--border-strong);
     font-size: 12px;
     font-weight: 600;
+  }
+
+  .preview-sort-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 9px 10px;
+    color: inherit;
+    background: none;
+    border: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .preview-sort-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  .preview-sort-button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .preview-sort-indicator::before {
+    content: "↕";
+    opacity: 0.35;
+  }
+
+  .preview-sort-button:hover .preview-sort-indicator::before {
+    opacity: 0.6;
+  }
+
+  [aria-sort="ascending"] .preview-sort-button,
+  [aria-sort="descending"] .preview-sort-button {
+    color: var(--text-primary);
+  }
+
+  [aria-sort="ascending"] .preview-sort-indicator::before {
+    content: "↑";
+    opacity: 1;
+  }
+
+  [aria-sort="descending"] .preview-sort-indicator::before {
+    content: "↓";
+    opacity: 1;
   }
 
   .preview-post-row > th,
@@ -876,6 +1049,261 @@ const publishedMemoFilterParams = new URLSearchParams({
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 400;
+  }
+
+  .preview-title-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .preview-slug {
+    color: var(--text-muted);
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    word-break: break-all;
+  }
+
+  .preview-edit-trigger {
+    display: inline-flex;
+    padding: 2px;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--radius-label);
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .preview-post-row:hover .preview-edit-trigger,
+  .preview-edit-trigger:focus-visible {
+    opacity: 1;
+  }
+
+  .preview-edit-trigger:hover {
+    color: var(--link);
+    background: var(--bg-hover);
+  }
+
+  .preview-edit-trigger:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .preview-edit-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .preview-title-input {
+    flex: 1 1 240px;
+    min-width: 0;
+    padding: 3px 6px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    font-size: inherit;
+    font-family: inherit;
+  }
+
+  .preview-title-input[hidden] {
+    display: none;
+  }
+
+  .preview-edit-status {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .preview-edit-status[data-tone="error"] {
+    color: var(--danger-text);
+  }
+
+  .preview-cell-select,
+  .preview-cell-date,
+  .preview-status-badge {
+    max-width: 100%;
+    padding: 2px 7px;
+    color: var(--text-secondary);
+    background: var(--bg-subtle);
+    border: 1px solid transparent;
+    border-radius: var(--radius-label);
+    font-size: inherit;
+    font-family: inherit;
+  }
+
+  .preview-status-badge {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  .preview-cell-select {
+    appearance: none;
+  }
+
+  .preview-cell-date {
+    background: none;
+  }
+
+  .preview-post-row:hover .preview-cell-date,
+  .preview-cell-date:focus-visible {
+    background: var(--bg-base);
+    border-color: var(--border);
+  }
+
+  .preview-post-row:hover .preview-cell-select,
+  .preview-cell-select:focus-visible {
+    border-color: var(--border-strong);
+  }
+
+  .preview-cell-select:focus-visible,
+  .preview-cell-date:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  preview-posts {
+    --tint-danger: color-mix(in oklab, var(--danger) 13%, var(--bg-base));
+    --tint-warning: color-mix(in oklab, var(--warning) 13%, var(--bg-base));
+    --tint-active: color-mix(in oklab, var(--link) 13%, var(--bg-base));
+    --tint-done: color-mix(in oklab, var(--accent-warm) 55%, var(--bg-base));
+  }
+
+  .preview-post-row[data-priority="high"] [data-edit-select="priority"] {
+    color: var(--danger);
+    background: var(--tint-danger);
+  }
+
+  .preview-post-row[data-priority="medium"] [data-edit-select="priority"],
+  .preview-post-row[data-publication="draft"] [data-edit-select="status"],
+  .preview-post-row[data-writing="planned"] [data-edit-select="writingStatus"] {
+    color: var(--warning);
+    background: var(--tint-warning);
+  }
+
+  .preview-post-row[data-priority="low"] [data-edit-select="priority"],
+  .preview-post-row[data-writing="writing"] [data-edit-select="writingStatus"] {
+    color: var(--link);
+    background: var(--tint-active);
+  }
+
+  .preview-post-row[data-publication="published"] [data-edit-select="status"],
+  .preview-post-row[data-writing="done"] [data-edit-select="writingStatus"] {
+    color: var(--text-primary);
+    background: var(--tint-done);
+  }
+
+  .preview-post-row[data-memo="HAS_MEMO"] .preview-memo-badge {
+    color: var(--warning);
+    background: var(--tint-warning);
+  }
+
+  .preview-post-row[data-memo="BROKEN_MEMO"] .preview-memo-badge {
+    color: var(--danger);
+    background: var(--tint-danger);
+  }
+
+  .preview-post-row[data-memo="NO_MEMO"] .preview-memo-badge {
+    color: var(--text-muted);
+    background: none;
+  }
+
+  .preview-post-row[data-writing="on_hold"] > th,
+  .preview-post-row[data-writing="on_hold"] > td {
+    background: var(--bg-subtle);
+  }
+
+  .preview-recent-options {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  .preview-recent-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 11px;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: 13px;
+    font-family: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .preview-recent-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  .preview-recent-button[aria-pressed="true"] {
+    color: var(--link);
+    background: var(--bg-hover);
+    border-color: var(--link);
+  }
+
+  .preview-recent-button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .preview-recent-count {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .preview-recent-count:empty {
+    display: none;
+  }
+
+  .preview-category-trigger {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .preview-category-trigger:hover {
+    color: var(--link);
+  }
+
+  .preview-category-trigger:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .preview-category-popover {
+    position: fixed;
+    margin: 0;
+    padding: 8px;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .preview-category-choice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    cursor: pointer;
+  }
+
+  .preview-category-choice input:disabled + span {
+    color: var(--text-muted);
+    opacity: 0.55;
   }
 
   .preview-tooltip-anchor {
@@ -1065,10 +1493,6 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   @media (max-width: 767px) {
-    .preview-table-wrap {
-      overflow: visible;
-    }
-
     .preview-table {
       display: block;
       min-width: 0;
