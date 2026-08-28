@@ -73,6 +73,7 @@ collections:
           - "Storybook"
           - "zod"
           - "TanStack Query"
+          - "htmx"
           - "Headless CMS"
           - "microCMS"
           - "Decap CMS"

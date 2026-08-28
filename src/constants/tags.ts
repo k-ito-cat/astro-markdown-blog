@@ -22,6 +22,7 @@ export const TAGS = [
   "Storybook",
   "zod",
   "TanStack Query",
+  "htmx",
   // CMS・ホスティング
   "Headless CMS",
   "microCMS",
