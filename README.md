@@ -24,7 +24,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 - `npm run new:post` - 新規ブログ投稿のテンプレートを作成（hygen）
 - `npm run posts:board` - 記事を `status` 別に集計し、メモ欄の状態を確認
-- `npm run update` - git pull とサブモジュール更新を実行
+- `npm run posts-update` - git pull とサブモジュール更新を実行
   - 管理画面でcommitが進むことがほとんどなので、このプロジェクトで何らかの修正を加える前に最新化する目的
   - 将来的にpre-pushで実行するなど自動化を考える
 - `npm run copy-images` - 画像を public ディレクトリにコピー ビルド時に行っている
