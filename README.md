@@ -48,6 +48,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - `writing`: 執筆中
 - `planned`: 執筆予定
 - `todo`: 未着手
+- `on_hold`: 保留
 - `done`: 執筆完了
 
 `priority` は次に取り組む順序を表す。
