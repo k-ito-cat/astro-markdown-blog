@@ -11,6 +11,7 @@ import rehypeExternalLinks, {
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
 import imageUploader from "./src/plugins/imageUploader.mjs";
+import imagePruner from "./src/plugins/imagePruner.mjs";
 import contentReload from "./src/plugins/contentReload.mjs";
 import postManager from "./src/plugins/postManager.mjs";
 import blockRange from "./src/plugins/blockRange.mjs";
@@ -32,6 +33,7 @@ export default defineConfig({
       frontmatterEditor(),
       bodyEditor(),
       imageUploader(),
+      imagePruner(),
       contentReload(),
       postManager(),
     ],

@@ -4,12 +4,9 @@ import path from "node:path";
 
 const ENDPOINT = "/__body";
 const POSTS_DIR = "src/content/posts";
-const IMAGES_DIR = "src/content/posts/images";
-const PUBLIC_IMAGES_DIR = "public/images";
 const POST_EXTENSIONS = [".md", ".mdx"];
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const FRONTMATTER_PATTERN = /^(---\r?\n)([\s\S]*?)(\r?\n---)/;
-const IMAGE_REFERENCE = /\/images\/[\w./-]+/g;
 
 class RequestError extends Error {
   constructor(status, message) {
@@ -61,46 +58,6 @@ const getBodyStart = (source) => {
 
   const rest = source.slice(match[0].length);
   return match[0].length + (rest.length - rest.trimStart().length);
-};
-
-const collectImageReferences = (text) =>
-  new Set(text.match(IMAGE_REFERENCE) ?? []);
-
-/**
- * 保存で参照されなくなった画像のうち、どの記事からも使われていないものを消す。
- * 判定はファイル書き込みの後に行う（対象記事の参照が消えている必要があるため）。
- */
-const removeUnusedImages = async (root, previous, next) => {
-  const stillUsed = collectImageReferences(next);
-  const dropped = [...collectImageReferences(previous)].filter(
-    (reference) => !stillUsed.has(reference),
-  );
-  if (dropped.length === 0) return [];
-
-  const postsDir = path.resolve(root, POSTS_DIR);
-  const imagesDir = path.resolve(root, IMAGES_DIR);
-  const entries = await fs.readdir(postsDir, { recursive: true });
-  const sources = await Promise.all(
-    entries
-      .filter((entry) => POST_EXTENSIONS.includes(path.extname(entry)))
-      .map((entry) => fs.readFile(path.join(postsDir, entry), "utf8")),
-  );
-
-  const removed = [];
-  for (const reference of dropped) {
-    if (sources.some((content) => content.includes(reference))) continue;
-
-    const relative = reference.slice("/images/".length);
-    const filePath = path.resolve(imagesDir, relative);
-    if (!filePath.startsWith(`${imagesDir}${path.sep}`)) continue;
-
-    await fs.rm(filePath, { force: true });
-    await fs.rm(path.resolve(root, PUBLIC_IMAGES_DIR, relative), {
-      force: true,
-    });
-    removed.push(reference);
-  }
-  return removed;
 };
 
 const buildNextSource = (source, { body, expected }) => {
@@ -170,17 +127,13 @@ const createHandler = (server) =>
       const result = buildNextSource(source, payload);
 
       if (result.source === null) {
-        sendJson(response, 200, { changed: false, removedImages: [] });
+        sendJson(response, 200, { changed: false });
         return;
       }
 
       await fs.writeFile(filePath, result.source, "utf8");
-      const removedImages = await removeUnusedImages(
-        server.config.root,
-        result.previous,
-        result.next,
-      );
-      sendJson(response, 200, { changed: true, removedImages });
+      // 未参照画像の削除はここでは行わない（scripts/prune-images.mjs を参照）
+      sendJson(response, 200, { changed: true });
     } catch (error) {
       if (error instanceof RequestError) {
         sendJson(response, error.status, { message: error.message });

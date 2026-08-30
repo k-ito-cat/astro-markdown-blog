@@ -10,6 +10,7 @@
     "astro": "astro",
     "new:post": "hygen generator new",
     "posts:board": "node scripts/posts-board.mjs",
+    "images:prune": "node scripts/prune-images.mjs",
     "posts-update": "git pull && git submodule update --remote src/content/posts"
   },
   "dependencies": {

@@ -23,6 +23,7 @@ Astro Content Collections を使用した Markdown 形式のブログ
 
 - `npm run new:post` - 新規ブログ投稿のテンプレートを作成（hygen）
 - `npm run posts:board` - 記事を `status` 別に集計し、メモ欄の状態を確認
+- `npm run images:prune` - どの記事からも参照されていない画像を削除（`--dry-run` で確認のみ）
 - `npm run posts-update` - git pull とサブモジュール更新を実行
   - 記事側リポジトリだけが先に進むことがあるため、このプロジェクトで何らかの修正を加える前に最新化する目的
   - 将来的にpre-pushで実行するなど自動化を考える
@@ -196,6 +197,9 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 - 本文からは `../images/xxx.png` の相対パスで参照する。`src/` 配下の相対参照だけが Astro の最適化対象になるため、`/images/...` の絶対パスは使わない
 - ビルド時に `dist/_astro/` へ WebP 化・複数サイズで出力される。`public/images` へのコピーは廃止した
 - OG画像は記事の `thumbnail` が空なら [src/assets/og-default.png](src/assets/og-default.png) にフォールバックする
+- どの記事からも参照されなくなった画像は、dev サーバー起動時に自動で削除される（[src/plugins/imagePruner.mjs](src/plugins/imagePruner.mjs)）。記事の削除で孤児になった画像も対象
+  - 記事の保存時には削除しない。Astro が生成するアセットマップの再生成がデータストアの更新より遅れるため、保存の途中で画像を消すと `ImageNotFound` になる
+  - 手動で掃除する場合は `npm run images:prune`。`--dry-run` を付けると対象を表示するだけで削除しない
 
 ## メンテナンス
 
