@@ -6,7 +6,7 @@ to: src/content/posts/blog/<%= fileName %>.md
 title: "<%= title %>"
 publishedAt: "<%= new Date().toISOString().split("T")[0] %>"
 updatedAt: "<%= new Date().toISOString().split("T")[0] %>"
-thumbnail: "/images/thumbnail/noimage.webp"
+thumbnail: ""
 githubUrl: ""
 # categories は src/constants/categories.ts の値から1〜2件（必須）
 categories: []

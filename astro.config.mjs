@@ -20,6 +20,8 @@ import astroExpressiveCode from "astro-expressive-code";
 // https://astro.build/config
 export default defineConfig({
   output: "static",
+  // og:image を絶対URLで組み立てるために必須
+  site: "https://k-ito-blog.netlify.app",
   image: {
     // Markdown 内の画像にも srcset / sizes を自動付与する
     layout: "constrained",

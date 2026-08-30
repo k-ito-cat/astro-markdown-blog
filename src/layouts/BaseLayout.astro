@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import Header from "../components/Header.astro";
+import ogDefault from "~/assets/og-default.png";
 
 type Props = {
   title: string;
@@ -8,6 +9,8 @@ type Props = {
   ogImage?: string;
 };
 const { title, ogTitle, ogImage } = Astro.props;
+// 記事側のサムネイル未設定時はサイト共通のOG画像に落とす
+const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
 ---
 
 <!doctype html>
@@ -28,7 +31,7 @@ const { title, ogTitle, ogImage } = Astro.props;
     />
     <title>{title}</title>
     <meta property="og:title" content={ogTitle ?? title} />
-    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta property="og:image" content={ogImageUrl.href} />
   </head>
   <body>
     <Header />
