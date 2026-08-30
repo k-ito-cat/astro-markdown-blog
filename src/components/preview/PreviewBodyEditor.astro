@@ -1,0 +1,352 @@
+---
+import { Icon } from "astro-icon/components";
+
+type Props = {
+  entryId: string;
+  body: string;
+};
+
+const { entryId, body } = Astro.props;
+
+// `</script>` で JSON が閉じられないようにエスケープする
+const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
+---
+
+<script is:inline>
+  // 再読み込み直後のスクロール位置復元を見せないため、描画前に覆いを出す。
+  // 万一解除されなくても白いままにならないよう保険の時限解除を置く。
+  try {
+    if (!sessionStorage.getItem("preview-body-edit:reloading")) throw 0;
+    document.documentElement.dataset.previewReloading = "";
+    // 位置は編集したブロックに合わせるので、ブラウザ任せの復元は止める
+    history.scrollRestoration = "manual";
+    setTimeout(() => {
+      delete document.documentElement.dataset.previewReloading;
+      history.scrollRestoration = "auto";
+      sessionStorage.removeItem("preview-body-edit:reloading");
+      sessionStorage.removeItem("preview-body-edit:focus");
+      sessionStorage.removeItem("preview-body-edit:stale-body");
+    }, 5000);
+  } catch {
+    /* 覆いを出せないだけなので何もしない */
+  }
+</script>
+
+<body-editor class="body-editor" data-entry-id={entryId}>
+  <script type="application/json" data-post-body set:html={serializedBody} />
+  <p class="body-editor-hint" data-hint>
+    ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
+  </p>
+  <p class="body-editor-status" data-status aria-live="polite"></p>
+  <span class="body-editor-count" data-count hidden></span>
+  <button
+    type="button"
+    class="body-editor-save"
+    data-save
+    aria-keyshortcuts="Meta+S Control+S"
+    disabled
+  >
+    <span>保存</span>
+    <span class="body-editor-save-shortcut" aria-hidden="true">
+      <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
+    </span>
+  </button>
+  <button type="button" data-discard disabled>破棄</button>
+  <template data-block-toolbar-icon="image">
+    <Icon name="octicon:image-16" aria-hidden="true" />
+  </template>
+  <template data-block-toolbar-icon="delete">
+    <Icon name="octicon:trash-16" aria-hidden="true" />
+  </template>
+</body-editor>
+
+<style>
+  /* ページのどこにいても保存できるよう追従させる */
+  .body-editor {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 10px 0;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .body-editor-hint,
+  .body-editor-status {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .body-editor-hint {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+
+  .body-editor-status[data-tone="error"] {
+    color: var(--danger);
+  }
+
+  .body-editor-count {
+    color: var(--warning);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .body-editor button {
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    background: var(--bg-base);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .body-editor button:hover:not(:disabled) {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .body-editor button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .body-editor .body-editor-save:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .body-editor-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .body-editor-save-shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 400;
+  }
+
+  .body-editor-save-shortcut kbd {
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg-subtle);
+    line-height: 1;
+    white-space: nowrap;
+  }
+</style>
+
+<style is:global>
+  /* 保存から再読み込み完了までの間、画面の揺れを覆い隠す */
+  :root[data-preview-reloading]::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg-base);
+  }
+
+  :root[data-preview-reloading]::before {
+    content: "";
+    position: fixed;
+    z-index: 10000;
+    top: 50%;
+    left: 50%;
+    width: 28px;
+    height: 28px;
+    margin: -14px 0 0 -14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: preview-reloading-spin 700ms linear infinite;
+  }
+
+  @keyframes preview-reloading-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-preview-reloading]::before {
+      animation: none;
+    }
+  }
+
+  /* script で .prose 内に差し込むため global に置く */
+  .preview-detail .prose [data-md-index] {
+    border-radius: 2px;
+    transition: background-color 120ms ease-out;
+  }
+
+  .preview-detail .prose [data-md-index]:hover {
+    background: var(--bg-subtle);
+    cursor: text;
+  }
+
+  .preview-detail .prose [data-md-index][hidden] {
+    display: none;
+  }
+
+  /* 戻ってきた位置を一瞬示す */
+  .preview-detail .prose .block-restored {
+    animation: block-restored-flash 1200ms ease-out;
+  }
+
+  @keyframes block-restored-flash {
+    from {
+      background: var(--bg-subtle);
+    }
+    to {
+      background: transparent;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-detail .prose .block-restored {
+      animation: none;
+    }
+  }
+
+  /* 保存前のブロックは描画できないので、生 Markdown のまま示す */
+  .preview-detail .prose .block-pending {
+    margin: 24px 0;
+    padding-left: 12px;
+    border-left: 2px solid var(--warning);
+    cursor: text;
+  }
+
+  .preview-detail .prose .block-pending-text {
+    overflow-x: auto;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: var(--leading-body);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .preview-detail .prose .block-editor-wrap {
+    margin: 24px 0;
+  }
+
+  /* 入力欄の内側右下に操作の手がかりを置く */
+  .preview-detail .prose .block-editor-field {
+    position: relative;
+  }
+
+  .preview-detail .prose .block-editor-hint {
+    position: absolute;
+    right: 10px;
+    bottom: 6px;
+    padding: 1px 6px;
+    border-radius: var(--radius-label);
+    background: var(--bg-base);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.6;
+    pointer-events: none;
+  }
+
+  .preview-detail .prose .block-editor {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: var(--leading-body);
+    resize: none;
+    overflow: hidden;
+    tab-size: 2;
+    /* 手がかりと文字が重ならないよう下に余白を取る */
+    padding-bottom: 28px;
+  }
+
+  /* 編集中のメッセージは、対象のブロックの真下に出す */
+  .preview-detail .prose .block-editor-status {
+    margin: 0;
+    min-height: 1.5em;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+
+  .preview-detail .prose .block-editor-status[data-tone="error"] {
+    color: var(--danger);
+  }
+
+  .block-toolbar {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    gap: 2px;
+    /* 少し外れても閉じないよう、当たり判定を外側に広げる */
+    padding: 10px;
+    margin: -10px;
+    border-radius: calc(var(--radius-label) + 10px);
+  }
+
+  .block-toolbar[hidden] {
+    display: none;
+  }
+
+  .block-toolbar button {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    background: var(--bg-base);
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .block-toolbar button + button {
+    margin-left: -1px;
+  }
+
+  .block-toolbar button:hover:not(:disabled) {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .block-toolbar button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .block-toolbar button[hidden] {
+    display: none;
+  }
+</style>
+
+<script>
+  // dev 専用機能なので、本番バンドルに含めない
+  if (import.meta.env.DEV) {
+    const { initPreviewBodyEdit } = await import("~/scripts/previewBodyEdit");
+    initPreviewBodyEdit();
+  }
+</script>

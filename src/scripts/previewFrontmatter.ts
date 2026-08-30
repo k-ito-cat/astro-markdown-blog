@@ -9,7 +9,6 @@ const TEXT_FIELDS = [
   "status",
   "writingStatus",
   "priority",
-  "verificationStatus",
 ] as const;
 
 const LIST_FIELDS = ["categories", "tags"] as const;

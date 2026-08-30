@@ -1,0 +1,480 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { Icon } from "astro-icon/components";
+import {
+  POST_PRIORITY,
+  POST_PRIORITY_LABELS,
+  POST_PRIORITY_ORDER,
+} from "~/constants/postPriority";
+import {
+  PUBLISHED_STATUS,
+  PUBLISHED_STATUS_LABELS,
+  PUBLISHED_STATUS_ORDER,
+} from "~/constants/publishedStatus";
+import {
+  WRITING_STATUS,
+  WRITING_STATUS_LABELS,
+  WRITING_STATUS_ORDER,
+} from "~/constants/writingStatus";
+import { normalizeSearchText } from "~/utils/previewPost";
+import { normalizePostSlug } from "~/utils/postSlug";
+
+type Props = {
+  posts: CollectionEntry<"posts">[];
+  currentId: string;
+};
+
+const { posts, currentId } = Astro.props;
+
+// 並びはボードの推奨順に合わせる（書きかけが上に来る）
+const items = posts
+  .map((post) => {
+    const slug = normalizePostSlug(post.id);
+    return {
+      id: post.id,
+      slug,
+      title: post.data.title,
+      priority: post.data.priority,
+      writingStatus: post.data.writingStatus,
+      status: post.data.status,
+      // 本文は含めない。全記事ページに載せると重くなるため、本文検索は一覧側の役割
+      searchText: normalizeSearchText(
+        [post.data.title, slug, ...post.data.tags].join(" "),
+      ),
+    };
+  })
+  .sort((a, b) => {
+    const priorityDiff =
+      POST_PRIORITY_ORDER[a.priority] - POST_PRIORITY_ORDER[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+
+    const writingDiff =
+      WRITING_STATUS_ORDER[a.writingStatus] -
+      WRITING_STATUS_ORDER[b.writingStatus];
+    if (writingDiff !== 0) return writingDiff;
+
+    return a.title.localeCompare(b.title, "ja");
+  });
+
+const FILTERS = [
+  {
+    key: "priority",
+    label: "優先度",
+    options: Object.values(POST_PRIORITY)
+      .sort((a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b])
+      .map((value) => ({ value, label: POST_PRIORITY_LABELS[value] })),
+  },
+  {
+    key: "writing",
+    label: "執筆状態",
+    options: Object.values(WRITING_STATUS)
+      .sort((a, b) => WRITING_STATUS_ORDER[a] - WRITING_STATUS_ORDER[b])
+      .map((value) => ({ value, label: WRITING_STATUS_LABELS[value] })),
+  },
+  {
+    key: "publication",
+    label: "公開状態",
+    options: Object.values(PUBLISHED_STATUS)
+      .sort((a, b) => PUBLISHED_STATUS_ORDER[a] - PUBLISHED_STATUS_ORDER[b])
+      .map((value) => ({ value, label: PUBLISHED_STATUS_LABELS[value] })),
+  },
+] as const;
+---
+
+<script is:inline>
+  // 開閉状態は記事を移動しても保つ。描画前に当てないと開閉がちらつく
+  try {
+    if (sessionStorage.getItem("preview-sidebar:collapsed")) {
+      document.documentElement.dataset.previewSidebar = "collapsed";
+    }
+  } catch {
+    /* 状態を引き継げないだけなので何もしない */
+  }
+</script>
+
+<preview-sidebar class="preview-sidebar" data-current={currentId}>
+  <div class="preview-sidebar-bar">
+    <p class="preview-sidebar-heading">
+      記事<span
+        class="preview-sidebar-count"
+        data-sidebar-count
+        aria-live="polite"></span>
+    </p>
+    <button
+      type="button"
+      class="preview-sidebar-toggle"
+      aria-controls="preview-sidebar-body"
+      data-sidebar-toggle
+    >
+      <Icon name="octicon:sidebar-collapse-16" class="preview-sidebar-close" />
+      <Icon name="octicon:sidebar-expand-16" class="preview-sidebar-open" />
+    </button>
+  </div>
+
+  <div id="preview-sidebar-body" class="preview-sidebar-body">
+    <div class="preview-sidebar-inner">
+      <div class="preview-sidebar-search">
+        <Icon name="octicon:search-16" aria-hidden="true" />
+        <input
+          type="search"
+          class="preview-sidebar-input"
+          placeholder="絞り込む"
+          autocomplete="off"
+          aria-label="記事を絞り込む"
+          data-sidebar-search
+        />
+      </div>
+
+      <div class="preview-sidebar-filters">
+        {
+          FILTERS.map((filter) => (
+            <select
+              class="preview-sidebar-select"
+              aria-label={filter.label}
+              data-sidebar-filter={filter.key}
+            >
+              <option value="">{filter.label}</option>
+              {filter.options.map((option) => (
+                <option value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          ))
+        }
+        <button
+          type="button"
+          class="preview-sidebar-clear"
+          data-sidebar-clear
+          hidden
+        >
+          解除
+        </button>
+      </div>
+
+      <p class="preview-sidebar-empty" data-sidebar-empty hidden>
+        該当する記事がありません
+      </p>
+
+      <nav class="preview-sidebar-list" aria-label="記事一覧">
+        <ul>
+          {
+            items.map((item) => (
+              <li
+                data-sidebar-item
+                data-search={item.searchText}
+                data-priority={item.priority}
+                data-writing={item.writingStatus}
+                data-publication={item.status}
+              >
+                <a
+                  href={`/preview/posts/${item.slug}`}
+                  aria-current={item.id === currentId ? "page" : undefined}
+                >
+                  <span class="preview-sidebar-title">{item.title}</span>
+                  <span class="preview-sidebar-meta">
+                    {WRITING_STATUS_LABELS[item.writingStatus]}
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </div>
+  </div>
+</preview-sidebar>
+
+<style>
+  .preview-sidebar {
+    display: block;
+    align-self: start;
+    min-width: 0;
+  }
+
+  /* 面ではなくTypographyとLineで階層を作る（design/DESIGN.md 固有ルール5） */
+  .preview-sidebar-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .preview-sidebar-heading {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .preview-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* Touch target の下限（design/hig.md Interaction） */
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--duration-feedback) var(--ease-trace);
+  }
+
+  .preview-sidebar-toggle:hover,
+  .preview-sidebar-toggle:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .preview-sidebar-toggle svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .preview-sidebar-open {
+    display: none;
+  }
+
+  /* 閉じたときは操作だけ残し、発見不能にしない（design/layouts.md Navigation）。
+     記事を動かさないため、列幅は変えずこの領域の中だけで畳む */
+  .preview-sidebar-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    min-height: 0;
+    transition: grid-template-rows var(--duration-state) var(--ease-trace);
+  }
+
+  .preview-sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-body {
+    grid-template-rows: 0fr;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-sidebar-body {
+      transition: none;
+    }
+  }
+
+  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-close {
+    display: none;
+  }
+
+  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-open {
+    display: inline-block;
+  }
+
+  .preview-sidebar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--text-muted);
+    transition: border-color var(--duration-feedback) var(--ease-trace);
+  }
+
+  .preview-sidebar-search:focus-within {
+    border-bottom-color: var(--color-secondary);
+    color: var(--color-interaction-text);
+  }
+
+  .preview-sidebar-search svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .preview-sidebar-input {
+    width: 100%;
+    min-width: 0;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+  }
+
+  .preview-sidebar-input:focus {
+    outline: none;
+  }
+
+  /* 絞り込みも検索と同じ面に置く（design/ui-patterns.md Search Transformation） */
+  .preview-sidebar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .preview-sidebar-select {
+    min-width: 0;
+    height: 24px;
+    padding: 0 2px;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    transition: border-color var(--duration-feedback) var(--ease-trace);
+  }
+
+  .preview-sidebar-select:hover,
+  .preview-sidebar-select:focus-visible {
+    color: var(--color-interaction-text);
+    border-bottom-color: var(--color-secondary);
+  }
+
+  /* 選択中は Line と文字色で示す */
+  .preview-sidebar-select[data-active] {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .preview-sidebar-clear {
+    min-height: 24px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .preview-sidebar-clear:hover,
+  .preview-sidebar-clear:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .preview-sidebar-count {
+    margin-left: 6px;
+    color: var(--text-muted);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .preview-sidebar-empty {
+    margin: 14px 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .preview-sidebar-list {
+    margin-top: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* 一覧の内側の scrollbar は情報ではないため隠す（page の scrollbar は残す） */
+    scrollbar-width: none;
+  }
+
+  .preview-sidebar-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .preview-sidebar-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 重ねると折り返したタイトルとぶつかるため、行の中に場所を確保する */
+  .preview-sidebar-list li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .preview-sidebar-list a {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 0 9px 14px;
+    /* 現在位置以外も同じ位置に文字を並べるため、透明の構造線で桁を合わせる */
+    border-left: 2px solid transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    line-height: 1.6;
+    transition: color var(--duration-feedback) var(--ease-trace);
+  }
+
+  .preview-sidebar-list a:hover .preview-sidebar-title,
+  .preview-sidebar-list a:focus-visible .preview-sidebar-title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .preview-sidebar-list a:hover,
+  .preview-sidebar-list a:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  /* 現在位置は構造線と Primary で示す（design/ui-patterns.md Line） */
+  .preview-sidebar-list a[aria-current="page"] {
+    border-left-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .preview-sidebar-list a[aria-current="page"] .preview-sidebar-title {
+    font-weight: 700;
+  }
+
+  .preview-sidebar-title {
+    display: block;
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .preview-sidebar-meta {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  .preview-sidebar-list li[hidden] {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .preview-sidebar {
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-sidebar-body {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* flex-grow が残ると、行を 0fr にしても高さが埋まってしまう */
+    :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-body {
+      flex: 0 0 auto;
+    }
+
+    .preview-sidebar-list {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+</style>
+
+<script>
+  import { initPreviewSidebar } from "~/scripts/previewSidebar";
+
+  initPreviewSidebar();
+</script>

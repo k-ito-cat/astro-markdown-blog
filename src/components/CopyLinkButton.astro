@@ -1,0 +1,89 @@
+---
+import { Icon } from "astro-icon/components";
+
+type Props = {
+  /** コピー対象のパス。開いている場所を基準に絶対 URL へ組み立てる */
+  path: string;
+  label?: string;
+  class?: string;
+};
+
+const { path, label, class: className } = Astro.props;
+---
+
+<button
+  type="button"
+  class:list={["copy-link", className]}
+  data-copy-link={path}
+  title="記事リンクをコピー"
+  aria-label="記事リンクをコピー"
+>
+  <Icon name="octicon:link-16" class="copy-link-icon" />
+  <Icon name="octicon:check-16" class="copy-link-done" />
+  {label && <span class="copy-link-label">{label}</span>}
+</button>
+
+<style>
+  .copy-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    /* Touch target の下限 24px を満たす（design/hig.md Interaction） */
+    min-width: 24px;
+    min-height: 24px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--duration-feedback) var(--ease-trace);
+  }
+
+  /* 面ではなく色と下線で操作可能性を示す（design/hig.md Interaction） */
+  .copy-link:hover,
+  .copy-link:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .copy-link:hover .copy-link-label,
+  .copy-link:focus-visible .copy-link-label {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .copy-link svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .copy-link-done {
+    display: none;
+  }
+
+  .copy-link[data-copy-state="copied"] {
+    color: var(--success);
+  }
+
+  .copy-link[data-copy-state="copied"] .copy-link-icon {
+    display: none;
+  }
+
+  .copy-link[data-copy-state="copied"] .copy-link-done {
+    display: inline-block;
+  }
+
+  .copy-link[data-copy-state="failed"] {
+    color: var(--danger);
+  }
+</style>
+
+<script>
+  import { initCopyLink } from "~/scripts/copyLink";
+
+  initCopyLink();
+</script>

@@ -3,8 +3,15 @@ import { getCollection, getEntry, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
+import { Icon } from "astro-icon/components";
+import CopyLinkButton from "~/components/CopyLinkButton.astro";
+import RecordRelations from "~/components/RecordRelations.astro";
+import { getPostRelations } from "~/utils/postRelations";
+import PreviewBodyEditor from "~/components/preview/PreviewBodyEditor.astro";
 import PreviewFrontmatterEditor from "~/components/preview/PreviewFrontmatterEditor.astro";
 import PreviewPostsIndex from "~/components/preview/PreviewPostsIndex.astro";
+import PreviewSidebar from "~/components/preview/PreviewSidebar.astro";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
 
 export async function getStaticPaths() {
@@ -46,55 +53,102 @@ const Content = rendered?.Content;
 const headings = rendered?.headings ?? [];
 
 const posts = await getCollection("posts");
+
+// 本番ページは非公開記事を生成しないため、導線もそのときだけ出す
+const publicPath = post ? `/blog/${normalizePostSlug(post.id)}` : "";
+const hasPublicPage = post?.data.status !== PUBLISHED_STATUS.PRIVATE;
+
+const relations = post ? getPostRelations(post, posts) : null;
+// 本番の記事ページは下書きのとき関係を出さない
+const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
 ---
 
 <BaseLayout title={post ? `Preview｜${post.data.title}` : "Preview Posts"}>
   {
     post && Content ? (
-      <main id="main-content" class="preview-detail">
-        <header class="preview-toolbar">
-          <a
-            href="/preview/posts"
-            data-reading-return
-            data-return-paths='["/preview/posts"]'
+      <div class="preview-layout">
+        <PreviewSidebar posts={posts} currentId={post.id} />
+        <main id="main-content" class="preview-detail">
+          <header class="preview-toolbar">
+            <a
+              href="/preview/posts"
+              data-reading-return
+              data-return-paths='["/preview/posts"]'
+            >
+              一覧へ戻る
+            </a>
+            <CopyLinkButton path={Astro.url.pathname} label="リンクをコピー" />
+            {hasPublicPage ? (
+              <a class="preview-toolbar-public" href={publicPath}>
+                本番ページ
+              </a>
+            ) : (
+              <span class="preview-toolbar-public preview-toolbar-note">
+                非公開のため本番ページなし
+              </span>
+            )}
+            <button
+              type="button"
+              class="preview-toolbar-delete"
+              data-delete-post={normalizePostSlug(post.id)}
+              data-post-title={post.data.title}
+            >
+              削除
+            </button>
+          </header>
+
+          <PreviewFrontmatterEditor entryId={post.id} data={post.data} />
+
+          <PreviewBodyEditor entryId={post.id} body={post.body ?? ""} />
+
+          <div
+            class:list={[
+              "preview-article-grid",
+              { "has-trace": headings.length > 0 },
+            ]}
           >
-            一覧へ戻る
-          </a>
-        </header>
-
-        <PreviewFrontmatterEditor entryId={post.id} data={post.data} />
-
-        <div
-          class:list={[
-            "preview-article-grid",
-            { "has-trace": headings.length > 0 },
-          ]}
-        >
-          <Article
-            title={post.data.title}
-            publishedAt={post.data.publishedAt}
-            updatedAt={post.data.updatedAt}
-            categories={post.data.categories}
-            tags={post.data.tags}
-            githubUrl={post.data.githubUrl}
-            content={Content}
-            headings={headings}
-            status={post.data.status}
-            verificationStatus={post.data.verificationStatus}
-            revisions={post.data.revisions}
-            forceRenderContent
-            showGithubCard={false}
-          />
-          {headings.length > 0 && (
-            <Navigation
+            <Article
+              title={post.data.title}
+              publishedAt={post.data.publishedAt}
+              updatedAt={post.data.updatedAt}
+              categories={post.data.categories}
+              tags={post.data.tags}
+              githubUrl={post.data.githubUrl}
+              content={Content}
               headings={headings}
-              returnHref="/preview/posts"
-              returnLabel="一覧へ戻る"
-              returnSourcePaths={["/preview/posts"]}
+              status={post.data.status}
+              revisions={post.data.revisions}
+              forceRenderContent
+              showGithubCard={false}
             />
+            {headings.length > 0 && (
+              <Navigation
+                headings={headings}
+                returnHref="/preview/posts"
+                returnLabel="一覧へ戻る"
+                returnSourcePaths={["/preview/posts"]}
+              />
+            )}
+          </div>
+
+          {relations && (
+            <section class="preview-relations">
+              <p class="preview-relations-note">
+                関連情報
+                {relationsHidden &&
+                  "（下書きのため本番ページには表示されません）"}
+              </p>
+              <RecordRelations
+                groups={relations.groups}
+                sameField={relations.sameField}
+                older={relations.older}
+                newer={relations.newer}
+                basePath="/preview/posts"
+              />
+            </section>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
     ) : (
       <PreviewPostsIndex posts={posts} />
     )
@@ -102,15 +156,64 @@ const posts = await getCollection("posts");
 </BaseLayout>
 
 <style>
-  .preview-detail {
+  .preview-layout {
     width: 100%;
     max-width: var(--max-width-content);
     margin: 0 auto;
     padding: 24px 16px 80px;
   }
 
+  .preview-detail {
+    min-width: 0;
+  }
+
+  .preview-relations-note {
+    max-width: var(--measure-prose);
+    margin: 48px auto 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
   .preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     margin-bottom: 28px;
+  }
+
+  /* 「戻る」とは役割が違うので、行の反対側に離す */
+  .preview-toolbar-public {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .preview-toolbar-public svg {
+    width: 0.85em;
+    height: 0.85em;
+  }
+
+  .preview-toolbar-delete {
+    min-height: 24px;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+
+  .preview-toolbar-delete:hover,
+  .preview-toolbar-delete:focus-visible {
+    color: var(--danger);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .preview-toolbar-note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .preview-toolbar a {
@@ -131,8 +234,20 @@ const posts = await getCollection("posts");
   }
 
   @media (min-width: 640px) {
-    .preview-detail {
+    .preview-layout {
       padding: 36px 24px 96px;
+    }
+  }
+
+  /* 記事の横に一覧を出し、別の記事へすぐ移れるようにする。
+     本文が痩せないよう、二段組みは十分な幅があるときだけにする */
+  @media (min-width: 1280px) {
+    .preview-layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 72px;
+      max-width: calc(var(--max-width-content) + 320px + 72px);
+      align-items: start;
     }
   }
 
@@ -143,3 +258,9 @@ const posts = await getCollection("posts");
     }
   }
 </style>
+
+<script>
+  import { initPreviewPostManager } from "~/scripts/previewPostManager";
+
+  initPreviewPostManager();
+</script>

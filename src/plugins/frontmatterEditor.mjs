@@ -17,15 +17,13 @@ class RequestError extends Error {
 }
 
 const loadFieldSpecs = async (server) => {
-  const [categories, tags, priority, published, writing, verification] =
-    await Promise.all([
-      server.ssrLoadModule("/src/constants/categories.ts"),
-      server.ssrLoadModule("/src/constants/tags.ts"),
-      server.ssrLoadModule("/src/constants/postPriority.ts"),
-      server.ssrLoadModule("/src/constants/publishedStatus.ts"),
-      server.ssrLoadModule("/src/constants/writingStatus.ts"),
-      server.ssrLoadModule("/src/constants/verificationStatus.ts"),
-    ]);
+  const [categories, tags, priority, published, writing] = await Promise.all([
+    server.ssrLoadModule("/src/constants/categories.ts"),
+    server.ssrLoadModule("/src/constants/tags.ts"),
+    server.ssrLoadModule("/src/constants/postPriority.ts"),
+    server.ssrLoadModule("/src/constants/publishedStatus.ts"),
+    server.ssrLoadModule("/src/constants/writingStatus.ts"),
+  ]);
 
   return {
     title: { kind: "text", required: true },
@@ -54,11 +52,6 @@ const loadFieldSpecs = async (server) => {
       kind: "choice",
       required: true,
       options: Object.values(priority.POST_PRIORITY),
-    },
-    verificationStatus: {
-      kind: "choice",
-      required: false,
-      options: Object.values(verification.VERIFICATION_STATUS),
     },
   };
 };

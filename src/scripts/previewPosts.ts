@@ -52,7 +52,6 @@ type PreviewState = {
   memo: MemoState[];
   category: string[];
   tag: string[];
-  issuesOnly: boolean;
   recentDays: number;
 };
 
@@ -68,7 +67,6 @@ type PreviewRow = {
   tags: string[];
   published: string;
   updated: number;
-  issues: string[];
 };
 
 type GroupDefinition = {
@@ -124,7 +122,6 @@ const createBaseState = (): PreviewState => ({
   memo: [],
   category: [],
   tag: [],
-  issuesOnly: false,
   recentDays: 0,
 });
 
@@ -177,7 +174,6 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
     tags: parseStringArray(element.dataset.tags ?? "[]", "tags"),
     published: element.dataset.published ?? "",
     updated,
-    issues: parseStringArray(element.dataset.issues ?? "[]", "issues"),
   };
 };
 
@@ -248,7 +244,6 @@ const readStateFromUrl = (
   state.memo = getAllowedValues(params, "memo", MEMO_STATES);
   state.category = getAllowedValues(params, "category", categories);
   state.tag = getAllowedValues(params, "tag", tags);
-  state.issuesOnly = params.get("issues") === "only";
   const recent = Number(params.get("recent"));
   state.recentDays = recentDayOptions.includes(recent) ? recent : 0;
   return state;
@@ -269,7 +264,6 @@ const writeStateToUrl = (state: PreviewState) => {
   state.memo.forEach((value) => url.searchParams.append("memo", value));
   state.category.forEach((value) => url.searchParams.append("category", value));
   state.tag.forEach((value) => url.searchParams.append("tag", value));
-  if (state.issuesOnly) url.searchParams.set("issues", "only");
   if (state.recentDays > 0) {
     url.searchParams.set("recent", String(state.recentDays));
   }
@@ -334,7 +328,6 @@ const matchesState = (
   ) {
     return false;
   }
-  if (state.issuesOnly && row.issues.length === 0) return false;
   if (state.recentDays > 0 && row.published < recentCutoff) return false;
   return true;
 };
@@ -468,7 +461,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const activeFilters = root.querySelector("[data-active-filters]");
   const filterChips = root.querySelector("[data-filter-chips]");
   const filterCount = root.querySelector("[data-filter-count]");
-  const issuesOnlyInput = root.querySelector("[data-issues-only]");
   const filterDetails = root.querySelector("[data-filter-details]");
 
   if (!(controls instanceof HTMLFormElement))
@@ -491,8 +483,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
     throw new Error("Filter chips not found");
   if (!(filterCount instanceof HTMLElement))
     throw new Error("Filter count not found");
-  if (!(issuesOnlyInput instanceof HTMLInputElement))
-    throw new Error("Issue filter not found");
   if (!(filterDetails instanceof HTMLDetailsElement))
     throw new Error("Filter details not found");
 
@@ -577,7 +567,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
       const key = input.dataset.filterKey as FilterKey;
       input.checked = getStateValues(key).includes(input.value as never);
     });
-    issuesOnlyInput.checked = state.issuesOnly;
     recentButtons.forEach((button) => {
       const days = Number(button.dataset.recentButton);
       button.setAttribute("aria-pressed", String(state.recentDays === days));
@@ -602,7 +591,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
         if (key === "category") next.category.push(input.value);
         if (key === "tag") next.tag.push(input.value);
       });
-    next.issuesOnly = issuesOnlyInput.checked;
     next.recentDays = state.recentDays;
     return next;
   };
@@ -625,10 +613,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
       ]),
       ...state.tag.map((value): [FilterKey, string] => ["tag", value]),
     ];
-    const count =
-      filterEntries.length +
-      Number(state.issuesOnly) +
-      Number(state.recentDays > 0);
+    const count = filterEntries.length + Number(state.recentDays > 0);
     filterCount.textContent = String(count);
     filterCount.hidden = count === 0;
 
@@ -636,8 +621,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
       getFilterLabel(key, value),
     );
     if (state.query) labels.unshift(`検索: ${state.query}`);
-    if (state.issuesOnly) labels.push("要確認のみ");
     if (state.recentDays > 0) labels.push(`最近の記事: ${state.recentDays}日`);
+    const active = labels.length > 0;
     filterChips.replaceChildren(
       ...labels.map((text) => {
         const chip = document.createElement("span");
@@ -646,7 +631,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
         return chip;
       }),
     );
-    activeFilters.hidden = labels.length === 0;
+    activeFilters.hidden = !active;
+    return active;
   };
 
   const render = () => {
@@ -681,7 +667,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
     resultCount.textContent = `表示中 ${visibleRows.length} / 全${total}件`;
     tableWrap.hidden = visibleRows.length === 0;
     emptyState.hidden = visibleRows.length > 0;
-    updateFilterSummary();
+    const filterActive = updateFilterSummary();
+    root.toggleAttribute("data-filter-active", filterActive);
   };
 
   const applyState = (nextState: PreviewState) => {
@@ -726,7 +713,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
         next.memo = [];
         next.category = [];
         next.tag = [];
-        next.issuesOnly = false;
         next.recentDays = 0;
         applyState(next);
       });

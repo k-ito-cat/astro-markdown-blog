@@ -10,8 +10,16 @@ type Props = {
   sameField?: RelationRecord[];
   older?: RelationRecord;
   newer?: RelationRecord;
+  /** プレビューから呼ぶときはプレビュー側へ辿らせる */
+  basePath?: string;
 };
-const { groups, sameField = [], older, newer } = Astro.props;
+const {
+  groups,
+  sameField = [],
+  older,
+  newer,
+  basePath = "/blog",
+} = Astro.props;
 const meaningfulGroups = groups.filter((group) => group.records.length > 0);
 ---
 
@@ -25,7 +33,7 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
           <ul>
             {group.records.map((record) => (
               <li>
-                <a href={`/blog/${record.slug}`}>→ {record.title}</a>
+                <a href={`${basePath}/${record.slug}`}>→ {record.title}</a>
               </li>
             ))}
           </ul>
@@ -38,7 +46,7 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
           <ul>
             {sameField.map((record) => (
               <li>
-                <a href={`/blog/${record.slug}`}>→ {record.title}</a>
+                <a href={`${basePath}/${record.slug}`}>→ {record.title}</a>
               </li>
             ))}
           </ul>
@@ -47,13 +55,13 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
       {(older || newer) && (
         <div class="sequence">
           {older && (
-            <a href={`/blog/${older.slug}`}>
+            <a href={`${basePath}/${older.slug}`}>
               <small>ひとつ前の記録</small>
               <span>{older.title}</span>
             </a>
           )}
           {newer && (
-            <a href={`/blog/${newer.slug}`}>
+            <a href={`${basePath}/${newer.slug}`}>
               <small>ひとつ後の記録</small>
               <span>{newer.title}</span>
             </a>

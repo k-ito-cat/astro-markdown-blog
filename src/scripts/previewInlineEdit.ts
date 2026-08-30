@@ -70,7 +70,6 @@ const initializeRow = (row: HTMLTableRowElement, maxCategories: number) => {
   const categoryTrigger = row.querySelector("[data-category-trigger]");
   const categoryLabel = row.querySelector("[data-category-label]");
   const categoryPopover = row.querySelector("[data-category-popover]");
-  const priorityDot = row.querySelector("[data-priority-dot]");
 
   if (!(status instanceof HTMLElement))
     throw new Error("Edit status not found");
@@ -95,10 +94,6 @@ const initializeRow = (row: HTMLTableRowElement, maxCategories: number) => {
   if (!(categoryPopover instanceof HTMLElement)) {
     throw new Error("Category popover not found");
   }
-  if (!(priorityDot instanceof HTMLElement)) {
-    throw new Error("Priority dot not found");
-  }
-
   const choiceSelects = Array.from(
     row.querySelectorAll<HTMLSelectElement>("[data-edit-select]"),
   );
@@ -216,9 +211,6 @@ const initializeRow = (row: HTMLTableRowElement, maxCategories: number) => {
         value,
         () => {
           row.dataset[datasetKey] = value;
-          if (field === "priority") {
-            priorityDot.dataset.priorityValue = value;
-          }
         },
         () => {
           select.value = previous;

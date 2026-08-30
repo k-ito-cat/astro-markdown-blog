@@ -9,6 +9,11 @@ import rehypeExternalLinks, {
   remarkExternalLinksInHtml,
 } from "./src/plugins/rehypeExternalLinks.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
+import bodyEditor from "./src/plugins/bodyEditor.mjs";
+import imageUploader from "./src/plugins/imageUploader.mjs";
+import contentReload from "./src/plugins/contentReload.mjs";
+import postManager from "./src/plugins/postManager.mjs";
+import blockRange from "./src/plugins/blockRange.mjs";
 
 import astroExpressiveCode from "astro-expressive-code";
 
@@ -16,7 +21,14 @@ import astroExpressiveCode from "astro-expressive-code";
 export default defineConfig({
   output: "static",
   vite: {
-    plugins: [tailwindcss(), frontmatterEditor()],
+    plugins: [
+      tailwindcss(),
+      frontmatterEditor(),
+      bodyEditor(),
+      imageUploader(),
+      contentReload(),
+      postManager(),
+    ],
   },
   markdown: {
     processor: unified({
@@ -43,5 +55,7 @@ export default defineConfig({
         borderColor: "var(--border)",
       },
     }),
+    // expressive-code の後に置くこと。rehype プラグインを最後に走らせる必要がある
+    blockRange(),
   ],
 });
