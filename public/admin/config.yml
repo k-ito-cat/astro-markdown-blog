@@ -191,15 +191,6 @@ collections:
           - "none"
         default: "none"
 
-      - label: 検証状態
-        name: verificationStatus
-        widget: select
-        required: false
-        options:
-          - { label: 検証中, value: "in_progress" }
-          - { label: 検証済, value: "verified" }
-          - { label: 要再検証, value: "needs_review" }
-
       - label: 記録同士の関係
         name: relations
         widget: object

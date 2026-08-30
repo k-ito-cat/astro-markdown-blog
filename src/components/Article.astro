@@ -14,7 +14,6 @@ import {
   PUBLISHED_STATUS,
   type PublishedStatus,
 } from "~/constants/publishedStatus";
-import type { VerificationStatus } from "~/constants/verificationStatus";
 import { HEADING_LEVEL } from "~/constants/headingLevel";
 
 type Props = {
@@ -27,7 +26,6 @@ type Props = {
   content: AstroComponentFactory;
   headings?: { depth: number; slug: string; text: string }[];
   status: PublishedStatus;
-  verificationStatus?: VerificationStatus;
   revisions?: { date: Date; summary: string }[];
   forceRenderContent?: boolean;
   showGithubCard?: boolean;
@@ -43,7 +41,6 @@ const {
   content,
   headings = [],
   status,
-  verificationStatus,
   revisions,
   forceRenderContent = false,
   showGithubCard = true,
@@ -61,11 +58,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 <article class="article">
   <header class="article-header">
     <h1 class="article-title">{title}</h1>
-    <Meta
-      publishedAt={publishedAt}
-      updatedAt={updatedAt}
-      verificationStatus={verificationStatus}
-    />
+    <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
     <Categories categories={categories} tags={tags} />
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>

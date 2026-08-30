@@ -18,8 +18,6 @@ tags: []
 status: "private"
 writingStatus: "todo"
 priority: "none"
-# verificationStatus: in_progress | verified | needs_review
-# verificationStatus: "in_progress"
 # relations:
 #   prerequisites: []
 #   related: []

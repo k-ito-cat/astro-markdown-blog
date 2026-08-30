@@ -10,7 +10,6 @@ export type TimelineEntry = {
   tags: string[];
   activity: "新規" | "改訂";
   isWip: boolean;
-  verificationLabel?: string;
   revisionCount: number;
 };
 
@@ -99,11 +98,6 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
                       {entry.activity}
                     </span>
                     {entry.isWip && <span class="tl-wip">WIP</span>}
-                    {entry.verificationLabel && (
-                      <span class="tl-verification">
-                        {entry.verificationLabel}
-                      </span>
-                    )}
                   </span>
                   <span class="tl-title">{entry.title}</span>
                   {entry.categories.length > 0 && (
@@ -117,9 +111,6 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
                   <p>分野: {entry.categories.join("・")}</p>
                 )}
                 {entry.tags.length > 0 && <p>タグ: {entry.tags.join("・")}</p>}
-                {entry.verificationLabel && (
-                  <p>状態: {entry.verificationLabel}</p>
-                )}
                 {entry.revisionCount > 0 && (
                   <p>改訂: {entry.revisionCount}回</p>
                 )}

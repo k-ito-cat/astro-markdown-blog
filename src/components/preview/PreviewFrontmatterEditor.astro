@@ -13,10 +13,6 @@ import {
 } from "~/constants/publishedStatus";
 import { TAGS } from "~/constants/tags";
 import {
-  VERIFICATION_STATUS,
-  VERIFICATION_STATUS_LABELS,
-} from "~/constants/verificationStatus";
-import {
   WRITING_STATUS,
   WRITING_STATUS_LABELS,
   WRITING_STATUS_ORDER,
@@ -39,7 +35,6 @@ const writingStatuses = Object.values(WRITING_STATUS).sort(
 const priorities = Object.values(POST_PRIORITY).sort(
   (a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b],
 );
-const verificationStatuses = Object.values(VERIFICATION_STATUS);
 const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 ---
 
@@ -122,23 +117,6 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
               priorities.map((value) => (
                 <option value={value} selected={value === data.priority}>
                   {POST_PRIORITY_LABELS[value]}
-                </option>
-              ))
-            }
-          </select>
-        </label>
-
-        <label class="fm-field">
-          <span class="fm-label">検証状態</span>
-          <select name="verificationStatus" class="fm-input">
-            <option value="" selected={!data.verificationStatus}>未設定</option>
-            {
-              verificationStatuses.map((value) => (
-                <option
-                  value={value}
-                  selected={value === data.verificationStatus}
-                >
-                  {VERIFICATION_STATUS_LABELS[value]}
                 </option>
               ))
             }
