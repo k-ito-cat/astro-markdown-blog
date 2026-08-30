@@ -51,6 +51,13 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
       <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
     </span>
   </button>
+  <button
+    type="button"
+    data-diff
+    aria-pressed="true"
+    title="追加・変更・削除を色で示す"
+    hidden>差分</button
+  >
   <button type="button" data-discard disabled>破棄</button>
   <template data-block-toolbar-icon="image">
     <Icon name="octicon:image-16" aria-hidden="true" />
@@ -227,8 +234,10 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
   /* 保存前のブロックは描画できないので、生 Markdown のまま示す */
   .preview-detail .prose .block-pending {
     margin: 24px 0;
-    padding-left: 12px;
+    padding: 10px 12px;
     border-left: 2px solid var(--warning);
+    border-radius: 0 2px 2px 0;
+    background: var(--color-annotation-warning-surface);
     cursor: text;
   }
 
@@ -238,6 +247,71 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: var(--leading-body);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* 「戻す」を右上へ重ねるので、本文と重ならない余白を取る */
+  .preview-detail .prose .block-pending,
+  .preview-detail .prose .block-removed {
+    position: relative;
+    padding-right: 60px;
+  }
+
+  .preview-detail .prose .block-undo {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    background: var(--bg-base);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.6;
+    cursor: pointer;
+  }
+
+  .preview-detail .prose .block-undo:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  /* 移動したブロックは中身が変わらないので、描画を保ったまま変更と同じ印を付ける */
+  .preview-detail .prose .block-moved {
+    padding: 10px 12px;
+    border-left: 2px solid var(--warning);
+    border-radius: 0 2px 2px 0;
+    background: var(--color-annotation-warning-surface);
+  }
+
+  /* 差分表示を切ると、種別によらず変更と同じ見た目に戻す */
+  .preview-detail .prose[data-diff="on"] .block-pending[data-kind="insert"] {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+  }
+
+  /* 削除したブロックは本文から消さず、差分として残す */
+  .preview-detail .prose .block-removed {
+    margin: 24px 0;
+    padding: 10px 12px;
+    border-left: 2px solid var(--danger);
+    border-radius: 0 2px 2px 0;
+    background: var(--color-annotation-caution-surface);
+  }
+
+  /* prose 側の display 指定に負けないよう明示する */
+  .preview-detail .prose .block-removed[hidden] {
+    display: none;
+  }
+
+  .preview-detail .prose .block-removed-text {
+    overflow-x: auto;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: var(--leading-body);
+    text-decoration: line-through;
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -309,6 +383,80 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
 
   .block-toolbar[hidden] {
     display: none;
+  }
+
+  /* 本文の左脇に置く掴み手。幅は HANDLE_SIZE と一致させること */
+  .block-drag-handle {
+    position: absolute;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .block-drag-handle:hover {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .block-drag-handle[hidden] {
+    display: none;
+  }
+
+  .block-drop-marker {
+    position: absolute;
+    z-index: 11;
+    height: 2px;
+    background: var(--color-primary);
+    pointer-events: none;
+  }
+
+  .block-drop-marker[hidden] {
+    display: none;
+  }
+
+  /* 範囲選択したブロックは、消える範囲が見えるよう枠で囲う */
+  .preview-detail .prose .block-selected {
+    outline: 2px solid var(--danger);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+
+  .block-bulk-action {
+    position: absolute;
+    z-index: 12;
+    padding: 4px 10px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-label);
+    background: var(--bg-base);
+    color: var(--danger);
+    font-size: 12px;
+    line-height: 1.6;
+    cursor: pointer;
+  }
+
+  .block-bulk-action[hidden] {
+    display: none;
+  }
+
+  /* ドラッグ中は本文の選択が始まらないようにする */
+  body.is-block-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  .preview-detail .prose .block-dragging {
+    opacity: 0.5;
   }
 
   .block-toolbar button {

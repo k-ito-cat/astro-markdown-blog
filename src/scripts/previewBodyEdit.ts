@@ -25,6 +25,11 @@ const TOOLBAR_GAP = 4;
 const TOOLBAR_HIT_PADDING = 10;
 const TOOLBAR_HIDE_DELAY = 400;
 const VIEWPORT_MARGIN = 8;
+/** .block-drag-handle の一辺と一致させること */
+const HANDLE_SIZE = 20;
+const HANDLE_GAP = 8;
+const DRAG_SCROLL_ZONE = 64;
+const DRAG_SCROLL_STEP = 12;
 type EditMode = "replace" | "insert-after" | "insert-before";
 
 type ToolbarAction =
@@ -313,6 +318,41 @@ const createToolbar = (host: HTMLElement) => {
   return { toolbar, buttons: new Map(buttons) };
 };
 
+/** 本文の左脇に浮かせる掴み手。ツールバーと同じくホバー中のブロックへ寄せる */
+const createDragHandle = () => {
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "block-drag-handle";
+  handle.textContent = "⠿";
+  handle.title = "ドラッグでブロックを並び替え";
+  handle.setAttribute("aria-label", "ドラッグでブロックを並び替え");
+  handle.hidden = true;
+
+  document.body.append(handle);
+  return handle;
+};
+
+/** ドラッグ中に落ちる位置を示す線 */
+const createDropMarker = () => {
+  const marker = document.createElement("div");
+  marker.className = "block-drop-marker";
+  marker.hidden = true;
+
+  document.body.append(marker);
+  return marker;
+};
+
+/** 範囲選択したブロックに対する操作 */
+const createBulkAction = () => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "block-bulk-action";
+  button.hidden = true;
+
+  document.body.append(button);
+  return button;
+};
+
 const requireElement = (root: ParentNode, selector: string) => {
   const element = root.querySelector(selector);
   if (!(element instanceof HTMLElement)) {
@@ -329,6 +369,7 @@ const initializeEditor = (host: HTMLElement) => {
   const status = requireElement(host, "[data-status]");
   const counter = requireElement(host, "[data-count]");
   const saveButton = requireElement(host, "[data-save]");
+  const diffButton = requireElement(host, "[data-diff]");
   const discardButton = requireElement(host, "[data-discard]");
   const prose = requireElement(document, ".preview-detail .prose");
 
@@ -353,10 +394,21 @@ const initializeEditor = (host: HTMLElement) => {
   });
 
   const { toolbar, buttons } = createToolbar(host);
+  const dragHandle = createDragHandle();
+  const dropMarker = createDropMarker();
+  const bulkAction = createBulkAction();
 
   let draft: Draft = { body: serverBody, blocks };
   let lastTouched = 0;
   const dirty = new Set<number>();
+  /**
+   * ブロック単位の取り消し先。索引ではなく印の要素をキーにする。
+   * 要素の同一性は並べ替えで変わらないので、索引の振り直しが要らない。
+   */
+  const originals = new Map<
+    HTMLElement,
+    { text: string; node: HTMLElement | null }
+  >();
   let active: {
     index: number;
     mode: EditMode;
@@ -368,6 +420,16 @@ const initializeEditor = (host: HTMLElement) => {
   let hovered: HTMLElement | null = null;
   let hideTimer = 0;
   let busy = false;
+  let diffVisible = true;
+  let dragging: {
+    index: number;
+    node: HTMLElement;
+    bounds: { min: number; max: number };
+    target: number;
+    pointerY: number;
+  } | null = null;
+  let dragFrame = 0;
+  let selected: { anchor: number; from: number; to: number } | null = null;
 
   const setStatus = (message: string, isError = false) => {
     const target = active?.status ?? status;
@@ -378,12 +440,22 @@ const initializeEditor = (host: HTMLElement) => {
     else delete target.dataset.tone;
   };
 
+  /** 削除したブロックの跡は索引を持たないので、表示の切り替えは DOM から探す */
+  const syncDiff = () => {
+    prose.dataset.diff = diffVisible ? "on" : "off";
+    diffButton.setAttribute("aria-pressed", String(diffVisible));
+    prose
+      .querySelectorAll<HTMLElement>(".block-removed")
+      .forEach((node) => (node.hidden = !diffVisible));
+  };
+
   const syncBar = () => {
     const pending = dirty.size;
     counter.textContent = pending === 0 ? "" : `未保存 ${pending} 箇所`;
     counter.hidden = pending === 0;
     saveButton.toggleAttribute("disabled", pending === 0 || busy);
     discardButton.toggleAttribute("disabled", pending === 0 || busy);
+    diffButton.hidden = pending === 0;
   };
 
   const textOf = (index: number) => blockText(draft, index);
@@ -408,27 +480,70 @@ const initializeEditor = (host: HTMLElement) => {
     next.forEach((index) => dirty.add(index));
   };
 
+  const createUndoButton = () => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "block-undo";
+    button.dataset.undo = "";
+    button.textContent = "戻す";
+    button.title = "このブロックの変更を取り消す";
+    return button;
+  };
+
   /** 保存前のブロックは描画できないので、生 Markdown のまま置く */
-  const createPendingNode = (index: number) => {
+  const createPendingNode = (index: number, kind: "edit" | "insert") => {
     const pending = document.createElement("div");
     pending.className = "block-pending";
     pending.dataset.mdIndex = String(index);
+    pending.dataset.kind = kind;
 
     // pre は typography の既定スタイル（暗い背景）を拾うため div で組む
     const text = document.createElement("div");
     text.className = "block-pending-text";
     text.textContent = textOf(index);
 
-    pending.append(text);
+    pending.append(text, createUndoButton());
     return pending;
   };
 
+  /**
+   * 削除したブロックの跡。差分として見せるためだけの要素なので、
+   * nodes と draft.blocks の索引には入れない（入れると編集対象を取り違える）。
+   */
+  const createRemovedNode = (text: string) => {
+    const removed = document.createElement("div");
+    removed.className = "block-removed";
+    removed.hidden = !diffVisible;
+
+    const body = document.createElement("div");
+    body.className = "block-removed-text";
+    body.textContent = text;
+
+    removed.append(body, createUndoButton());
+    return removed;
+  };
+
   const applyEdit = (index: number, text: string) => {
+    const previous = nodes[index];
+    // 差し替える前の姿を控える。ここを逃すと取り消し先が無くなる
+    const previousText = textOf(index);
     draft = replaceBlock(draft, index, text);
     markDirty(index);
 
-    const node = createPendingNode(index);
-    nodes[index]?.replaceWith(node);
+    // 追加したブロックを編集しても、取り消しは「追加の取り消し」のままにする
+    const kind = previous?.dataset.kind === "insert" ? "insert" : "edit";
+    const node = createPendingNode(index, kind);
+    if (kind === "edit") {
+      // 2 回目以降の編集でも、最初の状態を取り消し先として持ち続ける
+      const carried = previous ? originals.get(previous) : undefined;
+      originals.set(
+        node,
+        carried ?? { text: previousText, node: previous ?? null },
+      );
+    }
+    if (previous) originals.delete(previous);
+
+    previous?.replaceWith(node);
     nodes[index] = node;
   };
 
@@ -439,7 +554,7 @@ const initializeEditor = (host: HTMLElement) => {
 
     const { index } = result;
     reindexDirty((i) => (i >= index ? i + 1 : i));
-    const node = createPendingNode(index);
+    const node = createPendingNode(index, "insert");
     const anchorNode = nodes[anchorIndex];
     anchorNode?.insertAdjacentElement(after ? "afterend" : "beforebegin", node);
     nodes.splice(index, 0, node);
@@ -448,10 +563,22 @@ const initializeEditor = (host: HTMLElement) => {
   };
 
   const applyDelete = (index: number) => {
+    // 消した後は取り出せないので、跡に残す本文を先に控える
+    const removedText = textOf(index);
+    const previous = nodes[index];
     draft = deleteBlock(draft, index);
 
     reindexDirty((i) => (i === index ? null : i > index ? i - 1 : i));
-    nodes[index]?.remove();
+    const marker = createRemovedNode(removedText);
+    // 一度も編集していないブロックなら、描画済みの要素をそのまま戻せる
+    const rendered =
+      previous && !previous.classList.contains("block-pending")
+        ? previous
+        : null;
+    originals.set(marker, { text: removedText, node: rendered });
+    if (previous) originals.delete(previous);
+
+    previous?.replaceWith(marker);
     nodes.splice(index, 1);
     renumber(index);
     markDirty(Math.min(index, draft.blocks.length - 1));
@@ -467,13 +594,35 @@ const initializeEditor = (host: HTMLElement) => {
     if (firstNode && secondNode) firstNode.replaceWith(secondNode, firstNode);
     [nodes[first], nodes[second]] = [nodes[second], nodes[first]];
     renumber(first);
+    // 中身は変わっていないので生 Markdown へは差し替えず、描画したまま印を付ける
+    nodes[other]?.classList.add("block-moved");
     markDirty(other);
   };
 
   // カーソルが少し外れただけで閉じないよう、猶予を置いてから隠す
   const hideToolbar = () => {
+    // ドラッグ中は掴み手が消えると操作が途切れる
+    if (dragging) return;
+
     toolbar.hidden = true;
+    dragHandle.hidden = true;
     hovered = null;
+  };
+
+  /**
+   * 掴み手は本文の左脇に出す。左に余白が無い幅では出さず、↑↓ に任せる。
+   */
+  const positionHandle = (node: HTMLElement) => {
+    const rect = node.getBoundingClientRect();
+    const left = rect.left - HANDLE_SIZE - HANDLE_GAP;
+    if (draft.blocks.length <= 1 || left < VIEWPORT_MARGIN) {
+      dragHandle.hidden = true;
+      return;
+    }
+
+    dragHandle.hidden = false;
+    dragHandle.style.top = `${rect.top + window.scrollY}px`;
+    dragHandle.style.left = `${left + window.scrollX}px`;
   };
 
   const cancelHide = () => {
@@ -507,6 +656,8 @@ const initializeEditor = (host: HTMLElement) => {
       ?.toggleAttribute("disabled", draft.blocks.length <= 1);
     // 先頭より前に足す手段は、先頭ブロックにいるときだけ必要
     buttons.get("insert-before")?.toggleAttribute("hidden", index !== 0);
+
+    positionHandle(node);
 
     // 当たり判定用の余白ぶん、要素の箱は見た目より大きい
     const width = toolbar.offsetWidth - TOOLBAR_HIT_PADDING * 2;
@@ -642,11 +793,20 @@ const initializeEditor = (host: HTMLElement) => {
       const text = textarea.value.replace(/\s+$/, "");
       close();
 
-      if (text === "") {
-        setStatus(
-          "空にはできないため元に戻しました。削除は削除ボタンから",
-          true,
-        );
+      if (text.trim() === "") {
+        // 挿入中に空のまま抜けるのは「やめた」であって削除ではない
+        if (mode !== "replace") {
+          setStatus("");
+          return;
+        }
+        // 本文は空にできないため、最後の 1 ブロックだけは消さずに戻す
+        if (draft.blocks.length <= 1) {
+          setStatus("本文を空にはできないため元に戻しました", true);
+          return;
+        }
+
+        applyDelete(target);
+        setStatus("ブロックを削除しました");
         return;
       }
       if (mode === "replace" && text === initial) {
@@ -764,20 +924,351 @@ const initializeEditor = (host: HTMLElement) => {
     applyDelete(index);
   };
 
+  /**
+   * 削除の跡は索引を持たない DOM 要素なので、並べ替えたときにどこへ属するかが定まらない。
+   * 意味を決めきれないうちは、跡をまたぐ移動を断って位置が狂うのを防ぐ。
+   */
+  const hasRemovedBetween = (from: HTMLElement, to: HTMLElement) => {
+    const forward =
+      (from.compareDocumentPosition(to) & Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0;
+    const [start, end] = forward ? [from, to] : [to, from];
+
+    for (
+      let element = start.nextElementSibling;
+      element !== null && element !== end;
+      element = element.nextElementSibling
+    ) {
+      if (element.classList.contains("block-removed")) return true;
+    }
+    return false;
+  };
+
   const move = (index: number, direction: "up" | "down") => {
     if (active || busy) return;
 
     const other = direction === "up" ? index - 1 : index + 1;
     if (other < 0 || other >= draft.blocks.length) return;
 
+    const node = nodes[index];
+    const otherNode = nodes[other];
+    if (node && otherNode && hasRemovedBetween(node, otherNode)) {
+      setStatus(
+        "削除の跡をまたぐ移動はできません。保存するか破棄してから移動してください",
+        true,
+      );
+      return;
+    }
+
     hideToolbar();
     applyMove(index, other);
   };
 
+  /**
+   * 任意位置への移動は、隣り合う入れ替えの繰り返しで表す。
+   * moveBlock が正しいのは隣接のときだけで、離れた 2 つを直接入れ替えると
+   * 間のブロックの範囲がずれる（本文が壊れる）。
+   */
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+
+    const step = from < to ? 1 : -1;
+    for (let index = from; index !== to; index += step) {
+      const first = Math.min(index, index + step);
+      const second = first + 1;
+
+      draft = moveBlock(draft, first, second);
+      reindexDirty((i) => (i === first ? second : i === second ? first : i));
+
+      const firstNode = nodes[first];
+      const secondNode = nodes[second];
+      if (firstNode && secondNode) firstNode.replaceWith(secondNode, firstNode);
+      [nodes[first], nodes[second]] = [nodes[second], nodes[first]];
+    }
+
+    renumber(Math.min(from, to));
+    // 中身は変わっていないので生 Markdown へは差し替えず、描画したまま印を付ける
+    nodes[to]?.classList.add("block-moved");
+    // 途中経過ではなく、移動そのものを 1 件として数える
+    markDirty(to);
+  };
+
+  const clearSelection = () => {
+    if (!selected) return;
+
+    for (const node of nodes) node?.classList.remove("block-selected");
+    bulkAction.hidden = true;
+    selected = null;
+  };
+
+  const selectBlocks = (anchor: number, focus: number) => {
+    clearSelection();
+
+    const from = Math.min(anchor, focus);
+    const to = Math.max(anchor, focus);
+    selected = { anchor, from, to };
+
+    for (let index = from; index <= to; index += 1) {
+      nodes[index]?.classList.add("block-selected");
+    }
+
+    const last = nodes[to];
+    if (!last) return;
+
+    // 何ブロック消えるのかを、押す前に数字で示す
+    bulkAction.textContent = `${to - from + 1}ブロックを削除`;
+    bulkAction.hidden = false;
+    const rect = last.getBoundingClientRect();
+    bulkAction.style.top = `${rect.bottom + window.scrollY + VIEWPORT_MARGIN}px`;
+    bulkAction.style.left = `${rect.left + window.scrollX}px`;
+  };
+
+  /**
+   * ドラッグでのテキスト選択から、触れているブロックを拾う。
+   * 1 ブロック内で閉じた選択は、本文をコピーしたいだけの場合が多いので拾わない。
+   */
+  const selectFromTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!prose.contains(range.commonAncestorContainer)) return false;
+
+    const touched: number[] = [];
+    nodes.forEach((node, index) => {
+      if (node && !node.hidden && range.intersectsNode(node))
+        touched.push(index);
+    });
+    if (touched.length < 2) return false;
+
+    selectBlocks(touched[0], touched[touched.length - 1]);
+    return true;
+  };
+
+  const bulkDelete = () => {
+    if (!selected || active || busy) return;
+
+    const { from, to } = selected;
+    const count = to - from + 1;
+    if (count >= draft.blocks.length) {
+      setStatus("本文を空にはできません", true);
+      return;
+    }
+    if (!window.confirm(`${count}個のブロックを削除します。`)) return;
+
+    clearSelection();
+    window.getSelection()?.removeAllRanges();
+    // 手前から消すと後続の索引がずれるため、必ず後ろから消す
+    for (let index = to; index >= from; index -= 1) applyDelete(index);
+
+    hideToolbar();
+    setStatus(`${count}個のブロックを削除しました`);
+  };
+
+  const undoInsert = (marker: HTMLElement, index: number) => {
+    if (draft.blocks.length <= 1) {
+      setStatus("最後のブロックは取り消せません", true);
+      return;
+    }
+
+    draft = deleteBlock(draft, index);
+    reindexDirty((i) => (i === index ? null : i > index ? i - 1 : i));
+    originals.delete(marker);
+    marker.remove();
+    nodes.splice(index, 1);
+    renumber(index);
+  };
+
+  const undoEdit = (marker: HTMLElement, index: number) => {
+    const original = originals.get(marker);
+    if (!original) return;
+
+    draft = replaceBlock(draft, index, original.text);
+    dirty.delete(index);
+    originals.delete(marker);
+
+    if (original.node) {
+      marker.replaceWith(original.node);
+      nodes[index] = original.node;
+      return;
+    }
+    marker.remove();
+    nodes[index] = undefined;
+  };
+
+  /** 墓標は索引を持たないので、隣のブロックを起点に挿し直す */
+  const undoDelete = (marker: HTMLElement) => {
+    const original = originals.get(marker);
+    if (!original) return;
+
+    const before = marker.previousElementSibling;
+    const after = marker.nextElementSibling;
+    const anchor =
+      before instanceof HTMLElement && before.dataset.mdIndex
+        ? before
+        : after instanceof HTMLElement && after.dataset.mdIndex
+          ? after
+          : null;
+    if (!anchor) {
+      setStatus("戻す位置を決められませんでした", true);
+      return;
+    }
+
+    const anchorIndex = indexOf(anchor);
+    if (anchorIndex < 0) return;
+
+    const mode = anchor === before ? "insert-after" : "insert-before";
+    const result = insertBlock(draft, anchorIndex, mode, original.text);
+    draft = result.draft;
+
+    const { index } = result;
+    reindexDirty((i) => (i >= index ? i + 1 : i));
+    // 編集済みだったブロックは描画済みの姿を持たないので、生 Markdown で戻す
+    const node = original.node ?? createPendingNode(index, "insert");
+    originals.delete(marker);
+    marker.replaceWith(node);
+    nodes.splice(index, 0, node);
+    renumber(index);
+  };
+
+  const undo = (marker: HTMLElement) => {
+    if (active || busy) return;
+
+    if (marker.classList.contains("block-removed")) {
+      undoDelete(marker);
+    } else {
+      const index = indexOf(marker);
+      if (index < 0) return;
+
+      if (marker.dataset.kind === "insert") undoInsert(marker, index);
+      else undoEdit(marker, index);
+    }
+
+    hideToolbar();
+    // すべて元に戻ったなら、未保存として数える理由がない
+    if (draft.body === serverBody) dirty.clear();
+    syncBar();
+    setStatus("");
+  };
+
+  /** 削除の跡をまたげないので、掴んだブロックが動ける範囲を先に出す */
+  const dragBounds = (index: number) => {
+    let min = index;
+    while (min > 0) {
+      const current = nodes[min];
+      const previous = nodes[min - 1];
+      if (!current || !previous || hasRemovedBetween(previous, current)) break;
+      min -= 1;
+    }
+
+    let max = index;
+    while (max < nodes.length - 1) {
+      const current = nodes[max];
+      const next = nodes[max + 1];
+      if (!current || !next || hasRemovedBetween(current, next)) break;
+      max += 1;
+    }
+
+    return { min, max };
+  };
+
+  const targetFrom = (
+    clientY: number,
+    { min, max }: { min: number; max: number },
+  ) => {
+    for (let index = min; index <= max; index += 1) {
+      const node = nodes[index];
+      if (node && clientY < node.getBoundingClientRect().bottom) return index;
+    }
+    return max;
+  };
+
+  const showDropMarker = (target: number) => {
+    const node = dragging && target !== dragging.index ? nodes[target] : null;
+    if (!node || !dragging) {
+      dropMarker.hidden = true;
+      return;
+    }
+
+    const rect = node.getBoundingClientRect();
+    const y = target < dragging.index ? rect.top : rect.bottom;
+    dropMarker.hidden = false;
+    dropMarker.style.top = `${y + window.scrollY}px`;
+    dropMarker.style.left = `${rect.left + window.scrollX}px`;
+    dropMarker.style.width = `${rect.width}px`;
+  };
+
+  // 指を止めたままでも端で送りたいので、移動イベントではなく毎フレーム見る
+  const trackDrag = () => {
+    if (!dragging) return;
+
+    const { pointerY } = dragging;
+    if (pointerY < DRAG_SCROLL_ZONE) window.scrollBy(0, -DRAG_SCROLL_STEP);
+    else if (pointerY > window.innerHeight - DRAG_SCROLL_ZONE) {
+      window.scrollBy(0, DRAG_SCROLL_STEP);
+    }
+
+    dragging.target = targetFrom(pointerY, dragging.bounds);
+    showDropMarker(dragging.target);
+    dragFrame = requestAnimationFrame(trackDrag);
+  };
+
+  const endDrag = (commitMove: boolean) => {
+    if (!dragging) return;
+
+    cancelAnimationFrame(dragFrame);
+    const { index, target, node } = dragging;
+    node.classList.remove("block-dragging");
+    document.body.classList.remove("is-block-dragging");
+    dropMarker.hidden = true;
+    dragging = null;
+    hideToolbar();
+
+    if (commitMove) reorder(index, target);
+  };
+
+  dragHandle.addEventListener("pointerdown", (event) => {
+    if (active || busy || !hovered) return;
+
+    const index = indexOf(hovered);
+    const node = nodes[index];
+    if (index < 0 || !node || draft.blocks.length <= 1) return;
+
+    event.preventDefault();
+    dragHandle.setPointerCapture(event.pointerId);
+    dragging = {
+      index,
+      node,
+      bounds: dragBounds(index),
+      target: index,
+      pointerY: event.clientY,
+    };
+    node.classList.add("block-dragging");
+    document.body.classList.add("is-block-dragging");
+    toolbar.hidden = true;
+    trackDrag();
+  });
+
+  dragHandle.addEventListener("pointermove", (event) => {
+    if (dragging) dragging.pointerY = event.clientY;
+  });
+
+  dragHandle.addEventListener("pointerup", () => endDrag(true));
+  dragHandle.addEventListener("pointercancel", () => endDrag(false));
+  dragHandle.addEventListener("pointerover", cancelHide);
+  dragHandle.addEventListener("pointerleave", scheduleHide);
+
   renumber(0);
   syncBar();
+  syncDiff();
 
   saveButton.addEventListener("click", () => void commit());
+  diffButton.addEventListener("click", () => {
+    diffVisible = !diffVisible;
+    syncDiff();
+  });
   discardButton.addEventListener("click", discard);
   document.addEventListener("keydown", (event) => {
     if (
@@ -835,9 +1326,63 @@ const initializeEditor = (host: HTMLElement) => {
     else if (action === "delete") remove(index);
   });
 
+  bulkAction.addEventListener("click", bulkDelete);
+
+  // Shift+クリックはブラウザがテキスト選択を伸ばすので、先に止める
+  prose.addEventListener("mousedown", (event) => {
+    if (event.shiftKey) event.preventDefault();
+  });
+
+  // ドラッグでの選択は離した時点で確定する。
+  // 直後に click が来るので、その回だけ解除を見送る印を立てる
+  let keepSelection = false;
+  prose.addEventListener("mouseup", (event) => {
+    if (active || busy || event.shiftKey) return;
+
+    keepSelection = selectFromTextSelection();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") clearSelection();
+  });
+
   prose.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    const block = target.closest<HTMLElement>("[data-md-index]");
+    if (event.shiftKey) {
+      if (active || busy || !block) return;
+
+      event.preventDefault();
+      const index = indexOf(block);
+      if (index < 0) return;
+
+      // 起点が無ければそのブロックを起点にし、あれば起点から伸ばす
+      window.getSelection()?.removeAllRanges();
+      selectBlocks(selected?.anchor ?? index, index);
+      return;
+    }
+
+    // 選択が出ている状態の素のクリックは、まず選択の解除に使う
+    if (keepSelection) {
+      keepSelection = false;
+      return;
+    }
+    if (selected) {
+      clearSelection();
+      return;
+    }
+
+    const undoButton = target.closest("[data-undo]");
+    if (undoButton) {
+      const marker = undoButton.closest<HTMLElement>(
+        ".block-pending, .block-removed",
+      );
+      if (marker) undo(marker);
+      return;
+    }
+
     // 画像は Lightbox、コードブロックのコピーボタンは本来の動作を優先する
     if (target.tagName === "IMG" || target.closest("button")) return;
 
