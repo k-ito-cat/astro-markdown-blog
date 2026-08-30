@@ -68,7 +68,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       <details class="article-structure" open>
         <summary>
           <span>
-            この記録の構成
+            目次
             <small>{tocHeadings.length}項目</small>
           </span>
           <Icon name="octicon:chevron-down-16" aria-hidden="true" />
@@ -146,11 +146,21 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     word-break: auto-phrase;
   }
 
+  /*
+   * 本文上の目次は狭幅でのみ出す。1024px 以上では Navigation の
+   * .current-trace が同じ役割を担うため、二重に置かない。
+   */
   .article-structure {
     max-width: var(--measure-prose);
     margin: 0 auto 24px;
     padding: 0 0 14px;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  @media (min-width: 1024px) {
+    .article-structure {
+      display: none;
+    }
   }
 
   .article-structure summary {
