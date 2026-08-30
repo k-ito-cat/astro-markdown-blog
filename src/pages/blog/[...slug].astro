@@ -3,10 +3,12 @@ import { getCollection, getEntry, render } from "astro:content";
 import { Icon } from "astro-icon/components";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
+import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import Navigation from "~/components/Navigation.astro";
 import RecordRelations from "~/components/RecordRelations.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
+import { getPostRelations } from "~/utils/postRelations";
 
 export async function getStaticPaths() {
   const posts = await getCollection(
@@ -29,92 +31,11 @@ if (!post) return Astro.redirect("/404");
 
 const { Content, headings } = await render(post);
 const isDraft = post.data.status === PUBLISHED_STATUS.DRAFT;
-const publishedPosts = await getCollection(
-  "posts",
-  ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
+const previewSlug = normalizePostSlug(post.id);
+const { groups, sameField, older, newer } = getPostRelations(
+  post,
+  await getCollection("posts"),
 );
-const timeline = publishedPosts.sort(
-  (a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime(),
-);
-const bySlug = new Map(
-  timeline.map((entry) => [normalizePostSlug(entry.id), entry]),
-);
-const currentIndex = timeline.findIndex((entry) => entry.id === post.id);
-const newerPost = currentIndex > 0 ? timeline[currentIndex - 1] : undefined;
-const olderPost =
-  currentIndex >= 0 && currentIndex < timeline.length - 1
-    ? timeline[currentIndex + 1]
-    : undefined;
-
-type LinkedRecord = { slug: string; title: string };
-const toLinkedRecord = (slug: string): LinkedRecord | undefined => {
-  const normalized = normalizePostSlug(slug);
-  const entry = bySlug.get(normalized);
-  return entry ? { slug: normalized, title: entry.data.title } : undefined;
-};
-const resolveRecords = (slugs?: string[]) =>
-  (slugs ?? [])
-    .map(toLinkedRecord)
-    .filter((record): record is LinkedRecord => Boolean(record));
-
-const relationGroups = [
-  {
-    label: "この記録の前提",
-    description: "先に理解しておくと、この記録を辿りやすくなります。",
-    records: resolveRecords(post.data.relations?.prerequisites),
-  },
-  {
-    label: "関連する記録",
-    description: "同じ論点を別の位置から扱っています。",
-    records: resolveRecords(post.data.relations?.related),
-  },
-  {
-    label: "ここから続く記録",
-    description: "この理解を前提に、先へ進めた記録です。",
-    records: resolveRecords(post.data.relations?.developments),
-  },
-  {
-    label: "この記録を置き換えたもの",
-    description: "認識の更新により、現在はこちらを参照します。",
-    records: resolveRecords(post.data.relations?.replacements),
-  },
-];
-
-// 関連記事は「共通タグ2点 + 共通カテゴリ1点」で採点する。
-// カテゴリが1つ重なるだけ（=同じ分野というだけ）では関連として扱わない。
-const TAG_SCORE = 2;
-const CATEGORY_SCORE = 1;
-const MIN_RELATION_SCORE = 2;
-const RELATION_LIMIT = 3;
-
-const currentCategories = new Set<string>(post.data.categories);
-const currentTags = new Set<string>(post.data.tags);
-const sameField = timeline
-  .filter((entry) => entry.id !== post.id)
-  .map((entry) => ({
-    entry,
-    score:
-      entry.data.tags.filter((tag) => currentTags.has(tag)).length * TAG_SCORE +
-      entry.data.categories.filter((category) =>
-        currentCategories.has(category),
-      ).length *
-        CATEGORY_SCORE,
-  }))
-  .filter(({ score }) => score >= MIN_RELATION_SCORE)
-  .sort(
-    (a, b) =>
-      b.score - a.score ||
-      b.entry.data.publishedAt.getTime() - a.entry.data.publishedAt.getTime(),
-  )
-  .slice(0, RELATION_LIMIT)
-  .map(({ entry }) => ({
-    slug: normalizePostSlug(entry.id),
-    title: entry.data.title,
-  }));
-const toSequenceRecord = (entry: typeof olderPost) =>
-  entry
-    ? { slug: normalizePostSlug(entry.id), title: entry.data.title }
-    : undefined;
 ---
 
 <BaseLayout
@@ -123,14 +44,32 @@ const toSequenceRecord = (entry: typeof olderPost) =>
   ogImage={post.data.thumbnail}
 >
   <main id="main-content" class="article-main">
-    <a
-      href="/blog"
-      class="back-link"
-      data-reading-return
-      data-return-paths='["/","/blog"]'
-    >
-      <Icon name="octicon:arrow-left-16" aria-hidden="true" />一覧へ戻る
-    </a>
+    <div class="article-toolbar">
+      <a
+        href="/blog"
+        class="back-link"
+        data-reading-return
+        data-return-paths='["/","/blog"]'
+      >
+        <Icon name="octicon:arrow-left-16" aria-hidden="true" />一覧へ戻る
+      </a>
+      <CopyLinkButton
+        path={Astro.url.pathname}
+        label="リンクをコピー"
+        class="article-copy-link"
+      />
+      {
+        /* ローカル専用の導線。公開ビルドには含めない */
+        import.meta.env.DEV && (
+          <a
+            class="article-preview-link"
+            href={`/preview/posts/${previewSlug}`}
+          >
+            プレビュー
+          </a>
+        )
+      }
+    </div>
 
     <div
       class:list={[
@@ -165,10 +104,10 @@ const toSequenceRecord = (entry: typeof olderPost) =>
     {
       !isDraft && (
         <RecordRelations
-          groups={relationGroups}
+          groups={groups}
           sameField={sameField}
-          older={toSequenceRecord(olderPost)}
-          newer={toSequenceRecord(newerPost)}
+          older={older}
+          newer={newer}
         />
       )
     }
@@ -183,11 +122,35 @@ const toSequenceRecord = (entry: typeof olderPost) =>
     padding: 24px 16px 80px;
   }
 
+  .article-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  /* 子コンポーネントの要素には scoped style が届かない */
+  .article-toolbar :global(.article-copy-link) {
+    margin-left: auto;
+  }
+
+  .article-preview-link {
+    color: var(--color-text-sub);
+    font-size: var(--text-sm);
+    text-decoration: none;
+  }
+
+  .article-preview-link:hover,
+  .article-preview-link:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   .back-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 28px;
     color: var(--color-text-sub);
     font-size: var(--text-sm);
     text-decoration: none;
