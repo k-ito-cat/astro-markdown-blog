@@ -1,4 +1,4 @@
-// MEMO: public/admin/config.yml でも管理画面用に同じ一覧を持つため二重管理になる。
+// MEMO: このファイルがタグの正本。frontmatter のバリデーション（src/content.config.ts）に適用される。
 //
 // タグは「固有名詞と個別の論点」。表記ゆれを実行時に検知するため enum 運用とし、
 // 新しいタグを使うときは必ずこの定数に追加する（追加しないと frontmatter のバリデーションで落ちる）。

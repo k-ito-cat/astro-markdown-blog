@@ -2,7 +2,7 @@
 
 Astro Content Collections を使用した Markdown 形式のブログ
 
-管理画面（Sveltia CMS）もしくは直接markdownファイルを作成して記事の作成が可能
+記事はエディタでの直接編集、またはローカルのプレビュー画面のインライン編集で作成する
 
 ## リポジトリの構成
 
@@ -14,7 +14,6 @@ Astro Content Collections を使用した Markdown 形式のブログ
 ## 主要設定ファイル
 
 - [astro.config.mjs](astro.config.mjs) - Astro の設定ファイル
-- [public/admin/config.yml](public/admin/config.yml) - Sveltia CMS の設定ファイル（リポジトリ連携、コンテンツモデル定義）
 - [netlify.toml](netlify.toml) - Netlify ビルド設定など
 - [.gitmodules](.gitmodules) - Git サブモジュール設定
 - [src/content.config.ts](src/content.config.ts) - Astro Content Collections のスキーマ定義
@@ -25,11 +24,8 @@ Astro Content Collections を使用した Markdown 形式のブログ
 - `npm run new:post` - 新規ブログ投稿のテンプレートを作成（hygen）
 - `npm run posts:board` - 記事を `status` 別に集計し、メモ欄の状態を確認
 - `npm run posts-update` - git pull とサブモジュール更新を実行
-  - 管理画面でcommitが進むことがほとんどなので、このプロジェクトで何らかの修正を加える前に最新化する目的
+  - 記事側リポジトリだけが先に進むことがあるため、このプロジェクトで何らかの修正を加える前に最新化する目的
   - 将来的にpre-pushで実行するなど自動化を考える
-- `npm run copy-images` - 画像を public ディレクトリにコピー ビルド時に行っている
-  - `src/content/posts`をサブモジュール化している兼ね合いで、記事のサムネイルや記事内の画像も同じリポジトリでgit管理したいが、publicにおかないと画像を表示できないのでbuild前に`src/content/posts/images`の内容を`public/images`にコピーしている
-  - 基本的に開発サーバー起動時とビルド時に実行されるようにしているので意識して実行はしなくて良い
 
 ## 記事の管理方法
 
@@ -170,7 +166,7 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 - `.obsidian` 内では `app.json`、`appearance.json`、`core-plugins.json` だけをGit管理する
 - Community Pluginは必須としない
 
-画像はビルド時に `public/images` へコピーされ、公開ページでは `/images/...` で参照する。Obsidianで画像を貼り付けた後は、本文に生成された画像URLが `/images/...` になっていることを確認する。
+画像は `src/content/posts/images` に置き、本文からは `../images/...` の相対パスで参照する。相対参照にすることで Astro の画像最適化（WebP変換・`srcset` 生成・`width`/`height` 付与）に載る。Obsidianで画像を貼り付けた後は、本文に生成された画像URLが `../images/...` になっていることを確認する。
 
 ### 1. エディタで直接編集
 
@@ -178,12 +174,13 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 2. 生成されたファイルを編集
 3. 変更を commit して push
 
-### 2. 管理画面（Sveltia CMS）から編集
+### 2. プレビュー画面から編集
 
-1. `/admin` にアクセス
-2. GitHub OAuth 認証
-3. 管理画面から記事を作成・編集
-4. 「Publish」ボタンで変更を適用
+1. `npm run dev` で開発サーバを起動
+2. `/preview/posts/<slug>` を開く
+3. フロントマター・本文・画像をインラインで編集（保存すると Markdown に直接書き戻される）
+
+一覧や絞り込みの挙動は「ローカルプレビュー」を参照。
 
 ## サブモジュール管理
 
@@ -195,8 +192,10 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 
 ## 画像管理
 
-- SveltiaCMSでuploadした画像は [src/content/posts/images](src/content/posts/images) に保存時にコミットされる（配置場所は/admin/config.yml参照）
-- ローカルサーバ起動時 & ビルド前に [src/content/posts/images](src/content/posts/images) の内容が [public/images](public/images) にコピーされるようにコマンドを実行しているため、ローカルサーバ起動時やデプロイ後はAstroテンプレートからpublicの画像を参照している。
+- 画像の正本は [src/content/posts/images](src/content/posts/images)（サブモジュール `blog-posts` 側）。プレビュー画面のツールバーから追加した画像もここに保存される
+- 本文からは `../images/xxx.png` の相対パスで参照する。`src/` 配下の相対参照だけが Astro の最適化対象になるため、`/images/...` の絶対パスは使わない
+- ビルド時に `dist/_astro/` へ WebP 化・複数サイズで出力される。`public/images` へのコピーは廃止した
+- OG画像は記事の `thumbnail` が空なら [src/assets/og-default.png](src/assets/og-default.png) にフォールバックする
 
 ## メンテナンス
 
@@ -206,13 +205,10 @@ Vaultには、Astroとの相互運用に必要な設定を含む `.obsidian` の
 
 - [src/constants/categories.ts](src/constants/categories.ts) / [src/constants/tags.ts](src/constants/tags.ts) - フロントマターでのバリデーションで使われる（主にエディタ編集時に活用）
 
-- [public/admin/config.yml](public/admin/config.yml) - 管理画面でカテゴリ・タグ選択時のサジェスト
-
 カテゴリは分野を表すため、増やす前に既存の9件で表せないかを先に検討する。技術名・製品名・個別の論点はカテゴリではなくタグに追加する。
 
 ### フロントマターを変更するとき
 
-- [public/admin/config.yml](public/admin/config.yml) - 管理画面カスタマイズ
 - [src/content.config.ts](src/content.config.ts) - スキーマ
 - [\_templates/generator/new/index.ejs.t](_templates/generator/new/index.ejs.t) - hygenによって生成するmdファイルのテンプレート（主にフロントマター部分）
 
