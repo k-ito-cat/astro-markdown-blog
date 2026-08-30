@@ -3,10 +3,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const ENDPOINT = "/__image";
-// 正本は submodule 側。public/ は copy-images の生成物だが、dev で即座に配信するため同時に書く
+// 正本は submodule 側。Markdown からは相対参照させ、astro:assets の最適化に載せる
 const SOURCE_DIR = "src/content/posts/images";
-const PUBLIC_DIR = "public/images";
-const PUBLIC_PATH = "/images";
+// 記事は src/content/posts/blog/ 配下にあるため、画像へは 1 階層上を辿る
+const REFERENCE_PREFIX = "../images";
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const EXTENSIONS = {
   "image/png": "png",
@@ -104,18 +104,16 @@ const createHandler = (server) =>
       }
 
       const sourceDir = path.resolve(server.config.root, SOURCE_DIR);
-      const publicDir = path.resolve(server.config.root, PUBLIC_DIR);
       const name = await resolveAvailableName(sourceDir, extension);
 
-      await fs.mkdir(publicDir, { recursive: true });
+      await fs.mkdir(sourceDir, { recursive: true });
       await fs.writeFile(path.join(sourceDir, name), content);
-      await fs.writeFile(path.join(publicDir, name), content);
 
       response.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
         "cache-control": "no-store",
       });
-      response.end(JSON.stringify({ path: `${PUBLIC_PATH}/${name}` }));
+      response.end(JSON.stringify({ path: `${REFERENCE_PREFIX}/${name}` }));
     } catch (error) {
       const status = error instanceof RequestError ? error.status : 500;
       if (status === 500) {

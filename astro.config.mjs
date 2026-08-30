@@ -20,6 +20,10 @@ import astroExpressiveCode from "astro-expressive-code";
 // https://astro.build/config
 export default defineConfig({
   output: "static",
+  image: {
+    // Markdown 内の画像にも srcset / sizes を自動付与する
+    layout: "constrained",
+  },
   vite: {
     plugins: [
       tailwindcss(),

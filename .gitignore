@@ -22,7 +22,6 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-public/images/
 
 # アダプタ差分
 .netlify/
