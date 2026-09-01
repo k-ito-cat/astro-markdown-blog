@@ -18,6 +18,7 @@ import {
 } from "~/constants/writingStatus";
 import { normalizeSearchText } from "~/utils/previewPost";
 import { normalizePostSlug } from "~/utils/postSlug";
+import { isPreviewPinned } from "~/constants/previewPinned";
 
 type Props = {
   posts: CollectionEntry<"posts">[];
@@ -33,6 +34,7 @@ const items = posts
     return {
       id: post.id,
       slug,
+      pinned: isPreviewPinned(slug),
       title: post.data.title,
       priority: post.data.priority,
       writingStatus: post.data.writingStatus,
@@ -44,6 +46,9 @@ const items = posts
     };
   })
   .sort((a, b) => {
+    // ピン留めは推奨順より前に置く
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+
     const priorityDiff =
       POST_PRIORITY_ORDER[a.priority] - POST_PRIORITY_ORDER[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
@@ -160,6 +165,7 @@ const FILTERS = [
             items.map((item) => (
               <li
                 data-sidebar-item
+                data-pinned={String(item.pinned)}
                 data-search={item.searchText}
                 data-priority={item.priority}
                 data-writing={item.writingStatus}
@@ -169,7 +175,16 @@ const FILTERS = [
                   href={`/preview/posts/${item.slug}`}
                   aria-current={item.id === currentId ? "page" : undefined}
                 >
-                  <span class="preview-sidebar-title">{item.title}</span>
+                  <span class="preview-sidebar-title">
+                    {item.pinned && (
+                      <Icon
+                        name="octicon:pin-16"
+                        class="preview-sidebar-pin"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {item.title}
+                  </span>
                   <span class="preview-sidebar-meta">
                     {WRITING_STATUS_LABELS[item.writingStatus]}
                   </span>
@@ -434,6 +449,27 @@ const FILTERS = [
     display: block;
     font-size: var(--text-sm);
     overflow-wrap: anywhere;
+  }
+
+  /* ピンとタイトルは横並びにして、上下の中心を合わせる */
+  .preview-sidebar-list li[data-pinned="true"] .preview-sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  /* 行送りを崩さない大きさに留める */
+  .preview-sidebar-pin {
+    width: 0.9em;
+    height: 0.9em;
+    flex: 0 0 auto;
+    color: var(--text-muted);
+  }
+
+  .preview-sidebar-list a:hover .preview-sidebar-pin,
+  .preview-sidebar-list a:focus-visible .preview-sidebar-pin,
+  .preview-sidebar-list a[aria-current="page"] .preview-sidebar-pin {
+    color: currentColor;
   }
 
   .preview-sidebar-meta {

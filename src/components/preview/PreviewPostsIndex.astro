@@ -25,6 +25,7 @@ import {
   type MemoState,
 } from "~/utils/previewPost";
 import { normalizePostSlug } from "~/utils/postSlug";
+import { isPreviewPinned } from "~/constants/previewPinned";
 
 type Props = {
   posts: CollectionEntry<"posts">[];
@@ -52,6 +53,7 @@ const previewPosts = posts
       ...post,
       previewSlug,
       memoState,
+      pinned: isPreviewPinned(previewSlug),
       searchText: normalizeSearchText(
         [
           post.data.title,
@@ -422,6 +424,7 @@ const publishedMemoFilterParams = new URLSearchParams({
                   data-post-row
                   data-entry-id={previewPost.id}
                   data-slug={previewPost.previewSlug}
+                  data-pinned={String(previewPost.pinned)}
                   data-title={previewPost.data.title}
                   data-search={previewPost.searchText}
                   data-priority={previewPost.data.priority}
@@ -443,13 +446,22 @@ const publishedMemoFilterParams = new URLSearchParams({
                     data-label="タイトル"
                   >
                     <span class="preview-title-line">
-                      <a
-                        href={`/preview/posts/${previewPost.previewSlug}`}
-                        class="preview-post-link"
-                        data-title-display
-                      >
-                        {previewPost.data.title}
-                      </a>
+                      <span class="preview-title-name">
+                        {previewPost.pinned && (
+                          <Icon
+                            name="octicon:pin-16"
+                            class="preview-pin-icon"
+                            title="一覧の先頭に固定している記事"
+                          />
+                        )}
+                        <a
+                          href={`/preview/posts/${previewPost.previewSlug}`}
+                          class="preview-post-link"
+                          data-title-display
+                        >
+                          {previewPost.data.title}
+                        </a>
+                      </span>
                       <button
                         type="button"
                         class="preview-edit-trigger"
@@ -1039,6 +1051,25 @@ const publishedMemoFilterParams = new URLSearchParams({
     background: var(--bg-hover);
   }
 
+  /* ピン留めは通常の一覧と別の塊なので、間を罫線で切る */
+  .preview-post-group[data-post-group="pinned"] > tr:last-child > th,
+  .preview-post-group[data-post-group="pinned"] > tr:last-child > td {
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  /* 続きがグループ見出しなら、その余白があるので足さない */
+  .preview-post-group[data-post-group="pinned"]
+    + tbody
+    > tr.preview-post-row:first-child
+    > th,
+  .preview-post-group[data-post-group="pinned"]
+    + tbody
+    > tr.preview-post-row:first-child
+    > td {
+    padding-top: 18px;
+  }
+
   .preview-title-cell {
     min-width: 340px;
     font-weight: 500;
@@ -1068,6 +1099,27 @@ const publishedMemoFilterParams = new URLSearchParams({
     flex-wrap: wrap;
     align-items: center;
     gap: 7px;
+  }
+
+  /* ピンはタイトルに属する印なので、行の操作ボタンより内側に寄せる */
+  .preview-title-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4em;
+    min-width: 0;
+  }
+
+  .preview-pin-icon {
+    width: 0.95em;
+    height: 0.95em;
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    /* 下辺がベースラインに載ると高く見えるので、文字の中心へ下ろす */
+    translate: 0 0.1em;
+  }
+
+  .preview-post-row:hover .preview-pin-icon {
+    color: var(--text-secondary);
   }
 
   .preview-slug {
@@ -1600,6 +1652,12 @@ const publishedMemoFilterParams = new URLSearchParams({
       display: grid;
       gap: 2px;
       margin-bottom: 18px;
+    }
+
+    /* セルの罫線を外しているので、塊そのものを線で切る */
+    .preview-post-group[data-post-group="pinned"] {
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-strong);
     }
 
     .preview-group-row,

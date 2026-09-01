@@ -59,6 +59,7 @@ type PreviewRow = {
   element: HTMLTableRowElement;
   title: string;
   search: string;
+  pinned: boolean;
   priority: PostPriority;
   writing: WritingStatus;
   publication: PublishedStatus;
@@ -75,6 +76,8 @@ type GroupDefinition = {
 };
 
 const GROUP_NAMES = ["priority", "writing", "publication", "none"] as const;
+/** 並び替えやグループ分けより前に、常に最上部へ出す塊。見出しは持たない */
+const PINNED_GROUP: GroupDefinition = { value: "pinned", label: "" };
 const SORT_COLUMNS = [
   "title",
   "priority",
@@ -163,6 +166,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
     element,
     title: element.dataset.title ?? "",
     search: element.dataset.search ?? "",
+    pinned: element.dataset.pinned === "true",
     priority,
     writing,
     publication,
@@ -648,8 +652,16 @@ const initializePreviewPosts = (root: HTMLElement) => {
       .querySelectorAll("tbody[data-post-group]")
       .forEach((body) => body.remove());
 
+    // ピン留めは絞り込みには従うが、並び替えとグループ分けより前に出す。
+    // 数が少なく常に見えているべきものなので、見出しも折りたたみも付けない
+    const pinnedRows = visibleRows.filter((row) => row.pinned);
+    const unpinnedRows = visibleRows.filter((row) => !row.pinned);
+    if (pinnedRows.length > 0) {
+      table.append(createGroupBody(PINNED_GROUP, "none", pinnedRows, false));
+    }
+
     definitions.forEach((definition) => {
-      const groupRows = visibleRows.filter(
+      const groupRows = unpinnedRows.filter(
         (row) => getGroupValue(row, state.group) === definition.value,
       );
       if (groupRows.length === 0) return;
