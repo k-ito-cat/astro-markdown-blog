@@ -2,6 +2,7 @@ import {
   blockText,
   deleteBlock,
   insertBlock,
+  mergeDetailsBlocks,
   moveBlock,
   replaceBlock,
   type Block,
@@ -28,6 +29,26 @@ const VIEWPORT_MARGIN = 8;
 /** .block-drag-handle の一辺と一致させること */
 const HANDLE_SIZE = 20;
 const HANDLE_GAP = 8;
+/** 編集中に Cmd/Ctrl + キーで前後へ差し込む記号 */
+const INLINE_MARKS: Record<string, string | undefined> = {
+  b: "**",
+  i: "*",
+};
+/** Shift を伴う組み合わせ。単独キーだとブラウザの既定操作とぶつかる */
+const SHIFT_INLINE_MARKS: Record<string, string | undefined> = {
+  m: "==",
+};
+/** 編集欄の右下に出す操作の手がかり */
+const EDITOR_HINTS: [string, string][] = [
+  ["⌘B", "太字"],
+  ["⌘I", "斜体"],
+  ["⌘⇧M", "マーカー"],
+  ["⌘⇧`", "コード"],
+  ["Shift+Enter", "確定"],
+  ["Esc", "取消"],
+];
+const CODE_FENCE = "```";
+const isApple = /Mac|iPhone|iPad/.test(navigator.userAgent);
 const DRAG_SCROLL_ZONE = 64;
 const DRAG_SCROLL_STEP = 12;
 type EditMode = "replace" | "insert-after" | "insert-before";
@@ -376,7 +397,8 @@ const initializeEditor = (host: HTMLElement) => {
   const serverBody = readEmbeddedBody(host);
   if (serverBody === null) throw new Error("Post body not found");
 
-  const blocks = readBlocks(prose);
+  // 生 HTML のトグルは複数ブロックに割れるため、描画後の 1 要素に合わせる
+  const blocks = mergeDetailsBlocks(readBlocks(prose), serverBody);
   if (blocks.length === 0) {
     hint.textContent =
       "この記事は構成上インライン編集に対応していません（本文の位置を特定できませんでした）";
@@ -760,11 +782,33 @@ const initializeEditor = (host: HTMLElement) => {
 
     const keyHint = document.createElement("span");
     keyHint.className = "block-editor-hint";
-    keyHint.textContent = "Shift+Enter で確定";
+    EDITOR_HINTS.forEach(([key, label]) => {
+      const item = document.createElement("span");
+      const shortcut = document.createElement("kbd");
+      shortcut.textContent = isApple ? key : key.replace("⌘", "Ctrl+");
+      item.append(shortcut, document.createTextNode(label));
+      keyHint.append(item);
+    });
+
+    const helpButton = document.createElement("button");
+    helpButton.type = "button";
+    helpButton.className = "block-editor-help";
+    helpButton.title = "記法を開く";
+    helpButton.setAttribute("aria-label", "記法を開く");
+    const helpIcon = host.querySelector('[data-block-toolbar-icon="help"]');
+    if (helpIcon instanceof HTMLTemplateElement) {
+      helpButton.append(helpIcon.content.cloneNode(true));
+    }
+    // 押した時に編集が確定してしまわないよう、フォーカスを textarea に残す
+    helpButton.addEventListener("mousedown", (event) => event.preventDefault());
+    helpButton.addEventListener("click", () => {
+      const help = document.querySelector(".body-editor-help");
+      if (help instanceof HTMLDetailsElement) help.open = true;
+    });
 
     const field = document.createElement("div");
     field.className = "block-editor-field";
-    field.append(textarea, keyHint);
+    field.append(textarea, helpButton, keyHint);
     wrapper.append(field, inlineStatus);
 
     if (mode === "insert-after")
@@ -850,6 +894,69 @@ const initializeEditor = (host: HTMLElement) => {
         file.type.startsWith("image/"),
       );
 
+    // 選択範囲をコードフェンスで囲む／既に囲まれていれば外す
+    const toggleCodeBlock = () => {
+      const value = textarea.value;
+      const from = textarea.selectionStart;
+      const to = textarea.selectionEnd;
+      const selected = value.slice(from, to);
+      const lines = selected.split("\n");
+
+      if (
+        lines.length >= 2 &&
+        lines[0].startsWith(CODE_FENCE) &&
+        lines.at(-1)?.trim() === CODE_FENCE
+      ) {
+        const inner = lines.slice(1, -1).join("\n");
+        textarea.value = value.slice(0, from) + inner + value.slice(to);
+        textarea.setSelectionRange(from, from + inner.length);
+      } else {
+        const block = `${CODE_FENCE}\n${selected}\n${CODE_FENCE}`;
+        textarea.value = value.slice(0, from) + block + value.slice(to);
+        // 言語名をすぐ書けるよう、開いたフェンスの後ろへ置く
+        const caret = from + CODE_FENCE.length;
+        textarea.setSelectionRange(caret, caret);
+      }
+      autosize();
+    };
+
+    // 選択範囲を記号で囲む／既に囲まれていれば外す
+    const toggleInlineMark = (mark: string) => {
+      const value = textarea.value;
+      const from = textarea.selectionStart;
+      const to = textarea.selectionEnd;
+      const selected = value.slice(from, to);
+      const width = mark.length;
+      // `**bold**` を選んで斜体を押したときに、太字を壊さないようにする
+      const isBoldSelection = mark === "*" && selected.startsWith("**");
+
+      if (
+        !isBoldSelection &&
+        selected.length >= width * 2 &&
+        selected.startsWith(mark) &&
+        selected.endsWith(mark)
+      ) {
+        // 記号ごと選んでいる場合
+        const stripped = selected.slice(width, -width);
+        textarea.value = value.slice(0, from) + stripped + value.slice(to);
+        textarea.setSelectionRange(from, from + stripped.length);
+      } else if (
+        value.slice(from - width, from) === mark &&
+        value.slice(to, to + width) === mark
+      ) {
+        // 記号の内側だけを選んでいる場合
+        textarea.value =
+          value.slice(0, from - width) + selected + value.slice(to + width);
+        textarea.setSelectionRange(from - width, to - width);
+      } else {
+        textarea.value = `${value.slice(0, from)}${mark}${selected}${mark}${value.slice(to)}`;
+        // 選択がなければ記号の中へ入れる
+        if (from === to) textarea.setSelectionRange(from + width, from + width);
+        else textarea.setSelectionRange(from + width, to + width);
+      }
+      autosize();
+    };
+
     textarea.addEventListener("input", autosize);
     textarea.addEventListener("blur", finish);
     textarea.addEventListener("paste", (event) => {
@@ -881,6 +988,20 @@ const initializeEditor = (host: HTMLElement) => {
         event.preventDefault();
         finish();
       }
+      if ((!event.metaKey && !event.ctrlKey) || event.altKey) return;
+
+      const key = event.key.toLocaleLowerCase();
+      if (event.shiftKey && key === "`") {
+        event.preventDefault();
+        toggleCodeBlock();
+        return;
+      }
+
+      const mark = event.shiftKey ? SHIFT_INLINE_MARKS[key] : INLINE_MARKS[key];
+      if (!mark) return;
+
+      event.preventDefault();
+      toggleInlineMark(mark);
     });
   };
 
@@ -1383,8 +1504,8 @@ const initializeEditor = (host: HTMLElement) => {
       return;
     }
 
-    // 画像は Lightbox、コードブロックのコピーボタンは本来の動作を優先する
-    if (target.tagName === "IMG" || target.closest("button")) return;
+    // 画像は Lightbox、コピーボタンとトグルの開閉は本来の動作を優先する
+    if (target.tagName === "IMG" || target.closest("button, summary")) return;
 
     const link = target.closest("a");
     if (link && !link.classList.contains("heading-self-link")) return;

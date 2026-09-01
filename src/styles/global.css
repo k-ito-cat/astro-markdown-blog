@@ -45,6 +45,28 @@
     var(--color-background)
   );
 
+  /* 本文のマーカー。注釈の面より濃く、文字が読める濃度に留める */
+  --color-marker-default: color-mix(
+    in srgb,
+    var(--color-accent) 78%,
+    var(--color-background)
+  );
+  --color-marker-green: color-mix(
+    in srgb,
+    var(--color-primary) 20%,
+    var(--color-background)
+  );
+  --color-marker-blue: color-mix(
+    in srgb,
+    var(--color-secondary) 26%,
+    var(--color-background)
+  );
+  --color-marker-red: color-mix(
+    in srgb,
+    var(--color-danger) 18%,
+    var(--color-background)
+  );
+
   --font-human: "Zen Kaku Gothic New", system-ui, -apple-system, sans-serif;
   --font-machine: "IBM Plex Mono", ui-monospace, monospace;
   --text-xs: 0.75rem;

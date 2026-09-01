@@ -5,6 +5,8 @@ export const MEMO_STATE = {
   BROKEN_MEMO: "BROKEN_MEMO",
 };
 
+export const MEMO_HEADING_TEXT = "メモ";
+
 const MEMO_HEADING_PATTERN = /^## メモ\s*$/gm;
 
 export const detectMemoState = (content) => {

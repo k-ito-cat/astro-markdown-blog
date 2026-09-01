@@ -10,6 +10,168 @@ const { entryId, body } = Astro.props;
 
 // `</script>` で JSON が閉じられないようにエスケープする
 const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
+
+// 記法ヘルプ。雛形はそのまま貼って使えるものだけを載せる
+const SNIPPET_GROUPS = [
+  {
+    title: "文字",
+    items: [
+      { label: "太字", code: "**太字**", note: "⌘B / Ctrl+B" },
+      { label: "斜体", code: "*斜体*", note: "⌘I / Ctrl+I" },
+      { label: "打ち消し", code: "~~打ち消し~~" },
+      {
+        label: "マーカー",
+        code: "==マーカー==",
+        note: "⌘⇧M / Ctrl+Shift+M。色は =g= 緑 / =b= 青 / =r= 赤 を先頭に付ける",
+      },
+      { label: "マーカー（色）", code: "=g=緑のマーカー==" },
+      { label: "インラインコード", code: "`code`" },
+    ],
+  },
+  {
+    title: "構造",
+    items: [
+      {
+        label: "見出し",
+        code: "## 見出し2\n\n### 見出し3",
+        note: "目次に載るのは h2 と h3",
+      },
+      { label: "箇条書き", code: "- 項目\n  - 入れ子" },
+      { label: "番号付き", code: "1. 一つ目\n2. 二つ目" },
+      {
+        label: "チェックリスト",
+        code: "- [ ] 未完了\n- [x] 完了",
+        note: "表示のみでクリックはできない",
+      },
+      { label: "引用", code: "> 引用文" },
+      {
+        label: "区切り線（節）",
+        code: "---",
+        note: "話題が変わるところ。全幅の細い線",
+      },
+      {
+        label: "区切り線（章）",
+        code: "***",
+        note: "場面の切れ目。短く太い線と大きめの余白",
+      },
+      {
+        label: "区切り線（ラベル付き）",
+        code: "補足 ---",
+        note: "メモ欄の見出しと同じ形。ハイフンは 3 つ以上（線の長さは表示側で伸ばす）。前後を空行で挟む",
+      },
+    ],
+  },
+  {
+    title: "表とトグル",
+    items: [
+      {
+        label: "テーブル（上ヘッダ）",
+        code: "| 項目 | 説明 | 数 |\n| --- | :---: | ---: |\n| left | center | right |\n| a | b | c |",
+        note: "--- が左寄せ、:---: が中央、---: が右寄せ",
+      },
+      {
+        label: "テーブル（左ヘッダ）",
+        code: '<table>\n<tr><th scope="row">項目</th><td>説明</td></tr>\n<tr><th scope="row">項目</th><td>説明</td></tr>\n</table>',
+        note: "Markdown のテーブルは上ヘッダのみ。左ヘッダは HTML で書く",
+      },
+      {
+        label: "トグル",
+        code: "<details>\n<summary>クリックで開く</summary>\n\n中身は **Markdown** として書ける\n\n</details>",
+        note: "summary の次の空行が必須。<details open> で最初から開く",
+      },
+    ],
+  },
+  {
+    title: "コード",
+    items: [
+      {
+        label: "コードブロック",
+        code: "```ts\nconst a = 1;\n```",
+        note: "⌘⇧` / Ctrl+Shift+` で選択範囲を囲める",
+      },
+      {
+        label: "ファイル名タブ",
+        code: '```ts title="src/example.ts"\nconst a = 1;\n```',
+        note: "1 行目のコメント（// src/example.ts）でもタブになる",
+      },
+      {
+        label: "差分",
+        code: '```diff lang="ts"\n-const a = 1;\n+const a = 2;\n```',
+        note: "lang を付けると差分のまま色も付く",
+      },
+      {
+        label: "追加・削除した行",
+        code: "```ts ins={2} del={3-4}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = 4;\n```",
+        note: "行番号で指定する。{2,4} や {2-4} も使える",
+      },
+      {
+        label: "行のハイライト",
+        code: "```ts {2-3}\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```",
+      },
+      {
+        label: "語句のマーク",
+        code: '```ts "const" ins="足した語" del="消した語"\nconst a = 1;\n```',
+        note: "/正規表現/ でも指定できる",
+      },
+      {
+        label: "枠の指定",
+        code: '```sh frame="none"\necho "枠なし"\n```',
+        note: "frame は none / code / terminal / auto",
+      },
+    ],
+  },
+  {
+    title: "埋め込み",
+    items: [
+      { label: "リンク", code: "[表示テキスト](https://example.com)" },
+      {
+        label: "リンクカード",
+        code: "https://example.com",
+        note: "URL だけの行がカードになる。リスト内は対象外",
+      },
+      {
+        label: "画像",
+        code: "![画像の説明](../images/example.png)",
+        note: "角括弧の中は alt。画面に出ず、読み上げと代替表示に使う。編集欄へのドラッグ＆ドロップ／貼り付けでも入る",
+      },
+      {
+        label: "画像（キャプション付き）",
+        code: '![画像の説明](../images/example.png "キャプション")',
+        note: "引用符の中がキャプション。画像の下に出る。alt とは役割が違うので両方書く",
+      },
+    ],
+  },
+  {
+    title: "アラート",
+    items: [
+      {
+        label: "NOTE（情報）",
+        code: "> [!NOTE]\n> これは情報メッセージです",
+        note: "流し読みでも目に留めてほしい補足",
+      },
+      {
+        label: "TIP（ヒント）",
+        code: "> [!TIP]\n> これは便利なヒントです",
+        note: "より簡単に、より良くやる方法",
+      },
+      {
+        label: "IMPORTANT（重要）",
+        code: "> [!IMPORTANT]\n> これは重要な情報です",
+        note: "目的の達成に欠かせない前提",
+      },
+      {
+        label: "WARNING（警告）",
+        code: "> [!WARNING]\n> これは警告メッセージです",
+        note: "問題を避けるため今すぐ注意が要る",
+      },
+      {
+        label: "CAUTION（危険）",
+        code: "> [!CAUTION]\n> これは危険メッセージです",
+        note: "操作に伴う危険や望ましくない結果",
+      },
+    ],
+  },
+] as const;
 ---
 
 <script is:inline>
@@ -37,28 +199,69 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
   <p class="body-editor-hint" data-hint>
     ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
   </p>
-  <p class="body-editor-status" data-status aria-live="polite"></p>
-  <span class="body-editor-count" data-count hidden></span>
-  <button
-    type="button"
-    class="body-editor-save"
-    data-save
-    aria-keyshortcuts="Meta+S Control+S"
-    disabled
-  >
-    <span>保存</span>
-    <span class="body-editor-save-shortcut" aria-hidden="true">
-      <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
-    </span>
-  </button>
-  <button
-    type="button"
-    data-diff
-    aria-pressed="true"
-    title="追加・変更・削除を色で示す"
-    hidden>差分</button
-  >
-  <button type="button" data-discard disabled>破棄</button>
+  <div class="body-editor-bar">
+    <p class="body-editor-status" data-status aria-live="polite"></p>
+    <span class="body-editor-count" data-count hidden></span>
+    <details class="body-editor-help">
+      <summary>
+        <Icon name="octicon:book-16" aria-hidden="true" />
+        <span>記法</span>
+      </summary>
+      <div class="body-editor-help-body">
+        {
+          SNIPPET_GROUPS.map((group) => (
+            <section class="help-group">
+              <h2>{group.title}</h2>
+              <ul>
+                {group.items.map((item) => (
+                  <li class="help-item">
+                    <p class="help-label">{item.label}</p>
+                    <div class="help-code-wrap">
+                      <pre class="help-code">{item.code}</pre>
+                      <button
+                        type="button"
+                        class="help-copy"
+                        data-copy-snippet={item.code}
+                        title={`${item.label}の雛形をコピー`}
+                        aria-label={`${item.label}の雛形をコピー`}
+                      >
+                        <Icon name="octicon:copy-16" class="help-copy-icon" />
+                        <Icon name="octicon:check-16" class="help-copy-done" />
+                      </button>
+                    </div>
+                    {"note" in item && <p class="help-note">{item.note}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </details>
+    <button
+      type="button"
+      class="body-editor-save"
+      data-save
+      aria-keyshortcuts="Meta+S Control+S"
+      disabled
+    >
+      <span>保存</span>
+      <span class="body-editor-save-shortcut" aria-hidden="true">
+        <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
+      </span>
+    </button>
+    <button
+      type="button"
+      data-diff
+      aria-pressed="true"
+      title="追加・変更・削除を色で示す"
+      hidden>差分</button
+    >
+    <button type="button" data-discard disabled>破棄</button>
+  </div>
+  <template data-block-toolbar-icon="help">
+    <Icon name="octicon:book-16" aria-hidden="true" />
+  </template>
   <template data-block-toolbar-icon="image">
     <Icon name="octicon:image-16" aria-hidden="true" />
   </template>
@@ -68,8 +271,12 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
 </body-editor>
 
 <style>
-  /* ページのどこにいても保存できるよう追従させる */
   .body-editor {
+    display: block;
+  }
+
+  /* ページのどこにいても保存できるよう追従させる */
+  .body-editor-bar {
     position: sticky;
     top: 0;
     z-index: 5;
@@ -90,8 +297,13 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
     font-size: var(--text-sm);
   }
 
+  /* 操作の説明はバーの外に置き、バーは状態と操作だけにする */
   .body-editor-hint {
-    flex: 1 1 320px;
+    margin-bottom: 6px;
+  }
+
+  .body-editor-status {
+    flex: 1 1 200px;
     min-width: 0;
   }
 
@@ -157,6 +369,187 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
     line-height: 1;
     white-space: nowrap;
   }
+
+  /* 開いてもバーの高さを変えないよう、中身はバーの下へ浮かせる */
+  .body-editor-help {
+    position: relative;
+    margin-left: auto;
+  }
+
+  .body-editor-help > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .body-editor-help > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .body-editor-help > summary:hover,
+  .body-editor-help > summary:focus-visible {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .body-editor-help[open] > summary {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .body-editor-help svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  /* 本文を見ながら引けるよう、画面の右端へ寄せて立てる */
+  .body-editor-help-body {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 20;
+    width: min(440px, 92vw);
+    height: 100dvh;
+    padding: 4px 20px 24px;
+    overflow-y: auto;
+    border-left: 1px solid var(--border-strong);
+    background: var(--bg-base);
+  }
+
+  /* 本文のラベル付き罫線（メモ欄の見出し）と同じ「語 + Line」の形にする */
+  .help-group h2 {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 0 12px;
+    background: var(--bg-base);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .help-group h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* 見出しの文字は小さく、Line も細い。塊の切れ目は余白で示す */
+  .help-group + .help-group {
+    margin-top: 30px;
+  }
+
+  .help-group ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .help-item {
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 見出しの Line と重なって二重に見えるため、先頭の項目は線を持たない */
+  .help-group li:first-child {
+    border-top: 0;
+  }
+
+  .help-label {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  /* コピーは雛形の右上に重ねる。コードブロックと同じ位置関係にする */
+  .help-code-wrap {
+    position: relative;
+    margin-top: 4px;
+  }
+
+  .help-code {
+    margin: 0;
+    /* ボタンと文字が重ならない幅を空ける */
+    padding: 8px 40px 8px 10px;
+    overflow-x: auto;
+    border-radius: 2px;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: var(--leading-body);
+    white-space: pre;
+  }
+
+  .help-note {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .body-editor .help-copy {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  .body-editor .help-copy:hover:not(:disabled),
+  .body-editor .help-copy:focus-visible {
+    background: var(--bg-base);
+    color: var(--color-interaction-text);
+  }
+
+  .body-editor .help-copy svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .help-copy-done {
+    display: none;
+  }
+
+  .body-editor .help-copy[data-copy-state="copied"] {
+    color: var(--success);
+  }
+
+  .body-editor .help-copy[data-copy-state="copied"] .help-copy-icon {
+    display: none;
+  }
+
+  .body-editor .help-copy[data-copy-state="copied"] .help-copy-done {
+    display: inline-block;
+  }
+
+  .body-editor .help-copy[data-copy-state="failed"] {
+    color: var(--danger);
+  }
 </style>
 
 <style is:global>
@@ -209,6 +602,31 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
 
   .preview-detail .prose [data-md-index][hidden] {
     display: none;
+  }
+
+  /* hr は高さを持たないためクリックできない。線の位置は保ったまま当たり判定を作る */
+  .preview-detail .prose hr {
+    position: relative;
+    height: 18px;
+    border-top: 0;
+    /* 当たり判定の分だけ外の余白を減らし、見た目の間隔は本文と揃える */
+    margin-block: 31px;
+  }
+
+  .preview-detail .prose hr::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    border-top: 1px solid var(--border);
+  }
+
+  .preview-detail .prose hr[data-divider="chapter"] {
+    margin-block: 63px;
+  }
+
+  .preview-detail .prose hr[data-divider="chapter"]::before {
+    border-top: 2px solid var(--border-strong);
   }
 
   /* 戻ってきた位置を一瞬示す */
@@ -325,10 +743,44 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
     position: relative;
   }
 
+  /* 入力欄の右上。押しても編集は閉じない */
+  .preview-detail .prose .block-editor-help {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .preview-detail .prose .block-editor-help:hover,
+  .preview-detail .prose .block-editor-help:focus-visible {
+    background: var(--bg-base);
+    color: var(--color-interaction-text);
+  }
+
+  .preview-detail .prose .block-editor-help svg {
+    width: 15px;
+    height: 15px;
+  }
+
   .preview-detail .prose .block-editor-hint {
     position: absolute;
     right: 10px;
     bottom: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 10px;
+    max-width: calc(100% - 20px);
     padding: 1px 6px;
     border-radius: var(--radius-label);
     background: var(--bg-base);
@@ -336,6 +788,23 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
     font-size: 11px;
     line-height: 1.6;
     pointer-events: none;
+  }
+
+  .preview-detail .prose .block-editor-hint > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .preview-detail .prose .block-editor-hint kbd {
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.4;
   }
 
   .preview-detail .prose .block-editor {
@@ -496,5 +965,9 @@ const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
   if (import.meta.env.DEV) {
     const { initPreviewBodyEdit } = await import("~/scripts/previewBodyEdit");
     initPreviewBodyEdit();
+
+    const { initPreviewSyntaxHelp } =
+      await import("~/scripts/previewSyntaxHelp");
+    initPreviewSyntaxHelp();
   }
 </script>

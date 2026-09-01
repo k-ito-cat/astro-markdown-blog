@@ -13,6 +13,7 @@ import PreviewPostsIndex from "~/components/preview/PreviewPostsIndex.astro";
 import PreviewSidebar from "~/components/preview/PreviewSidebar.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
+import { stripMemoHeadings } from "~/utils/postHeadings";
 
 export async function getStaticPaths() {
   if (!import.meta.env.DEV) {
@@ -50,7 +51,8 @@ if (isDetail && !post) {
 
 const rendered = post ? await render(post) : null;
 const Content = rendered?.Content;
-const headings = rendered?.headings ?? [];
+// メモ配下の見出しは作業用なので、目次と現在位置トレースには載せない
+const headings = stripMemoHeadings(rendered?.headings ?? []);
 
 const posts = await getCollection("posts");
 

@@ -4,10 +4,13 @@ import tailwindcss from "@tailwindcss/vite";
 import icon from "astro-icon";
 
 import remarkGithubBlockquoteAlert from "remark-github-blockquote-alert";
+import remarkFlexibleMarkers from "remark-flexible-markers";
 import remarkLinkCardPlus from "remark-link-card-plus";
 import rehypeExternalLinks, {
   remarkExternalLinksInHtml,
 } from "./src/plugins/rehypeExternalLinks.mjs";
+import remarkDividerVariant from "./src/plugins/remarkDividerVariant.mjs";
+import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
 import imageUploader from "./src/plugins/imageUploader.mjs";
@@ -42,6 +45,13 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [
         remarkGithubBlockquoteAlert,
+        remarkDividerVariant,
+        remarkImageFigure,
+        // 色は本文で使う 3 つに絞る。既定（色指定なし）と合わせて 4 種
+        [
+          remarkFlexibleMarkers,
+          { dictionary: { g: "green", b: "blue", r: "red" } },
+        ],
         [remarkLinkCardPlus, { noFavicon: true }],
         [
           remarkExternalLinksInHtml,

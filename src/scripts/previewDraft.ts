@@ -102,3 +102,39 @@ export const moveBlock = (
     blocks: next,
   };
 };
+
+const DETAILS_OPEN = /<details[\s>]/i;
+const DETAILS_CLOSE = /<\/details\s*>/i;
+
+/**
+ * `<details>` は中身との間に空行があると開始・中身・終了で別ブロックに割れるが、
+ * 描画後は 1 要素になる。要素とブロックの数が合わないとインライン編集が止まるため、
+ * 開始から終了までを 1 ブロックへまとめる。入れ子の details は扱わない。
+ */
+export const mergeDetailsBlocks = (blocks: Block[], body: string): Block[] => {
+  const merged: Block[] = [];
+  let open: Block | null = null;
+
+  for (const block of blocks) {
+    const text = body.slice(block[0], block[1]);
+
+    if (open) {
+      open = [open[0], block[1]];
+      if (DETAILS_CLOSE.test(text)) {
+        merged.push(open);
+        open = null;
+      }
+      continue;
+    }
+
+    if (DETAILS_OPEN.test(text) && !DETAILS_CLOSE.test(text)) {
+      open = block;
+      continue;
+    }
+
+    merged.push(block);
+  }
+
+  // 閉じていない場合は数を変えず、元の並びのまま扱う
+  return open ? blocks : merged;
+};

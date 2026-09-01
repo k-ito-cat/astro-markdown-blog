@@ -35,11 +35,57 @@ const { content: Content, status } = Astro.props;
     const lightbox = (GLightbox as any)({
       elements,
       touchNavigation: true,
+      // タップでは外側の判定が働かないため、閉じるボタンは残す
       closeButton: true,
+      // 内蔵の外側クリックはモバイル判定のとき無効になるので、下で自前に置き換える
+      closeOnOutsideClick: false,
       loop: false,
       slideEffect: "slide",
       cssEasing: "cubic-bezier(0.4,0,0.2,1)",
       speed: 50,
+      // 既定の zoom は動きが大きく遅いので、自前のアニメーションへ差し替える
+      openEffect: "zoom",
+      closeEffect: "zoom",
+      cssEfects: {
+        zoom: { in: "proseZoom", out: "proseZoomOut" },
+      },
+    });
+
+    // 開いている間 html に overflow: hidden が付き、閉じると読んでいた位置を失う。
+    // 元の位置へ戻し、画像を見終わった場所から読み進められるようにする
+    let scrollY = 0;
+
+    lightbox.on("open", () => {
+      scrollY = window.scrollY;
+
+      // スクロールバーが消えたぶんを内側で受ける。glightbox も同じ補正をするが、
+      // body の margin を使うため、中央寄せの本文が横へずれてしまう
+      const scrollbar =
+        window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbar > 0) {
+        document.body.style.paddingRight = `${scrollbar}px`;
+      }
+
+      // モバイル判定のままだと説明欄の位置などが変わる。画面幅によらず同じ見た目にする
+      document.body.classList.remove("glightbox-mobile");
+
+      // 画像の外側を触ったら閉じる。開くたびに器が作り直されるので都度つなぐ
+      document
+        .querySelector(".glightbox-container")
+        ?.addEventListener("click", (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          if (target.closest(".ginner-container") || target.closest(".gbtn")) {
+            return;
+          }
+
+          lightbox.close();
+        });
+    });
+
+    lightbox.on("close", () => {
+      document.body.style.paddingRight = "";
+      window.scrollTo({ top: scrollY, behavior: "instant" });
     });
 
     // 各画像クリックで該当インデックスを開く
@@ -90,9 +136,140 @@ const { content: Content, status } = Astro.props;
       : "編集用メモです。公開済みにする前に削除してください。";
     memoHeading.insertAdjacentElement("afterend", memoNote);
   }
+
+  // 横に溢れる表は、マウス以外でも送れるようフォーカスできるようにする
+  const tables = Array.from(
+    document.querySelectorAll<HTMLTableElement>(".prose table"),
+  );
+  if (tables.length > 0) {
+    const syncScrollable = (table: HTMLTableElement) => {
+      // 溢れていないうちは、意味のないタブ位置を作らない
+      if (table.scrollWidth > table.clientWidth) {
+        table.tabIndex = 0;
+        table.setAttribute("role", "region");
+        table.setAttribute("aria-label", "横にスクロールできる表");
+        return;
+      }
+
+      table.removeAttribute("tabindex");
+      table.removeAttribute("role");
+      table.removeAttribute("aria-label");
+    };
+
+    tables.forEach(syncScrollable);
+
+    const observer = new ResizeObserver((entries) => {
+      entries.forEach((entry) =>
+        syncScrollable(entry.target as HTMLTableElement),
+      );
+    });
+    tables.forEach((table) => observer.observe(table));
+  }
 </script>
 
 <style is:global>
+  /* ライブラリはスクロールバーぶんを body の margin で埋めるが、
+     それだと本文の幅が変わって横へずれる。padding での補正は script 側で行う */
+  body.gscrollbar-fixer {
+    margin-right: 0;
+  }
+
+  /* 閉じるボタン。面で押さえず、記号とhoverの薄い面だけで示す。
+     既定の .glightbox-clean .gclose に勝たせるため、クラス 2 つ分の詳細度で書く */
+  body .glightbox-clean .gclose {
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border-radius: 2px;
+    opacity: 1;
+  }
+
+  body .glightbox-clean .gclose svg {
+    width: 20px;
+  }
+
+  body .glightbox-clean .gclose path {
+    fill: rgb(255 255 255 / 0.82);
+  }
+
+  body .glightbox-clean .gclose:hover,
+  body .glightbox-clean .gclose:focus-visible {
+    background: rgb(255 255 255 / 0.14);
+  }
+
+  body .glightbox-clean .gclose:hover path,
+  body .glightbox-clean .gclose:focus-visible path {
+    fill: #fff;
+  }
+
+  /* Lightbox（glightbox）の背景。既定は不透明の黒で重い。
+     media query と .glightbox-mobile の指定へ勝たせるため、両方の形で書く */
+  body .goverlay,
+  body.glightbox-mobile .goverlay {
+    /* 面で覆わず、背景を透かしたまま曇らせる。彩度を少し上げて濁りを防ぐ */
+    background: rgb(17 24 39 / 0.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    backdrop-filter: blur(20px) saturate(1.3);
+  }
+
+  /* 透過を減らす設定では、ぼかしをやめて素直に暗くする */
+  @media (prefers-reduced-transparency: reduce) {
+    body .goverlay,
+    body.glightbox-mobile .goverlay {
+      background: rgb(17 24 39 / 0.88);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* 既定の zoom（0.5s・0.3 倍からの拡大）は待たされるので、
+     短い距離を速く動かす自前のアニメーションに置き換える */
+  body .gproseZoom {
+    animation: prose-lightbox-in 0.14s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  body .gproseZoomOut {
+    animation: prose-lightbox-out 0.12s ease-in;
+  }
+
+  @keyframes prose-lightbox-in {
+    from {
+      opacity: 0;
+      transform: scale3d(0.94, 0.94, 1);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes prose-lightbox-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: scale3d(0.97, 0.97, 1);
+    }
+  }
+
+  /* 背景の明滅も画像に合わせる */
+  body .gfadeIn,
+  body .gfadeOut {
+    animation-duration: 0.14s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body .gproseZoom,
+    body .gproseZoomOut,
+    body .gfadeIn,
+    body .gfadeOut {
+      animation: none;
+    }
+  }
+
   a:focus-visible,
   button:focus-visible {
     outline: 2px solid var(--focus);
@@ -149,6 +326,30 @@ const { content: Content, status } = Astro.props;
     vertical-align: 0.06em;
   }
 
+  /* マーカー。上を空けて下だけ塗り、行が詰まって見えないようにする */
+  .prose mark,
+  .prose .flexible-marker {
+    padding: 0 0.15em;
+    background: linear-gradient(
+      transparent 58%,
+      var(--marker-color, var(--color-marker-default)) 58%
+    );
+    color: inherit;
+    border-radius: 1px;
+  }
+
+  .prose .flexible-marker-green {
+    --marker-color: var(--color-marker-green);
+  }
+
+  .prose .flexible-marker-blue {
+    --marker-color: var(--color-marker-blue);
+  }
+
+  .prose .flexible-marker-red {
+    --marker-color: var(--color-marker-red);
+  }
+
   .prose strong {
     color: var(--text-primary);
     font-weight: 700;
@@ -198,12 +399,200 @@ const { content: Content, status } = Astro.props;
     list-style: decimal;
   }
 
+  /* 入れ子は 1 つの塊として見せたいので、外側ほど余白を取らない。
+     字下げは、子の文字の頭が親の文字の頭と揃う量にする */
+  .prose li > ul,
+  .prose li > ol {
+    margin: 2px 0;
+    padding-left: 1.625em;
+  }
+
   .prose li {
-    margin: 6px 0;
+    /* 本文より詰める。行間はデジタル庁デザインシステムの推奨（150〜175%）に合わせる */
+    margin: 2px 0;
+    line-height: 1.75;
   }
 
   .prose li::marker {
     color: var(--text-muted);
+  }
+
+  /* チェックリストは点を出さず、チェックボックスを本文の左脇に置く */
+  .prose .contains-task-list {
+    list-style: none;
+  }
+
+  .prose .task-list-item input[type="checkbox"] {
+    margin: 0 0.4em 0.25em -1.4em;
+    vertical-align: middle;
+    accent-color: var(--color-primary);
+    /* 読み物なので操作はさせないが、薄く見えないようにする */
+    opacity: 1;
+  }
+
+  /* 幅が収まらないときだけ横スクロールさせる。
+     table のままでは overflow を持てないため、ブロック化する。
+     左右の影は、続きがあることを示すために内容と一緒に動く背景で描く */
+  .prose table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: 24px 0;
+    overflow-x: auto;
+    /* 端まで送ってもページごと横に流れないようにする */
+    overscroll-behavior-inline: contain;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    background:
+      linear-gradient(to right, var(--bg-base) 40%, transparent) left center /
+        28px 100% no-repeat local,
+      linear-gradient(to left, var(--bg-base) 40%, transparent) right center /
+        28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.1), transparent)
+        left center / 14px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 0.1), transparent)
+        right center / 14px 100% no-repeat scroll;
+  }
+
+  /* キーボードで送れるよう、溢れる表には script が tabindex を付ける */
+  .prose table:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .prose th,
+  .prose td {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  /* 上ヘッダ（thead）と左ヘッダ（th scope="row"）を同じ見た目に揃える */
+  .prose th {
+    background: var(--bg-subtle);
+    font-weight: 600;
+  }
+
+  /* 行見出しは横に送っても左端へ残す。
+     border-collapse では固定セルの罫線が消えるため、影で引き直す */
+  .prose th[scope="row"] {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: inset -1px 0 var(--border);
+  }
+
+  /* 行をたどりやすくする */
+  .prose tr:hover td {
+    background: var(--bg-subtle);
+  }
+
+  /* トグル。三角と文字の間、そして中身の字下げを同じ幅で揃える */
+  .prose details {
+    --details-indent: 1.6em;
+    /* 中身の高さを auto へ動かすための許可。未対応ブラウザは即時開閉になる */
+    interpolate-size: allow-keywords;
+    margin: 24px 0;
+  }
+
+  .prose details > summary {
+    position: relative;
+    padding-left: var(--details-indent);
+    list-style: none;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Safari は list-style を無視するため、marker も個別に消す */
+  .prose details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .prose details > summary:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* 文字の三角は細いので図形で描く。回転させても中心がぶれない形にする */
+  .prose details > summary::before {
+    content: "";
+    position: absolute;
+    /* 1 行分の高さの中央に合わせる。lh 未対応の環境向けに em での近似を先に置く */
+    top: 0.95em;
+    top: 0.5lh;
+    left: 0.08em;
+    translate: 0 -50%;
+    width: 0.62em;
+    height: 0.62em;
+    background: var(--text-muted);
+    clip-path: polygon(20% 0%, 20% 100%, 92% 50%);
+    transition:
+      rotate 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .prose details[open] > summary::before {
+    rotate: 90deg;
+  }
+
+  .prose details > summary:hover::before {
+    background: var(--color-interaction-text);
+  }
+
+  /* 開閉を滑らかにする。未対応ブラウザではこの指定ごと無視される */
+  .prose details::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 200ms ease,
+      content-visibility 200ms allow-discrete;
+  }
+
+  .prose details[open]::details-content {
+    block-size: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prose details > summary::before,
+    .prose details::details-content {
+      transition: none;
+    }
+  }
+
+  .prose details > summary:hover {
+    color: var(--color-interaction-text);
+  }
+
+  /* 中身は三角の幅だけ下げて、トグルの外の文章と見分けられるようにする */
+  .prose details > :not(summary) {
+    margin-left: var(--details-indent);
+  }
+
+  .prose details > :not(summary):first-of-type {
+    margin-top: 8px;
+  }
+
+  /* 区切りは面ではなく Line と余白で強さを分ける（design/DESIGN.md 固有ルール5） */
+  .prose hr {
+    height: 0;
+    margin: 40px 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 章の切れ目。線を短くし、前後の余白で段を大きく取る */
+  .prose hr[data-divider="chapter"] {
+    width: 4em;
+    margin: 72px 0;
+    border-top: 2px solid var(--border-strong);
+  }
+
+  /* ラベル付き。見た目はメモ欄の見出しと同じ「語 + Line」に揃える */
+  .prose [data-divider="labeled"] {
+    margin: 56px 0;
   }
 
   .prose blockquote {
@@ -281,15 +670,33 @@ const { content: Content, status } = Astro.props;
     cursor: zoom-in;
   }
 
+  /* キャプション付きの画像。画像とキャプションの左端を揃える */
+  .prose figure {
+    max-width: var(--measure-prose);
+    margin: 24px auto;
+  }
+
+  .prose figure img {
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .prose figcaption {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
   .prose .prose-memo-section {
     margin: 40px 0 0;
   }
 
-  .prose .prose-memo-section > h2:first-child {
+  .prose .prose-memo-section > h2:first-child,
+  .prose [data-divider="labeled"] {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 7px;
     padding: 0;
     color: var(--text-muted);
     border: 0;
@@ -298,7 +705,12 @@ const { content: Content, status } = Astro.props;
     letter-spacing: 0.04em;
   }
 
-  .prose .prose-memo-section > h2:first-child::after {
+  .prose .prose-memo-section > h2:first-child {
+    margin: 0 0 7px;
+  }
+
+  .prose .prose-memo-section > h2:first-child::after,
+  .prose [data-divider="labeled"]::after {
     content: "";
     flex: 1;
     height: 1px;
