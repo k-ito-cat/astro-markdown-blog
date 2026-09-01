@@ -82,6 +82,74 @@ const initializeCreate = (form: HTMLFormElement) => {
   });
 };
 
+const initializeRename = (root: HTMLElement) => {
+  const slug = root.dataset.fmSlug;
+  const input = root.querySelector("[data-fm-slug-input]");
+  const submit = root.querySelector("[data-fm-slug-submit]");
+  const status = root.querySelector("[data-fm-slug-status]");
+  if (!slug) throw new Error("Slug not found");
+  if (!(input instanceof HTMLInputElement)) throw new Error("Input not found");
+  if (!(submit instanceof HTMLButtonElement))
+    throw new Error("Submit not found");
+  if (!(status instanceof HTMLElement)) throw new Error("Status not found");
+
+  let busy = false;
+
+  const setStatus = (message: string, isError = false) => {
+    status.textContent = message;
+    if (isError) status.dataset.tone = "error";
+    else delete status.dataset.tone;
+  };
+
+  const rename = async () => {
+    if (busy) return;
+
+    const nextSlug = input.value.trim();
+    if (nextSlug === slug) {
+      setStatus("slug が変わっていません", true);
+      return;
+    }
+    if (!SLUG_PATTERN.test(nextSlug)) {
+      setStatus("slug は英小文字・数字・ハイフンで入力してください", true);
+      input.focus();
+      return;
+    }
+
+    busy = true;
+    submit.disabled = true;
+    setStatus("変更中…");
+    try {
+      const result = await request({ action: "rename", slug, nextSlug });
+      const references =
+        typeof result === "object" && result !== null && "references" in result
+          ? result.references
+          : [];
+
+      // 変更は済んでいるので、参照が残っていることだけ伝えて新しい slug へ移る
+      if (Array.isArray(references) && references.length > 0) {
+        window.alert(
+          `変更しました。次の記録が旧 slug を参照したままです。\n\n${references.join("\n")}`,
+        );
+      }
+      // 旧 URL の記事はもう無い。戻るで 404 に落ちないよう履歴を置き換える
+      location.replace(`/preview/posts/${nextSlug}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error), true);
+      busy = false;
+      submit.disabled = false;
+    }
+  };
+
+  submit.addEventListener("click", () => void rename());
+  // フロントマターのフォーム内にあるため、Enter が保存に流れないよう受け止める
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    void rename();
+  });
+};
+
 const initializeDelete = (button: HTMLButtonElement) => {
   const slug = button.dataset.deletePost;
   const title = button.dataset.postTitle ?? slug;
@@ -136,4 +204,5 @@ const initEach = <T extends HTMLElement>(
 export const initPreviewPostManager = () => {
   initEach<HTMLFormElement>("[data-create-form]", initializeCreate);
   initEach<HTMLButtonElement>("[data-delete-post]", initializeDelete);
+  initEach<HTMLElement>("[data-fm-slug]", initializeRename);
 };

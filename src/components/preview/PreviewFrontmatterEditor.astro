@@ -18,6 +18,7 @@ import {
   WRITING_STATUS_ORDER,
 } from "~/constants/writingStatus";
 import { toIsoDate } from "~/utils/formatDate";
+import { normalizePostSlug } from "~/utils/postSlug";
 
 type Props = {
   entryId: string;
@@ -25,6 +26,9 @@ type Props = {
 };
 
 const { entryId, data } = Astro.props;
+
+// slug の正体はファイル名なので、フロントマターの保存とは別の操作として扱う
+const slug = normalizePostSlug(entryId);
 
 const publishedStatuses = Object.values(PUBLISHED_STATUS).sort(
   (a, b) => PUBLISHED_STATUS_ORDER[a] - PUBLISHED_STATUS_ORDER[b],
@@ -61,6 +65,31 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
             required
           />
         </label>
+
+        <div class="fm-field fm-field-wide" data-fm-slug={slug}>
+          <label class="fm-label" for="fm-slug">スラッグ</label>
+          <div class="fm-slug-row">
+            <input
+              type="text"
+              id="fm-slug"
+              class="fm-input"
+              value={slug}
+              autocomplete="off"
+              spellcheck="false"
+              data-fm-slug-input
+            />
+            <button type="button" class="fm-slug-submit" data-fm-slug-submit>
+              変更
+            </button>
+          </div>
+          <p
+            class="fm-slug-status"
+            data-fm-slug-status
+            role="status"
+            aria-live="polite"
+          >
+          </p>
+        </div>
 
         <label class="fm-field">
           <span class="fm-label">公開日</span>
@@ -281,6 +310,43 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
   .fm-input:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 1px;
+  }
+
+  .fm-slug-row {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .fm-slug-submit {
+    flex: none;
+    padding: 6px 12px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .fm-slug-submit:hover {
+    background: var(--bg-hover);
+  }
+
+  .fm-slug-submit:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .fm-slug-status {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .fm-slug-status[data-tone="error"] {
+    color: var(--danger-text);
   }
 
   .fm-fieldset {

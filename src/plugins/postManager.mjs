@@ -175,6 +175,40 @@ const findReferences = async (root, slug) => {
     .map(({ entry }) => entry);
 };
 
+const renamePost = async (root, { slug, nextSlug }) => {
+  if (typeof slug !== "string" || !SLUG_PATTERN.test(slug)) {
+    throw new RequestError(400, "slug が不正です");
+  }
+  if (typeof nextSlug !== "string" || !SLUG_PATTERN.test(nextSlug)) {
+    throw new RequestError(
+      400,
+      "slug は英小文字・数字・ハイフンで指定してください",
+    );
+  }
+  if (slug === nextSlug) throw new RequestError(400, "slug が変わっていません");
+
+  const filePath = resolveInBlog(root, slug);
+  const nextPath = resolveInBlog(root, nextSlug);
+  if (!filePath || !nextPath) throw new RequestError(400, "slug が不正です");
+
+  const exists = await fs
+    .stat(filePath)
+    .then(() => true)
+    .catch(() => false);
+  if (!exists) throw new RequestError(404, "対象の記事が見つかりません");
+
+  const taken = await fs
+    .stat(nextPath)
+    .then(() => true)
+    .catch(() => false);
+  if (taken) throw new RequestError(409, `既に存在します: ${nextSlug}.md`);
+
+  // 参照は旧 slug で探すため、名前を変える前に集める
+  const references = await findReferences(root, slug);
+  await fs.rename(filePath, nextPath);
+  return { slug: nextSlug, references };
+};
+
 const deletePost = async (root, { slug }) => {
   if (typeof slug !== "string" || !SLUG_PATTERN.test(slug)) {
     throw new RequestError(400, "slug が不正です");
@@ -226,6 +260,10 @@ const createHandler = (server) =>
 
       if (payload.action === "create") {
         sendJson(response, 200, await createPost(server, payload));
+        return;
+      }
+      if (payload.action === "rename") {
+        sendJson(response, 200, await renamePost(server.config.root, payload));
         return;
       }
       if (payload.action === "delete") {
