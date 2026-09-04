@@ -141,32 +141,33 @@ const { content: Content, status } = Astro.props;
   }
 
   // 横に溢れる表は、マウス以外でも送れるようフォーカスできるようにする
-  const tables = Array.from(
-    document.querySelectorAll<HTMLTableElement>(".prose table"),
+  // 器に包まれた表はその器を、生 HTML の表は自身を送る
+  const scrollers = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      ".prose .prose-table, .prose > table, .prose :not(.prose-table) > table",
+    ),
   );
-  if (tables.length > 0) {
-    const syncScrollable = (table: HTMLTableElement) => {
+  if (scrollers.length > 0) {
+    const syncScrollable = (scroller: HTMLElement) => {
       // 溢れていないうちは、意味のないタブ位置を作らない
-      if (table.scrollWidth > table.clientWidth) {
-        table.tabIndex = 0;
-        table.setAttribute("role", "region");
-        table.setAttribute("aria-label", "横にスクロールできる表");
+      if (scroller.scrollWidth > scroller.clientWidth) {
+        scroller.tabIndex = 0;
+        scroller.setAttribute("role", "region");
+        scroller.setAttribute("aria-label", "横にスクロールできる表");
         return;
       }
 
-      table.removeAttribute("tabindex");
-      table.removeAttribute("role");
-      table.removeAttribute("aria-label");
+      scroller.removeAttribute("tabindex");
+      scroller.removeAttribute("role");
+      scroller.removeAttribute("aria-label");
     };
 
-    tables.forEach(syncScrollable);
+    scrollers.forEach(syncScrollable);
 
     const observer = new ResizeObserver((entries) => {
-      entries.forEach((entry) =>
-        syncScrollable(entry.target as HTMLTableElement),
-      );
+      entries.forEach((entry) => syncScrollable(entry.target as HTMLElement));
     });
-    tables.forEach((table) => observer.observe(table));
+    scrollers.forEach((scroller) => observer.observe(scroller));
   }
 </script>
 
@@ -433,19 +434,15 @@ const { content: Content, status } = Astro.props;
     opacity: 1;
   }
 
-  /* 幅が収まらないときだけ横スクロールさせる。
-     table のままでは overflow を持てないため、ブロック化する。
+  /* 表は器の側でスクロールさせ、表には最小幅を持たせる。
+     table 自身を display: block にする方法だと、日本語のように任意の位置で
+     折り返せる本文では列が縮んで収まってしまい、狭い画面でスクロールしない。
      左右の影は、続きがあることを示すために内容と一緒に動く背景で描く */
-  .prose table {
-    display: block;
-    width: max-content;
-    max-width: 100%;
+  .prose .prose-table {
     margin: 24px 0;
     overflow-x: auto;
     /* 端まで送ってもページごと横に流れないようにする */
     overscroll-behavior-inline: contain;
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
     background:
       linear-gradient(to right, var(--bg-base) 40%, transparent) left center /
         28px 100% no-repeat local,
@@ -457,7 +454,33 @@ const { content: Content, status } = Astro.props;
         right center / 14px 100% no-repeat scroll;
   }
 
+  .prose .prose-table > table {
+    width: 100%;
+    /* 狭い画面では必ず溢れさせ、横スクロールで読ませる */
+    min-width: 30rem;
+    margin: 0;
+  }
+
+  /* 生 HTML で直接書かれた表は器に包めないため、従来どおり自身で送る */
+  .prose table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: 24px 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prose .prose-table > table {
+    display: table;
+    max-width: none;
+    overflow: visible;
+  }
+
   /* キーボードで送れるよう、溢れる表には script が tabindex を付ける */
+  .prose .prose-table:focus-visible,
   .prose table:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;

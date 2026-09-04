@@ -11,6 +11,7 @@ import rehypeExternalLinks, {
 } from "./src/plugins/rehypeExternalLinks.mjs";
 import remarkDividerVariant from "./src/plugins/remarkDividerVariant.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
+import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
 import imageUploader from "./src/plugins/imageUploader.mjs";
@@ -59,6 +60,7 @@ export default defineConfig({
         ],
       ],
       rehypePlugins: [
+        rehypeTableScroll,
         [rehypeExternalLinks, { internalHosts: ["k-ito-blog.netlify.app"] }],
       ],
     }),
