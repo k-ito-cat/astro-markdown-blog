@@ -3,6 +3,7 @@ import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
 import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import { CATEGORIES, MAX_CATEGORIES_PER_POST } from "~/constants/categories";
+import { TAGS } from "~/constants/tags";
 import {
   POST_PRIORITY,
   POST_PRIORITY_LABELS,
@@ -100,6 +101,23 @@ const tags = Array.from(
   new Set(previewPosts.flatMap((post) => post.data.tags)),
 ).sort((a, b) => a.localeCompare(b, "ja"));
 
+// 作成フォームは正本の定数から出す。まだ使われていない選択肢も選べる必要がある
+const createCategories = [...CATEGORIES].sort((a, b) =>
+  a.localeCompare(b, "ja"),
+);
+const createTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
+
+const today = new Date().toISOString().slice(0, 10);
+const createPublishedStatuses = Object.values(PUBLISHED_STATUS).sort(
+  (a, b) => PUBLISHED_STATUS_ORDER[a] - PUBLISHED_STATUS_ORDER[b],
+);
+const createWritingStatuses = Object.values(WRITING_STATUS).sort(
+  (a, b) => WRITING_STATUS_ORDER[a] - WRITING_STATUS_ORDER[b],
+);
+const createPriorities = Object.values(POST_PRIORITY).sort(
+  (a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b],
+);
+
 const publishedMemoCount = previewPosts.filter(
   (post) =>
     post.data.status === PUBLISHED_STATUS.PUBLISHED &&
@@ -156,52 +174,301 @@ const publishedMemoFilterParams = new URLSearchParams({
       )
     }
 
-    <details class="preview-create-details">
-      <summary class="preview-create-summary">
+    <div class="preview-create-launch">
+      <button type="button" class="preview-create-open" data-create-open>
         <Icon name="octicon:plus-16" />
         新しい記事
-      </summary>
-      <form class="preview-create" data-create-form>
-        <label class="preview-create-field">
-          <span>タイトル</span>
-          <input type="text" required data-create-title />
-        </label>
-        <label class="preview-create-field">
-          <span>slug</span>
-          <input
-            type="text"
-            required
-            placeholder="my-new-article"
-            pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            class="preview-create-slug"
-            data-create-slug
-          />
-        </label>
-        <label class="preview-create-field">
-          <span>カテゴリ</span>
-          <select required data-create-category>
-            {
-              categories.map((category) => (
-                <option value={category}>{category}</option>
-              ))
-            }
-          </select>
-        </label>
-        <label class="preview-create-field">
-          <span>タグ</span>
-          <select required data-create-tag>
-            {tags.map((tag) => <option value={tag}>{tag}</option>)}
-          </select>
-        </label>
-        <button type="submit">作成</button>
-        <p class="preview-create-hint">
-          src/content/posts/blog/<span data-create-preview>slug</span>.md
-          を作ります
-        </p>
-        <p class="preview-create-status" data-create-status aria-live="polite">
-        </p>
+      </button>
+    </div>
+
+    <dialog
+      class="create-dialog"
+      closedby="any"
+      aria-labelledby="create-dialog-title"
+      data-create-dialog
+    >
+      <form class="create-form" data-create-form>
+        <header class="create-head">
+          <h2 class="create-title" id="create-dialog-title">新しい記事</h2>
+
+          <details class="create-ai">
+            <summary class="create-ai-summary">AI 候補</summary>
+            <div class="create-ai-panel">
+              <p class="create-ai-note">
+                タイトルをもとに、タイトル・スラッグ・カテゴリ・タグの候補を出します。
+              </p>
+              <textarea
+                class="create-input create-ai-instruction"
+                rows="3"
+                placeholder="指示（任意）例: もっと短く、専門用語を避けて"
+                data-create-instruction></textarea>
+              <button type="button" class="create-ai-run" data-create-suggest>
+                候補を出す
+              </button>
+            </div>
+          </details>
+
+          <button
+            type="button"
+            class="create-close"
+            aria-label="閉じる"
+            data-create-close
+          >
+            <Icon name="octicon:x-16" />
+          </button>
+        </header>
+
+        <div class="create-body">
+          <div class="create-column">
+            <div class="create-field">
+              <label class="create-label" for="create-title">タイトル</label>
+              <input
+                type="text"
+                id="create-title"
+                class="create-input create-title-input"
+                autocomplete="off"
+                required
+                data-create-title
+              />
+              <div class="create-suggestions" data-suggestions="titles"></div>
+            </div>
+
+            <div class="create-field">
+              <label class="create-label" for="create-slug">スラッグ</label>
+              <input
+                type="text"
+                id="create-slug"
+                class="create-input create-slug"
+                placeholder="my-new-article"
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                data-create-slug
+              />
+              <div class="create-suggestions" data-suggestions="slugs"></div>
+              <p class="create-hint">
+                src/content/posts/blog/<span data-create-preview>slug</span>.md
+              </p>
+            </div>
+
+            <div class="create-field create-field-body">
+              <label class="create-label" for="create-body">本文</label>
+              <textarea
+                id="create-body"
+                class="create-input create-body-input"
+                placeholder="空のままなら「ここに本文を書く」と「## メモ」で作ります"
+                data-create-body></textarea>
+              <div
+                class="create-body-modes"
+                role="radiogroup"
+                aria-label="入力の扱い"
+              >
+                <label class="create-option">
+                  <input
+                    type="radio"
+                    name="bodyMode"
+                    value="body"
+                    checked
+                    data-create-body-mode
+                  />
+                  <span>本文にする</span>
+                </label>
+                <label class="create-option">
+                  <input
+                    type="radio"
+                    name="bodyMode"
+                    value="memo"
+                    data-create-body-mode
+                  />
+                  <span>メモに入れる</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="create-column">
+            <fieldset
+              class="create-choices"
+              data-create-group="categories"
+              data-create-max={MAX_CATEGORIES_PER_POST}
+            >
+              <legend class="create-legend">
+                カテゴリ
+                <span class="create-legend-hint">
+                  1〜{MAX_CATEGORIES_PER_POST}件
+                </span>
+              </legend>
+              <div class="create-suggestions" data-suggestions="categories">
+              </div>
+              <div class="create-options">
+                {
+                  createCategories.map((category) => (
+                    <label class="create-option" data-create-choice={category}>
+                      <input
+                        type="checkbox"
+                        name="categories"
+                        value={category}
+                      />
+                      <span>{category}</span>
+                    </label>
+                  ))
+                }
+              </div>
+            </fieldset>
+
+            <fieldset class="create-choices" data-create-group="tags">
+              <legend class="create-legend">
+                タグ
+                <span class="create-legend-hint">1件以上</span>
+              </legend>
+              <div class="create-tag-input">
+                <input
+                  type="search"
+                  class="create-input"
+                  placeholder="絞り込む・無ければ追加"
+                  autocomplete="off"
+                  data-create-filter
+                  data-new-tag-input
+                />
+                <button type="button" class="create-tag-add" data-new-tag-add>
+                  ＋追加
+                </button>
+              </div>
+              <div class="create-suggestions" data-suggestions="tags"></div>
+              <div class="create-suggestions" data-suggestions="newTags"></div>
+              <div class="create-selected" data-create-selected></div>
+              <div class="create-new-tags" data-new-tags></div>
+              <div class="create-options create-options-scroll">
+                {
+                  createTags.map((tag) => (
+                    <label class="create-option" data-create-choice={tag}>
+                      <input type="checkbox" name="tags" value={tag} />
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        class="tag-delete"
+                        aria-label={`${tag} を定数から削除`}
+                        data-tag-delete={tag}
+                      >
+                        ×
+                      </button>
+                    </label>
+                  ))
+                }
+              </div>
+            </fieldset>
+
+            <details class="create-advanced">
+              <summary class="create-advanced-summary">
+                公開設定
+                <span class="create-legend-hint">既定のままで作れます</span>
+              </summary>
+              <div class="create-grid">
+                <label class="create-field">
+                  <span class="create-label">公開日</span>
+                  <input
+                    type="date"
+                    class="create-input"
+                    value={today}
+                    data-create-field="publishedAt"
+                  />
+                </label>
+
+                <label class="create-field">
+                  <span class="create-label">更新日</span>
+                  <input
+                    type="date"
+                    class="create-input"
+                    value={today}
+                    data-create-field="updatedAt"
+                  />
+                </label>
+
+                <label class="create-field">
+                  <span class="create-label">公開状態</span>
+                  <select class="create-input" data-create-field="status">
+                    {
+                      createPublishedStatuses.map((value) => (
+                        <option
+                          value={value}
+                          selected={value === PUBLISHED_STATUS.PRIVATE}
+                        >
+                          {PUBLISHED_STATUS_LABELS[value]}
+                        </option>
+                      ))
+                    }
+                  </select>
+                </label>
+
+                <label class="create-field">
+                  <span class="create-label">執筆状態</span>
+                  <select
+                    class="create-input"
+                    data-create-field="writingStatus"
+                  >
+                    {
+                      createWritingStatuses.map((value) => (
+                        <option
+                          value={value}
+                          selected={value === WRITING_STATUS.TODO}
+                        >
+                          {WRITING_STATUS_LABELS[value]}
+                        </option>
+                      ))
+                    }
+                  </select>
+                </label>
+
+                <label class="create-field">
+                  <span class="create-label">優先度</span>
+                  <select class="create-input" data-create-field="priority">
+                    {
+                      createPriorities.map((value) => (
+                        <option
+                          value={value}
+                          selected={value === POST_PRIORITY.NONE}
+                        >
+                          {POST_PRIORITY_LABELS[value]}
+                        </option>
+                      ))
+                    }
+                  </select>
+                </label>
+
+                <label class="create-field create-field-wide">
+                  <span class="create-label">サムネイル</span>
+                  <input
+                    type="text"
+                    class="create-input"
+                    autocomplete="off"
+                    data-create-field="thumbnail"
+                  />
+                </label>
+
+                <label class="create-field create-field-wide">
+                  <span class="create-label">GitHub URL</span>
+                  <input
+                    type="text"
+                    class="create-input"
+                    autocomplete="off"
+                    data-create-field="githubUrl"
+                  />
+                </label>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <footer class="create-actions">
+          <button type="submit" class="create-submit">作成</button>
+          <button type="button" class="create-cancel" data-create-close>
+            キャンセル
+          </button>
+          <p class="create-status" data-create-status aria-live="polite"></p>
+        </footer>
       </form>
-    </details>
+    </dialog>
 
     <form class="preview-tools" data-preview-controls>
       <label class="preview-field preview-search-field">
@@ -1137,107 +1404,446 @@ const publishedMemoFilterParams = new URLSearchParams({
     pointer-events: none;
   }
 
-  .preview-create-details {
+  .preview-create-launch {
     margin-bottom: 16px;
     padding-bottom: 14px;
     border-bottom: 1px solid var(--border);
   }
 
-  .preview-create-summary {
+  .preview-create-open {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding: 6px 12px;
     color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
     font-size: var(--text-sm);
+    font-family: inherit;
     font-weight: 700;
+    cursor: pointer;
+  }
+
+  .preview-create-open svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .create-dialog {
+    /* Tailwind の preflight が全要素の margin を 0 にするため、
+       dialog 既定の margin: auto が消えて中央に来ない。ここで戻す */
+    margin: auto;
+    width: min(1060px, calc(100vw - 32px));
+    max-height: min(880px, calc(100vh - 48px));
+    padding: 0;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .create-dialog::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  /* ダイアログを開いている間は背面を固定する。dialog 単体では止まらない */
+  :global(html:has(dialog[open])) {
+    overflow: hidden;
+  }
+
+  .create-form {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+  }
+
+  .create-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .create-title {
+    margin: 0;
+    margin-right: auto;
+    font-size: var(--text-base);
+    font-weight: 700;
+  }
+
+  /* AI はフォームの途中ではなく、見出しの隣の 1 アクションとして置く */
+  .create-ai {
+    position: relative;
+  }
+
+  .create-ai-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
     cursor: pointer;
     list-style: none;
   }
 
-  .preview-create-summary::-webkit-details-marker {
+  .create-ai-summary::-webkit-details-marker {
     display: none;
   }
 
-  .preview-create-summary svg {
-    width: 14px;
-    height: 14px;
-    transition: transform var(--duration-feedback) var(--ease-trace);
+  .create-ai-summary::before {
+    content: "✦";
   }
 
-  .preview-create-details[open] .preview-create-summary svg {
-    transform: rotate(45deg);
+  .create-ai-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    width: min(320px, 70vw);
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+  }
+
+  .create-ai-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+  }
+
+  .create-ai-instruction {
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .create-ai-run {
+    justify-self: start;
+    padding: 6px 14px;
+    color: var(--bg-base);
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .create-ai-run:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .create-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--radius-label);
+    cursor: pointer;
+  }
+
+  .create-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  .create-close svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .create-body {
+    display: grid;
+    gap: 20px 32px;
+    padding: 16px;
+    overflow-y: auto;
+    /* 端まで送っても背面へスクロールを渡さない */
+    overscroll-behavior: contain;
+  }
+
+  /* 縦へ伸ばさず横に使う。左は書くもの、右は決めるもの */
+  @media (min-width: 900px) {
+    .create-body {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  .create-column {
+    display: grid;
+    align-content: start;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .create-field {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .create-field-body {
+    gap: 6px;
+  }
+
+  .create-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .create-input {
+    width: 100%;
+    padding: 6px 8px;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+  }
+
+  .create-input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  /* 主役。他の入力より一段大きく置く */
+  .create-title-input {
+    padding: 8px 10px;
+    font-size: var(--text-md);
   }
 
   /* slug は機械側の識別子（design/foundations.md Typography） */
-  .preview-create-slug {
+  .create-slug {
     font-family: var(--font-machine);
   }
 
-  .preview-create-hint {
-    flex-basis: 100%;
+  .create-body-input {
+    min-height: 260px;
+    resize: vertical;
+    line-height: 1.7;
+    font-family: var(--font-machine);
+  }
+
+  .create-body-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
+
+  .create-hint {
     margin: 0;
     color: var(--text-muted);
     font-family: var(--font-machine);
     font-size: 11px;
   }
 
-  .preview-create {
-    margin-top: 12px;
+  .create-suggestions {
     display: flex;
     flex-wrap: wrap;
-    align-items: end;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
+    gap: 6px;
   }
 
-  .preview-create-field {
+  .create-suggestions:empty {
+    display: none;
+  }
+
+  .create-choices {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .create-legend {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-size: var(--text-sm);
+    align-items: baseline;
+    gap: 8px;
+    padding: 0;
     color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
-  .preview-create-field select {
-    height: 30px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-label);
-    background: var(--bg-base);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
+  .create-legend-hint {
+    opacity: 0.8;
   }
 
-  .preview-create-field input {
-    height: 30px;
-    padding: 0 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-label);
-    background: var(--bg-base);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
+  /* 絞り込みと新規追加は同じ入力で兼ねる。打てば絞り込まれ、無ければ足せる */
+  .create-tag-input {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
   }
 
-  .preview-create button[type="submit"] {
-    height: 30px;
-    padding: 0 14px;
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-label);
-    background: var(--bg-base);
+  .create-tag-add {
+    flex: none;
+    padding: 6px 12px;
     color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
     font-size: var(--text-sm);
-    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
   }
 
-  .preview-create-status {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
+  .create-tag-add:hover {
+    background: var(--bg-hover);
   }
 
-  .preview-create-status[data-tone="error"] {
+  .create-selected,
+  .create-new-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .create-selected:empty,
+  .create-new-tags:empty {
+    display: none;
+  }
+
+  .create-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding: 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+  }
+
+  .create-options-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .create-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+
+  .create-option[hidden] {
+    display: none;
+  }
+
+  /* 常に見えていると 150 件ぶんの × が並んで邪魔になる。触れたときだけ出す */
+  .tag-delete {
+    padding: 0 2px;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    font-size: var(--text-xs);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .tag-delete:focus-visible,
+  label:hover > .tag-delete {
+    opacity: 1;
+  }
+
+  .tag-delete:hover {
+    color: var(--danger);
+  }
+
+  .create-option input:disabled + span {
+    color: var(--text-muted);
+    opacity: 0.55;
+  }
+
+  /* 既定のまま作ることが多いので、開いた人だけが触る */
+  .create-advanced-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .create-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .create-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .create-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .create-submit,
+  .create-cancel {
+    padding: 7px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .create-submit {
+    color: var(--bg-base);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .create-submit:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .create-cancel {
+    color: var(--text-primary);
+    background: var(--bg-base);
+  }
+
+  .create-cancel:hover {
+    background: var(--bg-hover);
+  }
+
+  .create-status {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .create-status[data-tone="error"] {
     color: var(--danger);
   }
 

@@ -1,6 +1,12 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  appendTags,
+  readTags,
+  TagError,
+  validateNewTags,
+} from "./tagStore.mjs";
 
 const ENDPOINT = "/__frontmatter";
 const POSTS_DIR = "src/content/posts";
@@ -19,7 +25,7 @@ class RequestError extends Error {
 const loadFieldSpecs = async (server) => {
   const [categories, tags, priority, published, writing] = await Promise.all([
     server.ssrLoadModule("/src/constants/categories.ts"),
-    server.ssrLoadModule("/src/constants/tags.ts"),
+    readTags(server.config.root),
     server.ssrLoadModule("/src/constants/postPriority.ts"),
     server.ssrLoadModule("/src/constants/publishedStatus.ts"),
     server.ssrLoadModule("/src/constants/writingStatus.ts"),
@@ -37,7 +43,7 @@ const loadFieldSpecs = async (server) => {
       min: 1,
       max: categories.MAX_CATEGORIES_PER_POST,
     },
-    tags: { kind: "list", options: tags.TAGS, min: 1 },
+    tags: { kind: "list", options: tags, min: 1 },
     status: {
       kind: "choice",
       required: true,
@@ -242,6 +248,25 @@ const createHandler = (server, parseDocument) =>
       if (!filePath) throw new RequestError(404, "対象の記事が見つかりません");
 
       const specs = await loadFieldSpecs(server);
+      // 新しいタグは記事より先に定数へ入れる。順序が逆だと検証で弾かれる
+      const added = validateNewTags(payload.newTags, specs.tags.options);
+      if (added.length > 0) {
+        specs.tags = {
+          ...specs.tags,
+          options: [...specs.tags.options, ...added],
+        };
+        // 追加したタグは、この記事に設定するために足したもの。
+        // クライアントが載せ忘れても、ここで必ず記事側へ入れる
+        const current = Array.isArray(payload.data.tags)
+          ? payload.data.tags.map(String)
+          : [];
+        payload.data.tags = [
+          ...current,
+          ...added.filter((tag) => !current.includes(tag)),
+        ];
+        await appendTags(server.config.root, added);
+      }
+
       const source = await fs.readFile(filePath, "utf8");
       const result = updateFrontmatter({
         parseDocument,
@@ -253,9 +278,9 @@ const createHandler = (server, parseDocument) =>
       if (result.changed.length > 0) {
         await fs.writeFile(filePath, result.source, "utf8");
       }
-      sendJson(response, 200, { changed: result.changed });
+      sendJson(response, 200, { changed: result.changed, addedTags: added });
     } catch (error) {
-      if (error instanceof RequestError) {
+      if (error instanceof RequestError || error instanceof TagError) {
         sendJson(response, error.status, { message: error.message });
         return;
       }

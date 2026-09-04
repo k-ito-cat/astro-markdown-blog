@@ -18,6 +18,8 @@ import imageUploader from "./src/plugins/imageUploader.mjs";
 import imagePruner from "./src/plugins/imagePruner.mjs";
 import contentReload from "./src/plugins/contentReload.mjs";
 import postManager from "./src/plugins/postManager.mjs";
+import createSuggester from "./src/plugins/createSuggester.mjs";
+import tagEditor from "./src/plugins/tagEditor.mjs";
 import blockRange from "./src/plugins/blockRange.mjs";
 
 import astroExpressiveCode from "astro-expressive-code";
@@ -40,6 +42,8 @@ export default defineConfig({
       imagePruner(),
       contentReload(),
       postManager(),
+      createSuggester(),
+      tagEditor(),
     ],
   },
   markdown: {

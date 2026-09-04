@@ -157,6 +157,86 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   }
 </BaseLayout>
 
+<!-- JS が作る要素には scoped style が当たらないため、共通のチップはここで当てる -->
+<style is:global>
+  .create-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-xs);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .create-chip::after {
+    content: "×";
+    color: var(--text-muted);
+  }
+  /* AI が出した候補。押して入力に入れるものなので、
+     確定済みの選択チップ（.create-chip）とは別の見た目にする */
+  .suggestion-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    color: var(--color-interaction-text);
+    background: color-mix(in srgb, var(--accent-warm) 34%, var(--bg-base));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+    border-radius: var(--radius-label);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .suggestion-chip::before {
+    content: "✦";
+    color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+    font-size: 0.9em;
+  }
+
+  /* まだ定数に無いタグ。保存・作成のときに tags.ts へ書かれる */
+  .new-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px dashed var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-xs);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .new-tag-chip::before {
+    content: "＋";
+  }
+
+  .new-tag-chip::after {
+    content: "×";
+    color: var(--text-muted);
+  }
+
+  .suggestion-chip-machine {
+    font-family: var(--font-machine);
+  }
+
+  .suggestion-chip:hover {
+    color: var(--bg-base);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .suggestion-chip:hover::before {
+    color: var(--bg-base);
+  }
+</style>
+
 <style>
   .preview-layout {
     width: 100%;
@@ -230,9 +310,14 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     text-decoration: underline;
   }
 
+  /*
+   * Article と Prose は自分で margin-inline: auto して中央に寄る。
+   * 列の幅を本文の測度に合わせれば余白が生まれず、サイドバー側の端に揃う。
+   */
   .preview-article-grid {
     display: grid;
     gap: 36px;
+    max-width: var(--measure-prose);
   }
 
   @media (min-width: 640px) {
@@ -257,6 +342,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     .preview-article-grid.has-trace {
       grid-template-columns: minmax(0, 1fr) 180px;
       gap: 48px;
+      max-width: calc(var(--measure-prose) + 48px + 180px);
     }
   }
 </style>

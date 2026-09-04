@@ -1,13 +1,21 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  appendTags,
+  readTags,
+  TagError,
+  validateNewTags,
+} from "./tagStore.mjs";
 
 const ENDPOINT = "/__post";
 const POSTS_DIR = "src/content/posts";
 const BLOG_DIR = "src/content/posts/blog";
 const TEMPLATE_PATH = "_templates/generator/new/index.ejs.t";
 const POST_EXTENSIONS = [".md", ".mdx"];
-const MAX_REQUEST_BYTES = 64 * 1024;
+const MAX_REQUEST_BYTES = 256 * 1024;
+const BODY_MODES = ["body", "memo"];
+const MEMO_HEADING = "## メモ";
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // hygen の frontmatter（to: 行）を落とし、本文テンプレートだけ取り出す
 const HYGEN_HEADER = /^---\r?\n[\s\S]*?\r?\n---\r?\n/;
@@ -61,11 +69,21 @@ const readPosts = async (root) => {
 };
 
 const loadOptions = async (server) => {
-  const [categories, tags] = await Promise.all([
+  const [categories, tags, published, writing, priority] = await Promise.all([
     server.ssrLoadModule("/src/constants/categories.ts"),
-    server.ssrLoadModule("/src/constants/tags.ts"),
+    readTags(server.config.root),
+    server.ssrLoadModule("/src/constants/publishedStatus.ts"),
+    server.ssrLoadModule("/src/constants/writingStatus.ts"),
+    server.ssrLoadModule("/src/constants/postPriority.ts"),
   ]);
-  return { categories: categories.CATEGORIES, tags: tags.TAGS };
+  return {
+    categories: categories.CATEGORIES,
+    maxCategories: categories.MAX_CATEGORIES_PER_POST,
+    tags,
+    status: Object.values(published.PUBLISHED_STATUS),
+    writingStatus: Object.values(writing.WRITING_STATUS),
+    priority: Object.values(priority.POST_PRIORITY),
+  };
 };
 
 /**
@@ -76,7 +94,22 @@ const loadOptions = async (server) => {
  * categories と tags はスキーマが 1 件以上を要求するため、空のままだと
  * コンテンツの検証が落ちて dev サーバーが止まる。必ず値を入れる。
  */
-const buildContent = async (root, { title, category, tag }) => {
+const toYamlList = (values) =>
+  `[${values.map((value) => JSON.stringify(value)).join(", ")}]`;
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** テンプレートの 1 行を、渡された値で差し替える */
+const replaceField = (source, key, value) =>
+  source.replace(
+    new RegExp(`^${key}: .*$`, "m"),
+    `${key}: ${JSON.stringify(value)}`,
+  );
+
+const buildContent = async (
+  root,
+  { title, categories, tags, fields, body, bodyMode },
+) => {
   const templatePath = path.resolve(root, TEMPLATE_PATH);
   const template = await fs.readFile(templatePath, "utf8").catch(() => null);
   if (template === null) {
@@ -87,14 +120,19 @@ const buildContent = async (root, { title, category, tag }) => {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const filled = template
+  let filled = template
     .replace(HYGEN_HEADER, "")
     .replaceAll("<%= title %>", title)
     .replaceAll('<%= new Date().toISOString().split("T")[0] %>', today)
-    .replace(/^categories: \[\]$/m, `categories: ["${category}"]`)
-    .replace(/^tags: \[\]$/m, `tags: ["${tag}"]`)
+    .replace(/^categories: \[\]$/m, `categories: ${toYamlList(categories)}`)
+    .replace(/^tags: \[\]$/m, `tags: ${toYamlList(tags)}`)
     // hygen ヘッダーを外した跡の空行を落とす。この後の ^ 判定に効く
     .trimStart();
+
+  // 指定のあった項目だけ、テンプレートの既定値から差し替える
+  for (const [key, value] of Object.entries(fields)) {
+    filled = replaceField(filled, key, value);
+  }
 
   if (filled.includes("<%")) {
     throw new RequestError(
@@ -118,11 +156,38 @@ const buildContent = async (root, { title, category, tag }) => {
     .split("\n")
     .filter((line) => !line.trimStart().startsWith("#"))
     .join("\n");
-  const body = filled.slice(match[0].length);
-  return `${match[1]}${frontmatter}${match[3]}${body.trimEnd()}\n`;
+
+  // 入力があれば、テンプレートの本文（"ここに本文を書く" と メモ 見出し）は使わない
+  const written =
+    body === ""
+      ? filled.slice(match[0].length).trimEnd()
+      : bodyMode === "memo"
+        ? `\n\n${MEMO_HEADING}\n\n${body}`
+        : `\n\n${body}`;
+  return `${match[1]}${frontmatter}${match[3]}${written}\n`;
 };
 
-const createPost = async (server, { slug, title, category, tag }) => {
+/** 選択肢に無い値と件数違反を弾く。フロントマターの検証で dev サーバーを止めないため */
+const validateChoices = (values, allowed, { min, max, label }) => {
+  if (!Array.isArray(values) || values.length < min) {
+    throw new RequestError(400, `${label}を${min}件以上選んでください`);
+  }
+  if (values.length > max) {
+    throw new RequestError(400, `${label}は${max}件までです`);
+  }
+  if (new Set(values).size !== values.length) {
+    throw new RequestError(400, `${label}が重複しています`);
+  }
+  if (values.some((value) => !allowed.includes(value))) {
+    throw new RequestError(400, `${label}に未登録の値が含まれています`);
+  }
+  return values;
+};
+
+const createPost = async (
+  server,
+  { slug, title, categories, tags, newTags, fields, body, bodyMode },
+) => {
   const { root } = server.config;
   if (typeof slug !== "string" || !SLUG_PATTERN.test(slug)) {
     throw new RequestError(
@@ -135,12 +200,24 @@ const createPost = async (server, { slug, title, category, tag }) => {
   }
 
   const options = await loadOptions(server);
-  if (!options.categories.includes(category)) {
-    throw new RequestError(400, "カテゴリを選んでください");
-  }
-  if (!options.tags.includes(tag)) {
-    throw new RequestError(400, "タグを選んでください");
-  }
+  // 新しいタグは記事より先に定数へ入れる。ここで通れば以降の検証も通る
+  const added = validateNewTags(newTags, options.tags);
+  const allowedTags = [...options.tags, ...added];
+  // 追加したタグは、この記事に付けるために足したもの。必ず記事側へ入れる
+  const selectedTags = Array.isArray(tags)
+    ? [...tags, ...added.filter((tag) => !tags.includes(tag))]
+    : tags;
+
+  validateChoices(categories, options.categories, {
+    min: 1,
+    max: options.maxCategories,
+    label: "カテゴリ",
+  });
+  validateChoices(selectedTags, allowedTags, {
+    min: 1,
+    max: allowedTags.length,
+    label: "タグ",
+  });
 
   const filePath = resolveInBlog(root, slug);
   if (!filePath) throw new RequestError(400, "slug が不正です");
@@ -151,13 +228,62 @@ const createPost = async (server, { slug, title, category, tag }) => {
     .catch(() => false);
   if (exists) throw new RequestError(409, `既に存在します: ${slug}.md`);
 
+  const written = {};
+  if (fields !== undefined) {
+    if (
+      fields === null ||
+      typeof fields !== "object" ||
+      Array.isArray(fields)
+    ) {
+      throw new RequestError(400, "フロントマターの形式が不正です");
+    }
+
+    for (const [key, spec] of Object.entries({
+      publishedAt: { kind: "date", label: "公開日" },
+      updatedAt: { kind: "date", label: "更新日" },
+      thumbnail: { kind: "text", label: "サムネイル" },
+      githubUrl: { kind: "text", label: "GitHub URL" },
+      status: { kind: "choice", label: "公開状態" },
+      writingStatus: { kind: "choice", label: "執筆状態" },
+      priority: { kind: "choice", label: "優先度" },
+    })) {
+      const value = fields[key];
+      if (value === undefined) continue;
+      if (typeof value !== "string") {
+        throw new RequestError(400, `${spec.label}の形式が不正です`);
+      }
+      if (spec.kind === "date" && !DATE_PATTERN.test(value)) {
+        throw new RequestError(
+          400,
+          `${spec.label}は YYYY-MM-DD で指定してください`,
+        );
+      }
+      if (spec.kind === "choice" && !options[key].includes(value)) {
+        throw new RequestError(400, `${spec.label}を選んでください`);
+      }
+
+      written[key] = value;
+    }
+  }
+
+  if (body !== undefined && typeof body !== "string") {
+    throw new RequestError(400, "本文の形式が不正です");
+  }
+  if (bodyMode !== undefined && !BODY_MODES.includes(bodyMode)) {
+    throw new RequestError(400, "本文の扱いが不正です");
+  }
+
+  await appendTags(root, added);
   const content = await buildContent(root, {
     title: title.trim(),
-    category,
-    tag,
+    categories,
+    tags: selectedTags,
+    fields: written,
+    body: (body ?? "").trim(),
+    bodyMode: bodyMode ?? "body",
   });
   await fs.writeFile(filePath, content, "utf8");
-  return { slug };
+  return { slug, addedTags: added };
 };
 
 /** 消した記事を指したままの記録を探す。相対リンク・絶対URL・relations を一度に見る */
@@ -275,7 +401,7 @@ const createHandler = (server) =>
         `未対応の操作です: ${String(payload.action)}`,
       );
     } catch (error) {
-      if (error instanceof RequestError) {
+      if (error instanceof RequestError || error instanceof TagError) {
         sendJson(response, error.status, { message: error.message });
         return;
       }

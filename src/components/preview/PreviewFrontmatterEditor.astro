@@ -54,178 +54,229 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     </summary>
 
     <form class="fm-form" data-fm-form>
-      <div class="fm-grid">
-        <label class="fm-field fm-field-wide">
-          <span class="fm-label">タイトル</span>
-          <input
-            type="text"
-            name="title"
-            class="fm-input"
-            value={data.title}
-            required
-          />
-        </label>
+      <div class="fm-toolbar">
+        <details class="fm-ai">
+          <summary class="fm-ai-summary">AI 候補</summary>
+          <div class="fm-ai-panel">
+            <p class="fm-ai-note">
+              タイトル・スラッグ・カテゴリ・タグの候補を出します。
+            </p>
+            <textarea
+              class="fm-input fm-ai-instruction"
+              rows="3"
+              placeholder="指示（任意）例: もっと短く、専門用語を避けて"
+              data-fm-instruction></textarea>
+            <label class="fm-ai-option">
+              <input type="checkbox" data-fm-suggest-body />
+              <span>本文も読む（10秒ほど長くなります）</span>
+            </label>
+            <button type="button" class="fm-ai-run" data-fm-suggest>
+              候補を出す
+            </button>
+          </div>
+        </details>
+        <p
+          class="fm-suggest-status"
+          data-fm-suggest-status
+          role="status"
+          aria-live="polite"
+        >
+        </p>
+      </div>
 
-        <div class="fm-field fm-field-wide" data-fm-slug={slug}>
-          <label class="fm-label" for="fm-slug">スラッグ</label>
-          <div class="fm-slug-row">
+      <div class="fm-body">
+        <div class="fm-column">
+          <div class="fm-field">
+            <label class="fm-label" for="fm-title">タイトル</label>
+            <input
+              type="text"
+              id="fm-title"
+              name="title"
+              class="fm-input fm-title-input"
+              value={data.title}
+              required
+            />
+            <div class="fm-suggestions" data-suggestions="titles"></div>
+          </div>
+
+          <div class="fm-field" data-fm-slug={slug}>
+            <label class="fm-label" for="fm-slug">スラッグ</label>
             <input
               type="text"
               id="fm-slug"
-              class="fm-input"
+              class="fm-input fm-slug-input"
               value={slug}
               autocomplete="off"
               spellcheck="false"
               data-fm-slug-input
             />
-            <button type="button" class="fm-slug-submit" data-fm-slug-submit>
-              変更
-            </button>
+            <div class="fm-suggestions" data-suggestions="slugs"></div>
+            <p class="fm-hint">
+              変更すると、保存時にファイル名を変えて新しい URL へ移ります
+            </p>
           </div>
-          <p
-            class="fm-slug-status"
-            data-fm-slug-status
-            role="status"
-            aria-live="polite"
-          >
-          </p>
+
+          <div class="fm-grid">
+            <label class="fm-field">
+              <span class="fm-label">公開日</span>
+              <input
+                type="date"
+                name="publishedAt"
+                class="fm-input"
+                value={toIsoDate(data.publishedAt)}
+                required
+              />
+            </label>
+
+            <label class="fm-field">
+              <span class="fm-label">更新日</span>
+              <input
+                type="date"
+                name="updatedAt"
+                class="fm-input"
+                value={toIsoDate(data.updatedAt)}
+                required
+              />
+            </label>
+
+            <label class="fm-field">
+              <span class="fm-label">公開状態</span>
+              <select name="status" class="fm-input">
+                {
+                  publishedStatuses.map((value) => (
+                    <option value={value} selected={value === data.status}>
+                      {PUBLISHED_STATUS_LABELS[value]}
+                    </option>
+                  ))
+                }
+              </select>
+            </label>
+
+            <label class="fm-field">
+              <span class="fm-label">執筆状態</span>
+              <select name="writingStatus" class="fm-input">
+                {
+                  writingStatuses.map((value) => (
+                    <option
+                      value={value}
+                      selected={value === data.writingStatus}
+                    >
+                      {WRITING_STATUS_LABELS[value]}
+                    </option>
+                  ))
+                }
+              </select>
+            </label>
+
+            <label class="fm-field">
+              <span class="fm-label">優先度</span>
+              <select name="priority" class="fm-input">
+                {
+                  priorities.map((value) => (
+                    <option value={value} selected={value === data.priority}>
+                      {POST_PRIORITY_LABELS[value]}
+                    </option>
+                  ))
+                }
+              </select>
+            </label>
+
+            <label class="fm-field fm-field-wide">
+              <span class="fm-label">サムネイル</span>
+              <input
+                type="text"
+                name="thumbnail"
+                class="fm-input"
+                value={data.thumbnail ?? ""}
+              />
+            </label>
+
+            <label class="fm-field fm-field-wide">
+              <span class="fm-label">GitHub URL</span>
+              <input
+                type="text"
+                name="githubUrl"
+                class="fm-input"
+                value={data.githubUrl ?? ""}
+              />
+            </label>
+          </div>
         </div>
 
-        <label class="fm-field">
-          <span class="fm-label">公開日</span>
-          <input
-            type="date"
-            name="publishedAt"
-            class="fm-input"
-            value={toIsoDate(data.publishedAt)}
-            required
-          />
-        </label>
+        <div class="fm-column">
+          <fieldset class="fm-fieldset">
+            <legend class="fm-legend">
+              カテゴリ
+              <span class="fm-legend-hint">
+                1〜{MAX_CATEGORIES_PER_POST}件
+              </span>
+            </legend>
+            <div class="fm-suggestions" data-suggestions="categories"></div>
+            <div class="fm-choices">
+              {
+                CATEGORIES.map((category) => (
+                  <label class="fm-choice">
+                    <input
+                      type="checkbox"
+                      name="categories"
+                      value={category}
+                      checked={data.categories.includes(category)}
+                      data-fm-category
+                    />
+                    <span>{category}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
 
-        <label class="fm-field">
-          <span class="fm-label">更新日</span>
-          <input
-            type="date"
-            name="updatedAt"
-            class="fm-input"
-            value={toIsoDate(data.updatedAt)}
-            required
-          />
-        </label>
-
-        <label class="fm-field">
-          <span class="fm-label">公開状態</span>
-          <select name="status" class="fm-input">
-            {
-              publishedStatuses.map((value) => (
-                <option value={value} selected={value === data.status}>
-                  {PUBLISHED_STATUS_LABELS[value]}
-                </option>
-              ))
-            }
-          </select>
-        </label>
-
-        <label class="fm-field">
-          <span class="fm-label">執筆状態</span>
-          <select name="writingStatus" class="fm-input">
-            {
-              writingStatuses.map((value) => (
-                <option value={value} selected={value === data.writingStatus}>
-                  {WRITING_STATUS_LABELS[value]}
-                </option>
-              ))
-            }
-          </select>
-        </label>
-
-        <label class="fm-field">
-          <span class="fm-label">優先度</span>
-          <select name="priority" class="fm-input">
-            {
-              priorities.map((value) => (
-                <option value={value} selected={value === data.priority}>
-                  {POST_PRIORITY_LABELS[value]}
-                </option>
-              ))
-            }
-          </select>
-        </label>
-
-        <label class="fm-field fm-field-wide">
-          <span class="fm-label">サムネイル</span>
-          <input
-            type="text"
-            name="thumbnail"
-            class="fm-input"
-            value={data.thumbnail ?? ""}
-          />
-        </label>
-
-        <label class="fm-field fm-field-wide">
-          <span class="fm-label">GitHub URL</span>
-          <input
-            type="text"
-            name="githubUrl"
-            class="fm-input"
-            value={data.githubUrl ?? ""}
-          />
-        </label>
+          <fieldset class="fm-fieldset">
+            <legend class="fm-legend">
+              タグ
+              <span class="fm-legend-hint">1件以上</span>
+            </legend>
+            <div class="fm-tag-input">
+              <input
+                type="search"
+                class="fm-input"
+                placeholder="絞り込む・無ければ追加"
+                autocomplete="off"
+                data-fm-tag-filter
+                data-new-tag-input
+              />
+              <button type="button" class="fm-tag-add" data-new-tag-add>
+                ＋追加
+              </button>
+            </div>
+            <div class="fm-suggestions" data-suggestions="tags"></div>
+            <div class="fm-suggestions" data-suggestions="newTags"></div>
+            <div class="fm-new-tags" data-new-tags></div>
+            <div class="fm-choices fm-choices-scroll">
+              {
+                sortedTags.map((tag) => (
+                  <label class="fm-choice" data-fm-tag-choice={tag}>
+                    <input
+                      type="checkbox"
+                      name="tags"
+                      value={tag}
+                      checked={data.tags.includes(tag)}
+                    />
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      class="tag-delete"
+                      aria-label={`${tag} を定数から削除`}
+                      data-tag-delete={tag}
+                    >
+                      ×
+                    </button>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+        </div>
       </div>
-
-      <fieldset class="fm-fieldset">
-        <legend class="fm-legend">
-          カテゴリ
-          <span class="fm-legend-hint">
-            1〜{MAX_CATEGORIES_PER_POST}件
-          </span>
-        </legend>
-        <div class="fm-choices">
-          {
-            CATEGORIES.map((category) => (
-              <label class="fm-choice">
-                <input
-                  type="checkbox"
-                  name="categories"
-                  value={category}
-                  checked={data.categories.includes(category)}
-                  data-fm-category
-                />
-                <span>{category}</span>
-              </label>
-            ))
-          }
-        </div>
-      </fieldset>
-
-      <fieldset class="fm-fieldset">
-        <legend class="fm-legend">
-          タグ
-          <span class="fm-legend-hint">1件以上</span>
-        </legend>
-        <input
-          type="search"
-          class="fm-input fm-tag-filter"
-          placeholder="タグを絞り込む"
-          autocomplete="off"
-          data-fm-tag-filter
-        />
-        <div class="fm-choices fm-choices-scroll">
-          {
-            sortedTags.map((tag) => (
-              <label class="fm-choice" data-fm-tag-choice={tag}>
-                <input
-                  type="checkbox"
-                  name="tags"
-                  value={tag}
-                  checked={data.tags.includes(tag)}
-                />
-                <span>{tag}</span>
-              </label>
-            ))
-          }
-        </div>
-      </fieldset>
 
       <footer class="fm-actions">
         <button type="submit" class="fm-submit" data-fm-submit>保存</button>
@@ -269,22 +320,137 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
   .fm-form {
     display: grid;
-    gap: 18px;
-    padding: 4px 14px 16px;
+    gap: 16px;
+    padding: 14px;
     border-top: 1px solid var(--border);
   }
 
-  .fm-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* AI は項目の途中ではなく、フォームの入口に 1 アクションとして置く */
+  .fm-toolbar {
+    display: flex;
+    align-items: center;
     gap: 12px;
-    margin-top: 14px;
+  }
+
+  .fm-ai {
+    position: relative;
+  }
+
+  .fm-ai-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .fm-ai-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .fm-ai-summary::before {
+    content: "✦";
+  }
+
+  .fm-ai-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    width: min(320px, 80vw);
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+  }
+
+  .fm-ai-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+  }
+
+  .fm-ai-instruction {
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .fm-ai-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+
+  .fm-ai-run {
+    justify-self: start;
+    padding: 6px 14px;
+    color: var(--bg-base);
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .fm-ai-run:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  .fm-suggest-status {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .fm-suggest-status[data-tone="error"] {
+    color: var(--danger-text);
+  }
+
+  .fm-body {
+    display: grid;
+    gap: 18px 32px;
+  }
+
+  /* 左は記事そのもの、右は分類 */
+  @media (min-width: 900px) {
+    .fm-body {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  .fm-column {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    min-width: 0;
   }
 
   .fm-field {
     display: grid;
     gap: 4px;
     min-width: 0;
+  }
+
+  .fm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
   }
 
   .fm-field-wide {
@@ -312,44 +478,36 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     outline-offset: 1px;
   }
 
-  .fm-slug-row {
-    display: flex;
-    gap: 8px;
-    min-width: 0;
+  /* 主役。他の入力より一段大きく置く */
+  .fm-title-input {
+    padding: 8px 10px;
+    font-size: var(--text-md);
   }
 
-  .fm-slug-submit {
-    flex: none;
-    padding: 6px 12px;
-    color: var(--text-primary);
-    background: var(--bg-base);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-label);
-    font-size: var(--text-sm);
-    font-family: inherit;
-    cursor: pointer;
+  /* slug は機械側の識別子（design/foundations.md Typography） */
+  .fm-slug-input {
+    font-family: var(--font-machine);
   }
 
-  .fm-slug-submit:hover {
-    background: var(--bg-hover);
-  }
-
-  .fm-slug-submit:disabled {
-    opacity: 0.6;
-    cursor: progress;
-  }
-
-  .fm-slug-status {
+  .fm-hint {
     margin: 0;
     color: var(--text-muted);
     font-size: var(--text-xs);
   }
 
-  .fm-slug-status[data-tone="error"] {
-    color: var(--danger-text);
+  .fm-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .fm-suggestions:empty {
+    display: none;
   }
 
   .fm-fieldset {
+    display: grid;
+    gap: 8px;
     min-width: 0;
     margin: 0;
     padding: 0;
@@ -360,31 +518,62 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 6px;
     padding: 0;
     color: var(--text-muted);
     font-size: var(--text-xs);
   }
 
   .fm-legend-hint {
-    color: var(--text-muted);
     opacity: 0.8;
+  }
+
+  /* 絞り込みと新規追加は同じ入力で兼ねる。打てば絞り込まれ、無ければ足せる */
+  .fm-tag-input {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .fm-tag-add {
+    flex: none;
+    padding: 6px 12px;
+    color: var(--color-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .fm-tag-add:hover {
+    background: var(--bg-hover);
+  }
+
+  .fm-new-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .fm-new-tags:empty {
+    display: none;
   }
 
   .fm-choices {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 10px;
-  }
-
-  .fm-choices-scroll {
-    max-height: 168px;
-    margin-top: 6px;
     padding: 8px;
-    overflow-y: auto;
     background: var(--bg-base);
     border: 1px solid var(--border);
     border-radius: var(--radius-label);
+  }
+
+  .fm-choices-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .fm-choice {
@@ -400,6 +589,27 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     display: none;
   }
 
+  /* 常に見えていると 150 件ぶんの × が並んで邪魔になる。触れたときだけ出す */
+  .tag-delete {
+    padding: 0 2px;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    font-size: var(--text-xs);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .tag-delete:focus-visible,
+  label:hover > .tag-delete {
+    opacity: 1;
+  }
+
+  .tag-delete:hover {
+    color: var(--danger);
+  }
+
   .fm-choice input:disabled + span {
     color: var(--text-muted);
     opacity: 0.55;
@@ -410,11 +620,12 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+    padding-top: 4px;
   }
 
   .fm-submit,
   .fm-reset {
-    padding: 6px 14px;
+    padding: 7px 18px;
     border: 1px solid var(--border);
     border-radius: var(--radius-label);
     font-size: var(--text-sm);
@@ -424,8 +635,8 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
   .fm-submit {
     color: var(--bg-base);
-    background: var(--text-primary);
-    border-color: var(--text-primary);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     font-weight: 600;
   }
 

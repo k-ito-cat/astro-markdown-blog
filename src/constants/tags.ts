@@ -174,5 +174,6 @@ export const TAGS = [
   "プロダクト設計",
   "用語",
   "検証",
+  "MDX",
 ] as const;
 export type Tag = (typeof TAGS)[number];

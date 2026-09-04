@@ -2,6 +2,36 @@
 import { Image } from "astro:assets";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import wipCat from "~/assets/wip-cat.png";
+
+/**
+ * 記事を作成・リネームした直後は、dev サーバーのコンテンツストアがまだ古い。
+ * 新しい slug のルートが生成されておらず、ここへ落ちてくる。
+ * 反映され次第その URL は開けるようになるため、少しの間だけ読み直して待つ。
+ */
+const PREVIEW_PREFIX = "/preview/posts/";
+const RETRY_LIMIT = 12;
+const RETRY_DELAY_MS = 400;
+
+const retry = Number(Astro.url.searchParams.get("retry") ?? 0);
+const isPreviewMiss =
+  import.meta.env.DEV &&
+  Astro.url.pathname.startsWith(PREVIEW_PREFIX) &&
+  Number.isInteger(retry) &&
+  retry < RETRY_LIMIT;
+
+if (isPreviewMiss) {
+  const next = new URL(Astro.url);
+  next.searchParams.set("retry", String(retry + 1));
+
+  return new Response(
+    `<!doctype html><html lang="ja"><head><meta charset="utf-8">` +
+      `<title>反映を待っています</title>` +
+      `<meta http-equiv="refresh" content="${RETRY_DELAY_MS / 1000};url=${next.pathname}${next.search}">` +
+      `</head><body style="font-family:system-ui;padding:24px;color:#4b5563">` +
+      `<p>反映を待っています…</p></body></html>`,
+    { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
+  );
+}
 ---
 
 <BaseLayout title="記事が存在しません">
