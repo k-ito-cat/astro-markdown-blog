@@ -56,8 +56,6 @@ const { content: Content, status } = Astro.props;
     let scrollY = 0;
 
     lightbox.on("open", () => {
-      scrollY = window.scrollY;
-
       // スクロールバーが消えたぶんを内側で受ける。glightbox も同じ補正をするが、
       // body の margin を使うため、中央寄せの本文が横へずれてしまう
       const scrollbar =
@@ -90,7 +88,12 @@ const { content: Content, status } = Astro.props;
 
     // 各画像クリックで該当インデックスを開く
     imgEls.forEach((img, idx) => {
-      img.addEventListener("click", () => lightbox.openAt(idx));
+      img.addEventListener("click", () => {
+        // 開く前に控える。glightbox は open を通知する前に html へ overflow: hidden を
+        // 付けるため、通知後に読むとモバイルでは 0 に潰れていて、閉じたとき先頭へ飛ぶ
+        scrollY = window.scrollY;
+        lightbox.openAt(idx);
+      });
       (img as HTMLImageElement).style.cursor = "zoom-in";
     });
   });
