@@ -71,7 +71,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
       <div class="preview-layout">
         <PreviewSidebar posts={posts} currentId={post.id} />
         <main id="main-content" class="preview-detail">
-          <header class="preview-toolbar">
+          <div class="preview-toolbar-nav">
             <a
               href="/preview/posts"
               data-reading-return
@@ -86,7 +86,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
               </a>
             ) : (
               <span class="preview-toolbar-public preview-toolbar-note">
-                非公開のため本番ページなし
+                本番ページなし
               </span>
             )}
             <button
@@ -97,11 +97,15 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             >
               削除
             </button>
-          </header>
+          </div>
 
-          <PreviewFrontmatterEditor entryId={post.id} data={post.data} />
-
-          <PreviewBodyEditor entryId={post.id} body={post.body ?? ""} />
+          <PreviewBodyEditor entryId={post.id} body={post.body ?? ""}>
+            <PreviewFrontmatterEditor
+              slot="tools"
+              entryId={post.id}
+              data={post.data}
+            />
+          </PreviewBodyEditor>
 
           <div
             class:list={[
@@ -257,19 +261,20 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     font-size: var(--text-sm);
   }
 
-  .preview-toolbar {
+  /* ページの操作。編集の道具とは役割が違うので、追従させず右上へ置く */
+  .preview-toolbar-nav {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 28px;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 8px;
   }
 
-  /* 「戻る」とは役割が違うので、行の反対側に離す */
   .preview-toolbar-public {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-left: auto;
   }
 
   .preview-toolbar-public svg {
@@ -299,14 +304,14 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     font-size: var(--text-sm);
   }
 
-  .preview-toolbar a {
+  .preview-toolbar-nav a {
     color: var(--color-text-sub);
     font-size: var(--text-sm);
     text-decoration: none;
   }
 
-  .preview-toolbar a:hover,
-  .preview-toolbar a:focus-visible {
+  .preview-toolbar-nav a:hover,
+  .preview-toolbar-nav a:focus-visible {
     color: var(--color-interaction-text);
     text-decoration: underline;
   }

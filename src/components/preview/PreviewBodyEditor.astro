@@ -200,9 +200,10 @@ const SNIPPET_GROUPS = [
     ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
   </p>
   <div class="body-editor-bar">
+    <div class="body-editor-tools">
     <p class="body-editor-status" data-status aria-live="polite"></p>
     <span class="body-editor-count" data-count hidden></span>
-    <details class="body-editor-help">
+    <details class="body-editor-help" data-preview-pane>
       <summary>
         <Icon name="octicon:book-16" aria-hidden="true" />
         <span>記法</span>
@@ -238,6 +239,7 @@ const SNIPPET_GROUPS = [
         }
       </div>
     </details>
+    <slot name="tools" />
     <button
       type="button"
       class="body-editor-save"
@@ -258,6 +260,7 @@ const SNIPPET_GROUPS = [
       hidden>差分</button
     >
     <button type="button" data-discard disabled>破棄</button>
+    </div>
   </div>
   <template data-block-toolbar-icon="help">
     <Icon name="octicon:book-16" aria-hidden="true" />
@@ -271,18 +274,29 @@ const SNIPPET_GROUPS = [
 </body-editor>
 
 <style>
+  /*
+   * 箱を持たせない。sticky は親の箱の中しか動けず、この要素の中身は
+   * ヒントとバーだけで記事本文は兄弟にある。箱を消して .preview-detail を
+   * 親にすることで、バーが本文の長さぶん追従できる。
+   */
   .body-editor {
-    display: block;
+    display: contents;
   }
 
-  /* ページのどこにいても保存できるよう追従させる */
+  /*
+   * ページのどこにいても保存できるよう追従させる。
+   * ここがスタッキングコンテキストの境界になるので、中から出る右ペインの
+   * 重なりもこの値で決まる。本文脇の道具（.block-toolbar ほか、10〜12）と
+   * モバイルの固定バー（30）より上、左レール（40）より下に置く。
+   */
   .body-editor-bar {
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 35;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
     padding: 10px 0;
@@ -302,8 +316,9 @@ const SNIPPET_GROUPS = [
     margin-bottom: 6px;
   }
 
+  /* 道具の側へ移したので、行の余白を埋める役目はもう持たせない */
   .body-editor-status {
-    flex: 1 1 200px;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -371,9 +386,17 @@ const SNIPPET_GROUPS = [
   }
 
   /* 開いてもバーの高さを変えないよう、中身はバーの下へ浮かせる */
+  /* 状態と道具を行の両端へ寄せる。折り返して一行に一つになっても右端に残す */
+  .body-editor-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
   .body-editor-help {
     position: relative;
-    margin-left: auto;
   }
 
   .body-editor-help > summary {
@@ -415,11 +438,11 @@ const SNIPPET_GROUPS = [
   /* 本文を見ながら引けるよう、画面の右端へ寄せて立てる */
   .body-editor-help-body {
     position: fixed;
-    top: 0;
+    top: var(--preview-pane-top, 52px);
     right: 0;
     z-index: 20;
     width: min(440px, 92vw);
-    height: 100dvh;
+    height: calc(100dvh - var(--preview-pane-top, 52px));
     padding: 4px 20px 24px;
     overflow-y: auto;
     border-left: 1px solid var(--border-strong);

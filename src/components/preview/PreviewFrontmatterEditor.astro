@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from "astro:content";
+import { Icon } from "astro-icon/components";
 import { CATEGORIES, MAX_CATEGORIES_PER_POST } from "~/constants/categories";
 import {
   POST_PRIORITY,
@@ -47,13 +48,14 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
   data-entry-id={entryId}
   data-max-categories={MAX_CATEGORIES_PER_POST}
 >
-  <details class="fm-details">
+  <details class="fm-details" data-preview-pane>
     <summary class="fm-summary">
-      <span>フロントマターを編集</span>
-      <span class="fm-summary-hint">相関・改訂履歴はファイルを直接編集</span>
+      <Icon name="octicon:list-unordered-16" aria-hidden="true" />
+      <span>フロントマター</span>
     </summary>
 
     <form class="fm-form" data-fm-form>
+      <p class="fm-form-hint">相関・改訂履歴はファイルを直接編集</p>
       <div class="fm-toolbar">
         <details class="fm-ai">
           <summary class="fm-ai-summary">AI 候補</summary>
@@ -290,39 +292,69 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
 <style>
   .fm-editor {
-    display: block;
-    margin-bottom: 28px;
+    display: contents;
   }
 
   .fm-details {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
+    position: relative;
   }
 
+  /* 記法のトリガーと同じ形にして、道具の見た目を揃える */
   .fm-summary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 10px;
-    padding: 10px 14px;
-    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    color: var(--text-secondary);
     font-size: var(--text-sm);
-    font-weight: 600;
+    line-height: 1;
+    list-style: none;
     cursor: pointer;
   }
 
-  .fm-summary-hint {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: 400;
+  .fm-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .fm-summary:hover,
+  .fm-summary:focus-visible {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .fm-details[open] > .fm-summary {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .fm-summary svg {
+    width: 14px;
+    height: 14px;
   }
 
   .fm-form {
+    position: fixed;
+    top: var(--preview-pane-top, 52px);
+    right: 0;
+    z-index: 20;
     display: grid;
+    align-content: start;
     gap: 16px;
-    padding: 14px;
-    border-top: 1px solid var(--border);
+    width: min(440px, 92vw);
+    height: calc(100dvh - var(--preview-pane-top, 52px));
+    padding: 16px 20px 24px;
+    overflow-y: auto;
+    background: var(--bg-base);
+    border-left: 1px solid var(--border-strong);
+  }
+
+  .fm-form-hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   /* AI は項目の途中ではなく、フォームの入口に 1 アクションとして置く */
