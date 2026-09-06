@@ -104,13 +104,15 @@ const firstSection = sections[0];
 
               {hasSubheadings && (
                 <div class="trace-sub-wrap">
-                  <ol id={panelId} class="trace-subheadings">
-                    {section.subheadings.map((subheading) => (
-                      <li>
-                        <a href={`#${subheading.slug}`}>{subheading.text}</a>
-                      </li>
-                    ))}
-                  </ol>
+                  <div class="trace-sub-clip">
+                    <ol id={panelId} class="trace-subheadings">
+                      {section.subheadings.map((subheading) => (
+                        <li>
+                          <a href={`#${subheading.slug}`}>{subheading.text}</a>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 </div>
               )}
             </li>
@@ -310,14 +312,17 @@ const firstSection = sections[0];
         visibility 0s;
     }
 
+    .trace-sub-clip {
+      min-height: 0;
+      overflow: hidden;
+    }
+
     .trace-subheadings {
       display: grid;
       gap: 6px;
       /* 畳んだときに余白が残らないよう、間隔は内側の padding で持つ */
-      min-height: 0;
       margin: 0;
       padding: 8px 0 10px 11px;
-      overflow: hidden;
       list-style: none;
     }
 
