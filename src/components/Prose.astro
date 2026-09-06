@@ -675,6 +675,34 @@ const { content: Content, status } = Astro.props;
     margin: 24px 0;
   }
 
+  .prose .expressive-code .copy {
+    --copy-done-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042a.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200'%2F%3E%3C%2Fsvg%3E");
+  }
+
+  .prose .expressive-code .copy button {
+    border-radius: var(--radius-label);
+  }
+
+  .prose .expressive-code .copy:has(.feedback.show) button::after {
+    background-color: var(--color-accent);
+    -webkit-mask-image: var(--copy-done-icon);
+    mask-image: var(--copy-done-icon);
+  }
+
+  .prose .expressive-code .copy .feedback {
+    width: 1px;
+    height: 1px;
+    margin-inline-end: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: transparent;
+    clip-path: inset(50%);
+  }
+
+  .prose .expressive-code .copy .feedback::after {
+    content: none;
+  }
+
   .prose [data-filename] {
     position: relative;
   }
