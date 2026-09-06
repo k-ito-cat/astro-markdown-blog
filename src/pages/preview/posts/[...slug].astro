@@ -11,7 +11,12 @@ import PreviewBodyEditor from "~/components/preview/PreviewBodyEditor.astro";
 import PreviewFrontmatterEditor from "~/components/preview/PreviewFrontmatterEditor.astro";
 import PreviewPostsIndex from "~/components/preview/PreviewPostsIndex.astro";
 import PreviewSidebar from "~/components/preview/PreviewSidebar.astro";
-import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import {
+  PUBLISHED_STATUS,
+  PUBLISHED_STATUS_LABELS,
+} from "~/constants/publishedStatus";
+import { WRITING_STATUS_LABELS } from "~/constants/writingStatus";
+import { POST_PRIORITY_LABELS } from "~/constants/postPriority";
 import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
 import { stripMemoHeadings } from "~/utils/postHeadings";
 
@@ -100,6 +105,18 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
           </div>
 
           <PreviewBodyEditor entryId={post.id} body={post.body ?? ""}>
+            <p
+              slot="state"
+              class="preview-toolbar-state"
+              data-publication={post.data.status}
+            >
+              <span class="preview-toolbar-publication">
+                {PUBLISHED_STATUS_LABELS[post.data.status]}
+              </span>
+              <span>{WRITING_STATUS_LABELS[post.data.writingStatus]}</span>
+              <span>優先度 {POST_PRIORITY_LABELS[post.data.priority]}</span>
+            </p>
+
             <PreviewFrontmatterEditor
               slot="tools"
               entryId={post.id}
@@ -297,6 +314,38 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     color: var(--danger);
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  /*
+   * 編集の判断材料になる状態は、frontmatter を開かなくても読めるようにする。
+   * 公開ステータスだけ色を持たせ、残りは本文より前に出ないよう控えめに置く。
+   */
+  .preview-toolbar-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .preview-toolbar-state span + span::before {
+    content: "／";
+    margin-right: 8px;
+    color: var(--border-strong);
+  }
+
+  .preview-toolbar-publication {
+    color: var(--publication-color, var(--text-muted));
+    font-weight: 600;
+  }
+
+  .preview-toolbar-state[data-publication="published"] {
+    --publication-color: var(--color-primary);
+  }
+
+  .preview-toolbar-state[data-publication="draft"] {
+    --publication-color: var(--warning);
   }
 
   .preview-toolbar-note {

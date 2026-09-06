@@ -200,6 +200,7 @@ const SNIPPET_GROUPS = [
     ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
   </p>
   <div class="body-editor-bar">
+    <slot name="state" />
     <div class="body-editor-tools">
     <p class="body-editor-status" data-status aria-live="polite"></p>
     <span class="body-editor-count" data-count hidden></span>
