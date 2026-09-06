@@ -44,6 +44,12 @@
     var(--color-danger) 11%,
     var(--color-background)
   );
+  /* 添削。本文の注釈ではなく作業中の書き込みなので、色を持たせず紙の側へ寄せる */
+  --color-annotation-review-surface: color-mix(
+    in srgb,
+    var(--color-text-muted) 7%,
+    var(--color-background)
+  );
 
   /* 本文のマーカー。注釈の面より濃く、文字が読める濃度に留める */
   --color-marker-default: color-mix(

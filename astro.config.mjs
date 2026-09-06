@@ -10,6 +10,7 @@ import rehypeExternalLinks, {
   remarkExternalLinksInHtml,
 } from "./src/plugins/rehypeExternalLinks.mjs";
 import remarkDividerVariant from "./src/plugins/remarkDividerVariant.mjs";
+import remarkReviewCallout from "./src/plugins/remarkReviewCallout.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
@@ -57,6 +58,11 @@ export default defineConfig({
   markdown: {
     processor: unified({
       remarkPlugins: [
+        // 添削は Alert より先に拾う。`[!REVIEW]` を独自の器に振り替えるため
+        [
+          remarkReviewCallout,
+          { stripPublished: process.env.NODE_ENV === "production" },
+        ],
         remarkGithubBlockquoteAlert,
         remarkDividerVariant,
         remarkImageFigure,
