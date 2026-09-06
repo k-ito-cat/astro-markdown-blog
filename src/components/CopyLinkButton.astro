@@ -9,6 +9,7 @@ type Props = {
 };
 
 const { path, label, class: className } = Astro.props;
+const hasLabel = Boolean(label || Astro.slots.has("label"));
 ---
 
 <button
@@ -20,7 +21,13 @@ const { path, label, class: className } = Astro.props;
 >
   <Icon name="octicon:link-16" class="copy-link-icon" />
   <Icon name="octicon:check-16" class="copy-link-done" />
-  {label && <span class="copy-link-label">{label}</span>}
+  {
+    hasLabel && (
+      <span class="copy-link-label">
+        <slot name="label">{label}</slot>
+      </span>
+    )
+  }
 </button>
 
 <style>

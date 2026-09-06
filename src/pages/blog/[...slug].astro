@@ -1,9 +1,7 @@
 ---
 import { getCollection, getEntry, render } from "astro:content";
-import { Icon } from "astro-icon/components";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
-import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import Navigation from "~/components/Navigation.astro";
 import RecordRelations from "~/components/RecordRelations.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
@@ -44,33 +42,6 @@ const { groups, sameField, older, newer } = getPostRelations(
   ogImage={post.data.thumbnail}
 >
   <main id="main-content" class="article-main">
-    <div class="article-toolbar">
-      <a
-        href="/blog"
-        class="back-link"
-        data-reading-return
-        data-return-paths='["/","/blog"]'
-      >
-        <Icon name="octicon:arrow-left-16" aria-hidden="true" />一覧へ戻る
-      </a>
-      <CopyLinkButton
-        path={Astro.url.pathname}
-        label="リンクをコピー"
-        class="article-copy-link"
-      />
-      {
-        /* ローカル専用の導線。公開ビルドには含めない */
-        import.meta.env.DEV && (
-          <a
-            class="article-preview-link"
-            href={`/preview/posts/${previewSlug}`}
-          >
-            プレビュー
-          </a>
-        )
-      }
-    </div>
-
     <div
       class:list={[
         "article-grid",
@@ -88,6 +59,13 @@ const { groups, sameField, older, newer } = getPostRelations(
         headings={headings}
         status={post.data.status}
         revisions={post.data.revisions}
+        returnHref="/blog"
+        returnLabel="一覧へ戻る"
+        returnSourcePaths={["/", "/blog"]}
+        copyPath={Astro.url.pathname}
+        previewHref={import.meta.env.DEV
+          ? `/preview/posts/${previewSlug}`
+          : undefined}
       />
       {
         !isDraft && (
@@ -96,6 +74,10 @@ const { groups, sameField, older, newer } = getPostRelations(
             returnHref="/blog"
             returnLabel="一覧へ戻る"
             returnSourcePaths={["/", "/blog"]}
+            copyPath={Astro.url.pathname}
+            previewHref={
+              import.meta.env.DEV ? `/preview/posts/${previewSlug}` : undefined
+            }
           />
         )
       }
@@ -120,46 +102,6 @@ const { groups, sameField, older, newer } = getPostRelations(
     max-width: var(--max-width-content);
     margin: 0 auto;
     padding: 24px 16px 80px;
-  }
-
-  .article-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-
-  /* 子コンポーネントの要素には scoped style が届かない */
-  .article-toolbar :global(.article-copy-link) {
-    margin-left: auto;
-  }
-
-  .article-preview-link {
-    color: var(--color-text-sub);
-    font-size: var(--text-sm);
-    text-decoration: none;
-  }
-
-  .article-preview-link:hover,
-  .article-preview-link:focus-visible {
-    color: var(--color-interaction-text);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--color-text-sub);
-    font-size: var(--text-sm);
-    text-decoration: none;
-  }
-
-  .back-link:hover,
-  .back-link:focus-visible {
-    color: var(--color-interaction-text);
-    text-decoration: underline;
   }
 
   .article-grid {

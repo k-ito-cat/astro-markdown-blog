@@ -2,6 +2,7 @@
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import { Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
+import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import wipCat from "~/assets/wip-cat.png";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
@@ -29,6 +30,11 @@ type Props = {
   revisions?: { date: Date; summary: string }[];
   forceRenderContent?: boolean;
   showGithubCard?: boolean;
+  returnHref?: string;
+  returnLabel?: string;
+  returnSourcePaths?: string[];
+  copyPath?: string;
+  previewHref?: string;
 };
 
 const {
@@ -44,7 +50,13 @@ const {
   revisions,
   forceRenderContent = false,
   showGithubCard = true,
+  returnHref,
+  returnLabel,
+  returnSourcePaths = [],
+  copyPath,
+  previewHref,
 } = Astro.props;
+const returnPaths = JSON.stringify(returnSourcePaths);
 const tocHeadings = headings.filter(
   (heading) =>
     heading.depth === HEADING_LEVEL.TWO ||
@@ -65,24 +77,90 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
   {
     showContent && tocHeadings.length > 0 && (
-      <details class="article-structure" open>
-        <summary>
-          <span>
-            目次
-            <small>{tocHeadings.length}項目</small>
-          </span>
-          <Icon name="octicon:chevron-down-16" aria-hidden="true" />
-        </summary>
-        <ol>
-          {tocHeadings.map((heading) => (
-            <li class:list={{ "is-h3": heading.depth === HEADING_LEVEL.THREE }}>
-              <a href={`#${heading.slug}`} data-structure-link>
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </details>
+      <>
+        <span class="article-structure-sentinel" aria-hidden="true" />
+        <details class="article-structure">
+          <summary>
+            <span>
+              <span>目次</span>
+              <small>{tocHeadings.length}項目</small>
+            </span>
+            <Icon name="octicon:chevron-down-16" aria-hidden="true" />
+          </summary>
+          <div class="article-structure-body">
+            <ol>
+              {tocHeadings.map((heading) => (
+                <li
+                  class:list={{
+                    "is-h3": heading.depth === HEADING_LEVEL.THREE,
+                  }}
+                >
+                  <a href={`#${heading.slug}`} data-structure-link>
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+            {returnHref && returnLabel && copyPath && (
+              <div class="article-structure-actions">
+                <div
+                  class:list={[
+                    "article-structure-actions-inner",
+                    { "has-preview": previewHref },
+                  ]}
+                >
+                  <a
+                    class="article-structure-action article-structure-action--return"
+                    href={returnHref}
+                    aria-label={returnLabel}
+                    data-reading-return
+                    data-return-paths={returnPaths}
+                  >
+                    <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+                    <span>
+                      一覧へ
+                      <wbr />
+                      戻る
+                    </span>
+                  </a>
+                  <a
+                    class="article-structure-action article-structure-action--top"
+                    href="#"
+                    aria-label="ページの上部へ戻る"
+                  >
+                    <Icon name="octicon:arrow-up-16" aria-hidden="true" />
+                    <span>
+                      ページ上部へ
+                      <wbr />
+                      戻る
+                    </span>
+                  </a>
+                  <CopyLinkButton
+                    class="article-structure-action article-structure-action--copy"
+                    path={copyPath}
+                    label="記事のリンクをコピー"
+                  >
+                    <Fragment slot="label">
+                      記事のリンクを
+                      <wbr />
+                      コピー
+                    </Fragment>
+                  </CopyLinkButton>
+                  {previewHref && (
+                    <a
+                      class="article-structure-action article-structure-action--preview"
+                      href={previewHref}
+                    >
+                      <Icon name="octicon:eye-16" aria-hidden="true" />
+                      <span>プレビュー</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      </>
     )
   }
 
@@ -123,6 +201,10 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
 <style>
   .article {
+    --article-sticky-header-height: 52px;
+    --article-structure-summary-height: 44px;
+    --article-structure-padding-bottom: 14px;
+
     width: 100%;
     min-width: 0;
   }
@@ -151,10 +233,36 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
    * .current-trace が同じ役割を担うため、二重に置かない。
    */
   .article-structure {
+    --article-structure-side-inset: calc(
+      (100vw - min(var(--measure-prose), 100vw - 32px)) / 2
+    );
+
+    position: relative;
+    isolation: isolate;
     max-width: var(--measure-prose);
     margin: 0 auto 24px;
-    padding: 0 0 14px;
+    padding: 0 0 var(--article-structure-padding-bottom);
+  }
+
+  .article-structure::before {
+    position: absolute;
+    z-index: -1;
+    inset-block: 0;
+    inset-inline: calc(-1 * var(--article-structure-side-inset));
+    pointer-events: none;
+    content: "";
+    background: var(--color-background);
     border-bottom: 1px solid var(--color-border);
+    clip-path: inset(0 var(--article-structure-side-inset));
+    transition:
+      border-color var(--duration-feedback) ease,
+      box-shadow var(--duration-state) var(--ease-trace),
+      clip-path var(--duration-state) var(--ease-trace);
+  }
+
+  .article-structure-sentinel {
+    display: block;
+    height: 1px;
   }
 
   @media (min-width: 1024px) {
@@ -167,12 +275,22 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 40px;
+    min-height: var(--article-structure-summary-height);
     color: var(--color-primary);
     font-size: var(--text-sm);
     font-weight: 700;
     cursor: pointer;
     list-style: none;
+    transition:
+      color var(--duration-feedback) ease,
+      background-color var(--duration-feedback) ease,
+      transform var(--duration-state) var(--ease-trace);
+  }
+
+  .article-structure summary > span {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
   }
 
   .article-structure summary small {
@@ -180,6 +298,9 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     color: var(--color-text-muted);
     font-size: 11px;
     font-weight: 400;
+    transition:
+      opacity var(--duration-feedback) ease,
+      transform var(--duration-feedback) var(--ease-trace);
   }
 
   .article-structure summary::-webkit-details-marker {
@@ -190,11 +311,17 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   .article-structure ol {
+    position: relative;
+    z-index: 1;
     display: grid;
     gap: 6px;
     margin: 8px 0 0;
     padding: 0;
     list-style: none;
+  }
+
+  .article-structure-body {
+    min-block-size: 0;
   }
 
   .article-structure li.is-h3 {
@@ -208,6 +335,201 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   .article-structure a:hover {
     color: var(--color-interaction-text);
     text-decoration: underline;
+  }
+
+  .article-structure-actions {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    padding-top: 0;
+    overflow: hidden;
+    visibility: hidden;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    opacity: 0;
+    transition:
+      grid-template-rows var(--duration-state) var(--ease-trace),
+      margin var(--duration-state) var(--ease-trace),
+      padding var(--duration-state) var(--ease-trace),
+      border-color var(--duration-feedback) ease,
+      opacity var(--duration-feedback) ease;
+  }
+
+  .article-structure-actions-inner {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-block-size: 0;
+    gap: 0;
+  }
+
+  .article-structure-actions-inner > :global(.article-structure-action) {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-items: center;
+    align-content: center;
+    justify-items: start;
+    gap: 6px;
+    justify-self: stretch;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 8px;
+    color: var(--color-text-sub);
+    font-size: var(--text-xs);
+    line-height: 1.3;
+    text-align: start;
+    text-decoration: none;
+    transition:
+      color var(--duration-feedback) ease,
+      background-color var(--duration-feedback) ease;
+  }
+
+  .article-structure-actions-inner
+    > :global(.article-structure-action)
+    :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .article-structure-actions-inner
+    > :global(.article-structure-action)
+    :global(.copy-link-label),
+  .article-structure-actions-inner > a.article-structure-action > span {
+    min-width: 0;
+    word-break: keep-all;
+  }
+
+  .article-structure-actions-inner > a.article-structure-action {
+    font-size: var(--text-xs);
+    line-height: 1.3;
+  }
+
+  .article-structure-actions-inner > :global(.article-structure-action--top),
+  .article-structure-actions-inner.has-preview
+    > :global(.article-structure-action--preview) {
+    border-inline-start: 1px solid var(--color-border);
+  }
+
+  .article-structure-actions-inner > :global(.article-structure-action--copy),
+  .article-structure-actions-inner
+    > :global(.article-structure-action--preview) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .article-structure-actions-inner:not(.has-preview)
+    > :global(.article-structure-action--copy) {
+    grid-column: 1 / -1;
+    border-inline-start: 0;
+  }
+
+  .article-structure-actions-inner > :global(.article-structure-action):hover,
+  .article-structure-actions-inner
+    > :global(.article-structure-action):focus-visible {
+    color: var(--color-interaction-text);
+    background: var(--bg-subtle);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 1023px) {
+    .article-structure {
+      position: sticky;
+      inset-block-start: var(--article-sticky-header-height);
+      z-index: 20;
+    }
+
+    .article-structure[data-stuck]::before {
+      border-bottom-color: var(--color-border-strong);
+      box-shadow: 0 6px 14px rgb(0 0 0 / 8%);
+      clip-path: inset(0);
+    }
+
+    .article-structure[data-stuck] summary {
+      color: var(--color-text-sub);
+      font-weight: 600;
+    }
+
+    .article-structure[data-stuck] summary small {
+      margin-left: 6px;
+    }
+
+    .article-structure[data-stuck] summary :global(svg) {
+      width: 14px;
+      height: 14px;
+    }
+
+    .article-structure[data-stuck]:not([open]) {
+      padding-block-end: 0;
+    }
+
+    .article-structure[data-stuck][open] {
+      max-block-size: calc(80dvb - var(--article-sticky-header-height));
+      padding-block-end: 0;
+    }
+
+    .article-structure[data-stuck][open] .article-structure-body {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      max-block-size: calc(
+        80dvb - var(--article-sticky-header-height) -
+          var(--article-structure-summary-height)
+      );
+      min-block-size: 0;
+    }
+
+    .article-structure[data-stuck][open] ol {
+      align-content: start;
+      min-block-size: 0;
+      padding-block-end: var(--article-structure-padding-bottom);
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+    }
+
+    .article-structure[data-stuck][open] ol::-webkit-scrollbar {
+      display: none;
+    }
+
+    .article-structure[data-stuck] .article-structure-actions {
+      grid-template-rows: 1fr;
+      margin-top: 0;
+      padding-top: 0;
+      visibility: visible;
+      background: var(--color-background);
+      border-top-color: var(--color-border-strong);
+      border-bottom-color: var(--color-border-strong);
+      opacity: 1;
+    }
+
+    .article-structure[open] summary {
+      z-index: 1;
+      background: var(--color-background);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .article-structure[data-stuck] .article-structure-actions {
+      margin-inline: calc(-1 * var(--article-structure-side-inset));
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .article-structure {
+      --article-structure-side-inset: calc(
+        (100vw - min(var(--measure-prose), 100vw - 48px)) / 2
+      );
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-structure,
+    .article-structure summary,
+    .article-structure::before,
+    .article-structure-actions {
+      transition: none;
+    }
   }
 
   .draft-placeholder {
@@ -267,17 +589,101 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   .prose h3 {
     scroll-margin-top: 24px;
   }
+
+  @media (max-width: 1023px) {
+    .prose h2,
+    .prose h3 {
+      scroll-margin-top: calc(
+        var(--article-sticky-header-height) +
+          var(--article-structure-summary-height) + 24px
+      );
+    }
+  }
 </style>
 
 <script>
-  document.querySelectorAll("[data-structure-link]").forEach((link) => {
-    link.addEventListener("click", () => {
-      const details = link.closest("details");
-      if (
-        details instanceof HTMLDetailsElement &&
-        matchMedia("(max-width: 639px)").matches
-      )
-        details.open = false;
+  document
+    .querySelectorAll<HTMLDetailsElement>(".article-structure")
+    .forEach((details) => {
+      details
+        .querySelectorAll<HTMLAnchorElement>("[data-structure-link]")
+        .forEach((link) => {
+          link.addEventListener("click", () => {
+            if (matchMedia("(max-width: 1023px)").matches) {
+              details.open = false;
+            }
+          });
+        });
+
+      const sentinel = details.previousElementSibling;
+      if (!(sentinel instanceof HTMLElement)) return;
+
+      const mobileViewport = matchMedia("(max-width: 1023px)");
+      const isOpenStickySheet = () =>
+        mobileViewport.matches &&
+        details.open &&
+        details.hasAttribute("data-stuck");
+      let scrollCloseGuard = 0;
+
+      details.querySelector("summary")?.addEventListener("click", () => {
+        const currentGuard = ++scrollCloseGuard;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (scrollCloseGuard === currentGuard) {
+              scrollCloseGuard = 0;
+            }
+          });
+        });
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (
+          isOpenStickySheet() &&
+          event.target instanceof Node &&
+          !details.contains(event.target)
+        ) {
+          details.open = false;
+        }
+      });
+
+      document.addEventListener(
+        "scroll",
+        () => {
+          if (scrollCloseGuard === 0 && isOpenStickySheet()) {
+            details.open = false;
+          }
+        },
+        { passive: true },
+      );
+
+      const syncReadingMode = ([entry]: IntersectionObserverEntry[]) => {
+        if (!mobileViewport.matches) {
+          delete details.dataset.stuck;
+          return;
+        }
+
+        const hasReachedHeader =
+          !entry.isIntersecting && entry.boundingClientRect.top <= 52;
+        const wasStuck = details.hasAttribute("data-stuck");
+        const structureBody = details.querySelector(".article-structure-body");
+        const hasFocusInsideStructure =
+          structureBody instanceof HTMLElement &&
+          structureBody.contains(document.activeElement);
+
+        details.toggleAttribute("data-stuck", hasReachedHeader);
+
+        if (
+          !hasReachedHeader ||
+          (hasReachedHeader && !wasStuck && !hasFocusInsideStructure)
+        ) {
+          details.open = false;
+        }
+      };
+
+      const observer = new IntersectionObserver(syncReadingMode, {
+        rootMargin: "-52px 0px 0px 0px",
+        threshold: 0,
+      });
+      observer.observe(sentinel);
     });
-  });
 </script>

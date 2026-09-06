@@ -129,6 +129,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
                 returnHref="/preview/posts"
                 returnLabel="一覧へ戻る"
                 returnSourcePaths={["/preview/posts"]}
+                copyPath={Astro.url.pathname}
               />
             )}
           </div>
