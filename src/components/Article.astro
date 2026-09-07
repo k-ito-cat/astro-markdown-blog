@@ -535,12 +535,10 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
    */
   @media (max-width: 959px) {
     .article-structure[data-stuck]:not([open]) {
+      /* ヘッダーと同じ理由で 1px 余分に送る（下端の罫線を残さない） */
       --chrome-hidden-shift: calc(
-        -1 *
-          (
-            var(--article-sticky-header-height) +
-              var(--article-structure-summary-height)
-          )
+        -1px - var(--article-sticky-header-height) -
+          var(--article-structure-summary-height)
       );
       --chrome-shift: 0px;
 

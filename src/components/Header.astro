@@ -181,7 +181,9 @@ const navItems = [
    */
   @media (max-width: 959px) {
     .mobile-bar {
-      --chrome-hidden-shift: -52px;
+      /* バーの高さちょうどだと下端の罫線が y=0 に着地し、端数の丸めで
+         髪の毛一本分残ることがある。1px 余分に送って確実に画面外へ出す */
+      --chrome-hidden-shift: -53px;
       --chrome-shift: 0px;
 
       touch-action: none;
@@ -231,7 +233,7 @@ const navItems = [
     cursor: pointer;
     visibility: hidden;
     touch-action: none;
-    transform: translate(-50%, calc(-100% - 12px));
+    transform: translate(-50%, calc(-100% - 13px));
     transition:
       transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
       visibility 220ms;
@@ -239,7 +241,8 @@ const navItems = [
 
   /*
    * 面も枠も持たせず、線だけを浮かせる。ただし本文や画像の上では線が埋もれる
-   * ので、線の周りの背景だけをぼかして手前と奥を分ける
+   * ので、線の周りの背景だけをぼかして手前と奥を分ける。
+   * ぼかす範囲は線を包むカプセル形にして、角が立たないようにする
    */
   .chrome-handle-pill {
     display: flex;
@@ -247,7 +250,7 @@ const navItems = [
     justify-content: center;
     width: 56px;
     height: 22px;
-    border-radius: var(--radius-card);
+    border-radius: 999px;
     -webkit-backdrop-filter: blur(10px) saturate(140%);
     backdrop-filter: blur(10px) saturate(140%);
   }
