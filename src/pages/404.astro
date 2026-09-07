@@ -9,7 +9,7 @@ import wipCat from "~/assets/wip-cat.png";
  * 反映され次第その URL は開けるようになるため、少しの間だけ読み直して待つ。
  */
 const PREVIEW_PREFIX = "/preview/posts/";
-const RETRY_LIMIT = 12;
+const RETRY_LIMIT = 25;
 const RETRY_DELAY_MS = 400;
 
 const retry = Number(Astro.url.searchParams.get("retry") ?? 0);
@@ -23,12 +23,77 @@ if (isPreviewMiss) {
   const next = new URL(Astro.url);
   next.searchParams.set("retry", String(retry + 1));
 
+  const slug = Astro.url.pathname.slice(PREVIEW_PREFIX.length);
+  const nextUrl = `${next.pathname}${next.search}`;
+
+  /*
+   * ここは dev サーバーのストアが追いつくまでの数百 ms しか出ない。
+   * サイトの CSS を読み込む前に返すため、tokens.md の値を直接書く。
+   * Motion は Line だけを使い、prefers-reduced-motion では止める。
+   *
+   * 待ち時間はスクリプトで測る。meta refresh の秒数は非負整数としてしか
+   * 読まれず、小数を書くと 0 秒（＝即時）になって待ちが消えるため、
+   * meta は JS が動かないときの保険として 1 秒で置く。
+   */
   return new Response(
     `<!doctype html><html lang="ja"><head><meta charset="utf-8">` +
+      `<meta name="viewport" content="width=device-width, initial-scale=1">` +
       `<title>反映を待っています</title>` +
-      `<meta http-equiv="refresh" content="${RETRY_DELAY_MS / 1000};url=${next.pathname}${next.search}">` +
-      `</head><body style="font-family:system-ui;padding:24px;color:#4b5563">` +
-      `<p>反映を待っています…</p></body></html>`,
+      `<meta http-equiv="refresh" content="1;url=${nextUrl}">` +
+      `<style>
+        :root { color-scheme: light }
+        body {
+          margin: 0;
+          min-height: 100dvh;
+          display: grid;
+          place-content: center;
+          justify-items: start;
+          gap: 14px;
+          padding: 24px;
+          color: #1f2937;
+          font-family: "Zen Kaku Gothic New", system-ui, sans-serif;
+        }
+        .label {
+          margin: 0;
+          font-size: 0.875rem;
+        }
+        .slug {
+          margin: 0;
+          color: #68746f;
+          font-family: "IBM Plex Mono", ui-monospace, monospace;
+          font-size: 0.75rem;
+          word-break: break-all;
+        }
+        .track {
+          position: relative;
+          width: min(20rem, 70vw);
+          height: 1px;
+          background: #d7e6da;
+          overflow: hidden;
+        }
+        .track::after {
+          content: "";
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 40%;
+          background: #14686d;
+          animation: trace 900ms cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+        }
+        @keyframes trace {
+          from { transform: translateX(-100%) }
+          to { transform: translateX(250%) }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .track::after { animation: none; width: 100% }
+        }
+      </style>` +
+      `</head><body>` +
+      `<p class="label">記録の反映を待っています</p>` +
+      `<div class="track" aria-hidden="true"></div>` +
+      `<p class="slug">${slug}（${retry + 1}/${RETRY_LIMIT}）</p>` +
+      // 履歴を積まないよう replace で置き換える
+      `<script>setTimeout(function(){location.replace(${JSON.stringify(nextUrl)})},${RETRY_DELAY_MS})</script>` +
+      `</body></html>`,
     { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }

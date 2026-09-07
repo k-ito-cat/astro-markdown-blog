@@ -74,7 +74,12 @@ export default defineConfig({
           remarkFlexibleMarkers,
           { dictionary: { g: "green", b: "blue", r: "red" } },
         ],
-        [remarkLinkCardPlus, { noFavicon: true }],
+        // リンクカードは本文の外部リンクごとに OGP を取りに行く。dev では記事を
+        // 保存するたびにコンテンツの同期の中で走り、リンク 1 本あたり最大 10 秒
+        // 待つため、追加した記事が一覧に出るまで止まる。dev では外す
+        ...(process.env.NODE_ENV === "production"
+          ? [[remarkLinkCardPlus, { noFavicon: true }]]
+          : []),
         [
           remarkExternalLinksInHtml,
           { internalHosts: ["k-ito-blog.netlify.app"] },
@@ -88,6 +93,7 @@ export default defineConfig({
   },
   integrations: [
     icon(),
+    contentRefresh(),
     astroExpressiveCode({
       themes: ["github-dark"],
       styleOverrides: {

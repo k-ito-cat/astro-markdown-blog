@@ -679,8 +679,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     resultCount.textContent = `表示中 ${visibleRows.length} / 全${total}件`;
     tableWrap.hidden = visibleRows.length === 0;
     emptyState.hidden = visibleRows.length > 0;
-    const filterActive = updateFilterSummary();
-    root.toggleAttribute("data-filter-active", filterActive);
+    updateFilterSummary();
   };
 
   const applyState = (nextState: PreviewState) => {
@@ -739,6 +738,31 @@ const initializePreviewPosts = (root: HTMLElement) => {
         applyState(next);
       });
     });
+  /*
+   * 行のどこを押しても記事へ移れるようにする。
+   * タイトルの <a> は残したまま（キーボードと新しいタブのため）、
+   * 余白を押したときだけこちらで補う。
+   */
+  root.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const row = event.target.closest<HTMLTableRowElement>("[data-post-row]");
+    if (!row || !root.contains(row)) return;
+
+    // 行の中の操作（リンク、ボタン、入力、ポップオーバー）は本人に任せる
+    if (event.target.closest("a, button, input, select, textarea, label")) {
+      return;
+    }
+    // 文字を選ぼうとしただけのときに飛ばさない
+    if (!window.getSelection()?.isCollapsed) return;
+
+    const slug = row.dataset.slug;
+    if (!slug) return;
+
+    const href = `/preview/posts/${slug}`;
+    if (event.metaKey || event.ctrlKey) window.open(href, "_blank");
+    else window.location.assign(href);
+  });
+
   root.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
     const button = event.target.closest<HTMLButtonElement>(
