@@ -437,6 +437,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       position: sticky;
       inset-block-start: var(--article-sticky-header-height);
       z-index: 20;
+      transition: transform var(--duration-feedback) var(--ease-trace);
     }
 
     .article-structure[data-stuck]::before {
@@ -522,6 +523,43 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .article-structure[open] summary {
       z-index: 1;
       background: var(--color-background);
+    }
+  }
+
+  /*
+   * ヘッダーを指で引いている間、追従中の目次も一緒に動かして画面上部を空ける。
+   * ヘッダーの分と自身の分を合わせて退避するので、上端まで完全に外れる。
+   * sticky の offset を書き換えると再吸着で跳ねるため transform で動かす。
+   * 追従していない目次は本文中の位置にあるので動かさない。展開中も、
+   * 開いた本体だけが取り残されるため対象から外す
+   */
+  @media (max-width: 959px) {
+    .article-structure[data-stuck]:not([open]) {
+      --chrome-hidden-shift: calc(
+        -1 *
+          (
+            var(--article-sticky-header-height) +
+              var(--article-structure-summary-height)
+          )
+      );
+      --chrome-shift: 0px;
+
+      transform: translateY(
+        clamp(
+          var(--chrome-hidden-shift),
+          calc(var(--chrome-shift) + var(--chrome-drag-y, 0px)),
+          0px
+        )
+      );
+    }
+
+    :global(html[data-chrome-hidden])
+      .article-structure[data-stuck]:not([open]) {
+      --chrome-shift: var(--chrome-hidden-shift);
+    }
+
+    :global(html[data-chrome-dragging]) .article-structure {
+      transition: none;
     }
   }
 

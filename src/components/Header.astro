@@ -58,7 +58,7 @@ const navItems = [
     </nav>
   </div>
 
-  <div class="mobile-bar">
+  <div class="mobile-bar" data-chrome-drag>
     <a
       href="/"
       class="mobile-home"
@@ -99,6 +99,17 @@ const navItems = [
       </nav>
     </details>
   </div>
+  <button
+    class="chrome-handle"
+    type="button"
+    aria-label="ヘッダーを表示"
+    data-chrome-drag
+    data-chrome-handle
+  >
+    <span class="chrome-handle-pill" aria-hidden="true">
+      <span class="chrome-grabber"></span>
+    </span>
+  </button>
   <span class="menu-scrim" aria-hidden="true"></span>
 </header>
 
@@ -124,6 +135,143 @@ const navItems = [
     padding: 0 16px;
     background: var(--color-background);
     border-bottom: 1px solid var(--color-border);
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  /*
+   * 掴める面であることを形だけで示す。文言も方向の記号も置かない。
+   * 下端の罫線にまたがせて、線が中央だけ太くなったように見せる
+   */
+  .mobile-bar::after {
+    position: absolute;
+    inset-block-end: -2px;
+    inset-inline-start: 50%;
+    width: 36px;
+    height: 3px;
+    content: "";
+    background: var(--color-border-strong);
+    border-radius: 999px;
+    opacity: 1;
+    transform: translateX(-50%);
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  /*
+   * メニューや目次を開いている間は、その真上に線が残っても読みづらいので消す。
+   * メニューは閉じ始めた時点で戻す（スクリムの出し入れと歩調を揃える）
+   */
+  .site-header:has(.mobile-menu[open]:not([data-closing])) .mobile-bar::after,
+  :global(html:has(.article-structure[data-stuck][open])) .mobile-bar::after {
+    opacity: 0;
+  }
+
+  @media (min-width: 960px) {
+    .mobile-bar::after {
+      content: none;
+    }
+  }
+
+  /*
+   * 指で上へ引いて退避させる。--chrome-drag-y は引いている最中の移動量で、
+   * 離すと 0（表示）か --chrome-hidden-shift（退避）に落ち着く。
+   * transform は .site-header ではなくバーに掛ける。header 側に transform が
+   * 乗ると、中の position: fixed な .menu-scrim の基準が header になり全画面を
+   * 覆えなくなる。退避中の header は中身が画面外にあるだけで箱は残るため、
+   * 上端 52px がタップを吸わないよう pointer-events を切る
+   */
+  @media (max-width: 959px) {
+    .mobile-bar {
+      --chrome-hidden-shift: -52px;
+      --chrome-shift: 0px;
+
+      touch-action: none;
+      transform: translateY(
+        clamp(
+          var(--chrome-hidden-shift),
+          calc(var(--chrome-shift) + var(--chrome-drag-y, 0px)),
+          0px
+        )
+      );
+    }
+
+    :global(html[data-chrome-hidden]) .mobile-bar {
+      --chrome-shift: var(--chrome-hidden-shift);
+    }
+
+    :global(html[data-chrome-hidden]) .site-header {
+      pointer-events: none;
+    }
+
+    :global(html[data-chrome-dragging]) .mobile-bar,
+    :global(html[data-chrome-dragging]) .chrome-handle {
+      transition: none;
+    }
+  }
+
+  /*
+   * 退避すると出てくる取っ手。タップでも下へのドラッグでも戻せる。
+   * 上端に貼り付けると iOS の画面端スワイプ（通知/コントロールセンター）と
+   * 取り合いになるため 12px 浮かせる。バー(z-index 30)より奥に置いて、
+   * 戻ってくるバーに覆われるようにする。ボタン自身は取っ手より下へ広げて
+   * 指の当たりを稼ぐ
+   */
+  .chrome-handle {
+    position: fixed;
+    inset-block-start: 12px;
+    inset-inline-start: 50%;
+    z-index: 29;
+    display: grid;
+    align-items: start;
+    justify-items: center;
+    width: 72px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    visibility: hidden;
+    touch-action: none;
+    transform: translate(-50%, calc(-100% - 12px));
+    transition:
+      transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      visibility 220ms;
+  }
+
+  /*
+   * 面も枠も持たせず、線だけを浮かせる。ただし本文や画像の上では線が埋もれる
+   * ので、線の周りの背景だけをぼかして手前と奥を分ける
+   */
+  .chrome-handle-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 22px;
+    border-radius: var(--radius-card);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+  }
+
+  /* バー下端のグラバーと同じ線。退避しても同じものだと形で分かるようにする */
+  .chrome-grabber {
+    width: 36px;
+    height: 3px;
+    background: var(--color-border-strong);
+    border-radius: 999px;
+  }
+
+  @media (max-width: 959px) {
+    :global(html[data-chrome-hidden]) .chrome-handle {
+      pointer-events: auto;
+      visibility: visible;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  @media (min-width: 960px) {
+    .chrome-handle {
+      display: none;
+    }
   }
 
   .mobile-home,
@@ -436,6 +584,8 @@ const navItems = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .mobile-bar,
+    .chrome-handle,
     .menu-open-icon,
     .menu-close-icon,
     .mobile-menu nav,
@@ -526,4 +676,114 @@ const navItems = [
       { passive: true },
     );
   }
+
+  /*
+   * 上部バーの出し入れ。自動では動かさない。バーを指で上へ引くとヘッダーと
+   * 追従中の目次がまとめて退避し、上端に出る取っ手をタップするか下へ引くと戻る。
+   * 引いている最中の移動量は --chrome-drag-y に流し、位置は CSS 側で clamp する
+   */
+  const root = document.documentElement;
+  const siteHeader = document.querySelector<HTMLElement>(".site-header");
+  const chromeHandle = document.querySelector<HTMLElement>(
+    "[data-chrome-handle]",
+  );
+  const compactViewport = matchMedia("(max-width: 959px)");
+  // 確定に必要な移動量と、タップと見なす許容量
+  const commitDistance = 24;
+  const tapSlop = 6;
+
+  let dragPointerId = -1;
+  let dragStartY = 0;
+  let dragDistance = 0;
+  let suppressNextClick = false;
+
+  const isChromeHidden = () => root.dataset.chromeHidden !== undefined;
+
+  const setChromeHidden = (hidden: boolean) => {
+    if (hidden) {
+      root.dataset.chromeHidden = "";
+      return;
+    }
+    delete root.dataset.chromeHidden;
+  };
+
+  const endDrag = () => {
+    dragPointerId = -1;
+    delete root.dataset.chromeDragging;
+    root.style.removeProperty("--chrome-drag-y");
+  };
+
+  document.addEventListener("pointerdown", (event) => {
+    suppressNextClick = false;
+
+    if (dragPointerId !== -1 || !compactViewport.matches || mobileMenu?.open) {
+      return;
+    }
+
+    const origin =
+      event.target instanceof Element
+        ? event.target.closest("[data-chrome-drag]")
+        : null;
+    if (!origin) return;
+
+    dragPointerId = event.pointerId;
+    dragStartY = event.clientY;
+    dragDistance = 0;
+  });
+
+  document.addEventListener(
+    "pointermove",
+    (event) => {
+      if (event.pointerId !== dragPointerId) return;
+
+      dragDistance = event.clientY - dragStartY;
+      if (Math.abs(dragDistance) < tapSlop) return;
+
+      root.dataset.chromeDragging = "";
+      root.style.setProperty("--chrome-drag-y", `${dragDistance}px`);
+    },
+    { passive: true },
+  );
+
+  const finishDrag = (event: PointerEvent) => {
+    if (event.pointerId !== dragPointerId) return;
+
+    // 引き切ったかどうかだけで決める。届かなければ元の位置へ戻す
+    if (isChromeHidden()) {
+      if (dragDistance > commitDistance) setChromeHidden(false);
+    } else if (dragDistance < -commitDistance) {
+      setChromeHidden(true);
+    }
+
+    // 引いた後の指離しでリンクやメニューが反応しないようにする
+    suppressNextClick = Math.abs(dragDistance) > tapSlop;
+    endDrag();
+  };
+
+  document.addEventListener("pointerup", finishDrag);
+  document.addEventListener("pointercancel", (event) => {
+    if (event.pointerId !== dragPointerId) return;
+    endDrag();
+  });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!suppressNextClick) return;
+      suppressNextClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true,
+  );
+
+  chromeHandle?.addEventListener("click", () => {
+    setChromeHidden(false);
+  });
+
+  // 退避中にキーボードで入ってきた場合、見えない位置に焦点を残さない
+  siteHeader?.addEventListener("focusin", (event) => {
+    if (event.target === chromeHandle) return;
+    setChromeHidden(false);
+  });
 </script>
