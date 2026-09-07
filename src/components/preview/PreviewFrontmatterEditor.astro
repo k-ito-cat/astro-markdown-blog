@@ -55,10 +55,19 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     </summary>
 
     <form class="fm-form" data-fm-form>
+      <div class="fm-scroll">
       <p class="fm-form-hint">相関・改訂履歴はファイルを直接編集</p>
       <div class="fm-toolbar">
         <details class="fm-ai">
-          <summary class="fm-ai-summary">AI 候補</summary>
+          <summary class="fm-ai-summary">
+            <Icon name="octicon:sparkle-fill-16" aria-hidden="true" />
+            <span>AI 候補</span>
+            <Icon
+              name="octicon:chevron-down-16"
+              class="fm-ai-chevron"
+              aria-hidden="true"
+            />
+          </summary>
           <div class="fm-ai-panel">
             <p class="fm-ai-note">
               タイトル・スラッグ・カテゴリ・タグの候補を出します。
@@ -279,6 +288,7 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
           </fieldset>
         </div>
       </div>
+      </div>
 
       <footer class="fm-actions">
         <button type="submit" class="fm-submit" data-fm-submit>保存</button>
@@ -340,15 +350,30 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     top: var(--preview-pane-top, 52px);
     right: 0;
     z-index: 20;
-    display: grid;
-    align-content: start;
-    gap: 16px;
+    /*
+     * grid ではなく flex にする。grid の子の sticky は自分の行の中しか
+     * 動けず、底まで下がらない。flex ならスクロール領域を基準にできる。
+     */
+    display: flex;
+    flex-direction: column;
     width: min(440px, 92vw);
     height: calc(100dvh - var(--preview-pane-top, 52px));
-    padding: 16px 20px 24px;
-    overflow-y: auto;
+    /* 送るのは入力の側だけ。フッターを外に出して底へ固定する */
+    overflow: hidden;
     background: var(--bg-base);
     border-left: 1px solid var(--border-strong);
+  }
+
+  /* 入力はここだけがスクロールする */
+  .fm-scroll {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 16px;
+    min-height: 0;
+    padding: 16px 20px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .fm-form-hint {
@@ -386,8 +411,24 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     display: none;
   }
 
-  .fm-ai-summary::before {
-    content: "✦";
+  .fm-ai-chevron {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .fm-ai[open] .fm-ai-chevron {
+    transform: rotate(180deg);
+  }
+
+  .fm-ai-summary svg {
+    flex: 0 0 auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fm-ai-chevron {
+      transition: none;
+    }
   }
 
   .fm-ai-panel {
@@ -453,18 +494,12 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     color: var(--danger-text);
   }
 
+  /* ペインの幅は 440px 固定なので、画面幅で段組みを変えない。常に縦へ積む */
   .fm-body {
     display: grid;
-    gap: 18px 32px;
+    gap: 18px;
   }
 
-  /* 左は記事そのもの、右は分類 */
-  @media (min-width: 900px) {
-    .fm-body {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      align-items: start;
-    }
-  }
 
   .fm-column {
     display: grid;
@@ -481,7 +516,6 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
   .fm-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
   }
 
@@ -492,6 +526,13 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
   .fm-label {
     color: var(--text-muted);
     font-size: var(--text-xs);
+  }
+
+  select.fm-input {
+    padding-right: 28px;
+    background: var(--bg-base) var(--select-chevron) no-repeat right 8px center;
+    background-size: 12px 12px;
+    appearance: none;
   }
 
   .fm-input {
@@ -603,7 +644,7 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
   }
 
   .fm-choices-scroll {
-    max-height: 200px;
+    max-height: min(320px, 38dvh);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -612,9 +653,43 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: var(--text-primary);
+    padding: 2px 4px;
+    color: var(--text-muted);
     font-size: var(--text-sm);
     cursor: pointer;
+  }
+
+  .fm-choice input {
+    accent-color: var(--color-primary);
+  }
+
+  /*
+   * 候補が多いので、いま効いているものを前へ出す。面や枠は使わず、
+   * 文字の濃さと色だけで差をつける。
+   *
+   * checked 属性は保存済みの値、:checked は今の入力。
+   * 両者のずれが「保存すると変わるもの」になるので、そこだけ色を変える。
+   */
+  .fm-choice:has(:checked),
+  .fm-choice:has(input[checked]) {
+    order: -1;
+  }
+
+  .fm-choice:has(:checked) {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* これから足すもの */
+  .fm-choice:has(input:not([checked]):checked) {
+    color: var(--warning);
+  }
+
+  /* 外すもの。保存済みだが今は選ばれていない */
+  .fm-choice:has(input[checked]:not(:checked)) {
+    color: var(--danger);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
   }
 
   .fm-choice[hidden] {
@@ -647,12 +722,16 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
     opacity: 0.55;
   }
 
+  /* スクロール領域の外にいるので、位置指定なしで常に底に居座る */
   .fm-actions {
+    flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    padding-top: 4px;
+    padding: 12px 20px;
+    background: var(--bg-base);
+    border-top: 1px solid var(--border);
   }
 
   .fm-submit,

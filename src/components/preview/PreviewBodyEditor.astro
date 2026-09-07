@@ -196,14 +196,74 @@ const SNIPPET_GROUPS = [
 
 <body-editor class="body-editor" data-entry-id={entryId}>
   <script type="application/json" data-post-body set:html={serializedBody} />
-  <p class="body-editor-hint" data-hint>
-    ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
-  </p>
+  <p class="body-editor-hint" data-hint></p>
   <div class="body-editor-bar">
     <slot name="state" />
     <div class="body-editor-tools">
     <p class="body-editor-status" data-status aria-live="polite"></p>
     <span class="body-editor-count" data-count hidden></span>
+    <details class="body-editor-guide" data-preview-pane>
+      <summary>
+        <Icon name="octicon:question-16" aria-hidden="true" />
+        <span>ヘルプ</span>
+      </summary>
+      <div class="body-editor-pane-body">
+        <section class="help-group">
+          <h2>本文の編集</h2>
+          <p class="help-text">
+            ブロックをクリックして編集。フォーカスを外すと下書きへ反映し、保存でMarkdownへ書き込みます。
+          </p>
+          <p class="help-text">
+            下書きは記事ごとに残るため、開き直しても続きから編集できます。
+          </p>
+        </section>
+
+        <section class="help-group">
+          <h2>保存と取り消し</h2>
+          <ul class="help-list">
+            <li><kbd>⌘S</kbd> / <kbd>Ctrl S</kbd>：Markdown へ書き込む</li>
+            <li>破棄：下書きを捨てて、ファイルの内容へ戻す</li>
+            <li>差分：下書きとファイルの違いを色で示す</li>
+          </ul>
+        </section>
+
+        <section class="help-group">
+          <h2>編集中のキー</h2>
+          <ul class="help-list">
+            <li><kbd>⌘B</kbd> 太字、<kbd>⌘I</kbd> 斜体</li>
+            <li><kbd>⌘⇧M</kbd> マーカー、<kbd>⌘⇧`</kbd> コード</li>
+            <li><kbd>Shift Enter</kbd> そのブロックを確定</li>
+            <li><kbd>Esc</kbd> 編集を取り消して閉じる</li>
+          </ul>
+        </section>
+
+        <section class="help-group">
+          <h2>ブロックの操作</h2>
+          <ul class="help-list">
+            <li>左脇の掴み手をドラッグして並べ替える</li>
+            <li>ブロックの脇の道具から、編集、上下へ移動、前後に追加、画像を追加、削除</li>
+            <li>画像は編集欄へドラッグ＆ドロップ、または貼り付けでも入る</li>
+          </ul>
+        </section>
+
+        <section class="help-group">
+          <h2>右のペイン</h2>
+          <ul class="help-list">
+            <li>記法：使える書き方の一覧。雛形をコピーできる</li>
+            <li>フロントマター：タイトル、日付、状態、カテゴリ、タグ</li>
+            <li><kbd>Esc</kbd> かペインの外を押すと閉じる。同時に開くのは一つ</li>
+          </ul>
+        </section>
+
+        <section class="help-group">
+          <h2>添削</h2>
+          <ul class="help-list">
+            <li><code>&gt; [!REVIEW]</code> は一文への指摘、<code>&gt; [!OUTLINE]</code> は記事全体への指摘</li>
+            <li>どちらも公開ビルドでは取り除かれる</li>
+          </ul>
+        </section>
+      </div>
+    </details>
     <details class="body-editor-help" data-preview-pane>
       <summary>
         <Icon name="octicon:book-16" aria-hidden="true" />
@@ -305,6 +365,41 @@ const SNIPPET_GROUPS = [
     border-bottom: 1px solid var(--border);
   }
 
+  /* 説明はヘルプへ移したので、普段は空。異常時だけ文言が入る */
+  .body-editor-hint:empty {
+    display: none;
+  }
+
+  .help-text {
+    margin: 0 0 8px;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.8;
+  }
+
+  .help-list {
+    margin: 0;
+    padding-left: 1.2em;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.9;
+  }
+
+  .help-list code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .help-list kbd {
+    padding: 1px 5px;
+    color: var(--text-primary);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-label);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
   .body-editor-hint,
   .body-editor-status {
     margin: 0;
@@ -396,11 +491,13 @@ const SNIPPET_GROUPS = [
     margin-left: auto;
   }
 
-  .body-editor-help {
+  .body-editor-help,
+  .body-editor-guide {
     position: relative;
   }
 
-  .body-editor-help > summary {
+  .body-editor-help > summary,
+  .body-editor-guide > summary {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -415,29 +512,35 @@ const SNIPPET_GROUPS = [
     cursor: pointer;
   }
 
-  .body-editor-help > summary::-webkit-details-marker {
+  .body-editor-help > summary::-webkit-details-marker,
+  .body-editor-guide > summary::-webkit-details-marker {
     display: none;
   }
 
   .body-editor-help > summary:hover,
-  .body-editor-help > summary:focus-visible {
+  .body-editor-help > summary:focus-visible,
+  .body-editor-guide > summary:hover,
+  .body-editor-guide > summary:focus-visible {
     background: var(--bg-subtle);
     color: var(--text-primary);
   }
 
-  .body-editor-help[open] > summary {
+  .body-editor-help[open] > summary,
+  .body-editor-guide[open] > summary {
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
 
-  .body-editor-help svg {
+  .body-editor-help svg,
+  .body-editor-guide svg {
     width: 14px;
     height: 14px;
     flex: 0 0 auto;
   }
 
   /* 本文を見ながら引けるよう、画面の右端へ寄せて立てる */
-  .body-editor-help-body {
+  .body-editor-help-body,
+  .body-editor-pane-body {
     position: fixed;
     top: var(--preview-pane-top, 52px);
     right: 0;
