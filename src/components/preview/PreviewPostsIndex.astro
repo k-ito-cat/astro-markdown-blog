@@ -137,6 +137,20 @@ const publishedMemoFilterParams = new URLSearchParams({
   data-group="none"
   data-max-categories={MAX_CATEGORIES_PER_POST}
 >
+  {/*
+   * astro-icon は同じアイコンの一つ目に <symbol> を置き、以降を <use> で参照させる。
+   * 一覧の行は絞り込みのたびに DOM から外れるため、定義が行の中にあると、
+   * その行が結果から外れた瞬間に残りの行のアイコンが全部消える。
+   * 表より前でひととおり描いて、定義の置き場を固定する。
+   */}
+  <div class="preview-icon-sprites" aria-hidden="true">
+    <Icon name="octicon:pin-16" />
+    <Icon name="octicon:trash-16" />
+    <Icon name="octicon:pencil-16" />
+    <Icon name="octicon:link-16" />
+    <Icon name="octicon:check-16" />
+  </div>
+
   <main class="preview-shell">
     <header class="preview-header">
       <div>
@@ -192,7 +206,15 @@ const publishedMemoFilterParams = new URLSearchParams({
           <h2 class="create-title" id="create-dialog-title">新しい記事</h2>
 
           <details class="create-ai">
-            <summary class="create-ai-summary">AI 候補</summary>
+            <summary class="create-ai-summary">
+              <Icon name="octicon:sparkle-fill-16" aria-hidden="true" />
+              <span>AI 候補</span>
+              <Icon
+                name="octicon:chevron-down-16"
+                class="create-ai-chevron"
+                aria-hidden="true"
+              />
+            </summary>
             <div class="create-ai-panel">
               <p class="create-ai-note">
                 タイトルをもとに、タイトル・スラッグ・カテゴリ・タグの候補を出します。
@@ -220,6 +242,8 @@ const publishedMemoFilterParams = new URLSearchParams({
 
         <div class="create-body">
           <div class="create-column">
+            <p class="create-legend">記録</p>
+
             <div class="create-field">
               <label class="create-label" for="create-title">タイトル</label>
               <input
@@ -361,8 +385,17 @@ const publishedMemoFilterParams = new URLSearchParams({
 
             <details class="create-advanced">
               <summary class="create-advanced-summary">
-                公開設定
-                <span class="create-legend-hint">既定のままで作れます</span>
+                <Icon
+                  name="octicon:chevron-right-16"
+                  class="create-advanced-chevron"
+                  aria-hidden="true"
+                />
+                <span class="create-advanced-title">
+                  公開日、公開状態、執筆状態、優先度、サムネイル、GitHub URL
+                </span>
+                <span class="create-legend-hint">
+                  開いて変更。閉じたままなら 非公開 / 未着手 / 優先度なし
+                </span>
               </summary>
               <div class="create-grid">
                 <label class="create-field">
@@ -517,8 +550,15 @@ const publishedMemoFilterParams = new URLSearchParams({
 
       <details class="preview-filters" data-filter-details>
         <summary class="preview-filter-summary">
-          絞り込み
-          <span class="preview-filter-count" data-filter-count hidden></span>
+          <span class="preview-filter-summary-label">
+            絞り込み
+            <span class="preview-filter-count" data-filter-count hidden></span>
+          </span>
+          <Icon
+            name="octicon:chevron-down-16"
+            class="preview-filter-chevron"
+            aria-hidden="true"
+          />
         </summary>
         <div class="preview-filter-panel">
           <fieldset class="preview-filter-group">
@@ -714,13 +754,11 @@ const publishedMemoFilterParams = new URLSearchParams({
                   >
                     <span class="preview-title-line">
                       <span class="preview-title-name">
-                        {previewPost.pinned && (
-                          <Icon
-                            name="octicon:pin-16"
-                            class="preview-pin-icon"
-                            title="一覧の先頭に固定している記事"
-                          />
-                        )}
+                        <Icon
+                          name="octicon:pin-16"
+                          class="preview-pin-mark"
+                          aria-hidden="true"
+                        />
                         <a
                           href={`/preview/posts/${previewPost.previewSlug}`}
                           class="preview-post-link"
@@ -739,6 +777,24 @@ const publishedMemoFilterParams = new URLSearchParams({
                           name="octicon:pencil-16"
                           class="preview-edit-icon"
                         />
+                      </button>
+                      <button
+                        type="button"
+                        class="preview-pin-toggle"
+                        aria-pressed={String(previewPost.pinned)}
+                        title={
+                          previewPost.pinned
+                            ? `${previewPost.data.title} の固定を外す`
+                            : `${previewPost.data.title} を先頭に固定`
+                        }
+                        aria-label={
+                          previewPost.pinned
+                            ? `${previewPost.data.title} の固定を外す`
+                            : `${previewPost.data.title} を先頭に固定`
+                        }
+                        data-pin-toggle={previewPost.previewSlug}
+                      >
+                        <Icon name="octicon:pin-16" class="preview-pin-icon" />
                       </button>
                       <CopyLinkButton
                         path={`/preview/posts/${previewPost.previewSlug}`}
@@ -1045,15 +1101,18 @@ const publishedMemoFilterParams = new URLSearchParams({
     color: var(--text-muted);
   }
 
+  /* 開閉の記号は octicon の chevron で統一する。OS 既定の矢印は形も位置も揃わない */
   .preview-select {
     width: 100%;
     height: 40px;
-    padding: 0 10px;
+    padding: 0 34px 0 10px;
     color: var(--text-primary);
-    background: var(--bg-base);
+    background: var(--bg-base) var(--select-chevron) no-repeat right 12px center;
+    background-size: 14px 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius-label);
     font-size: 14px;
+    appearance: none;
   }
 
   .preview-filters {
@@ -1081,13 +1140,30 @@ const publishedMemoFilterParams = new URLSearchParams({
     display: none;
   }
 
-  .preview-filter-summary::after {
-    content: "▾";
-    color: var(--text-muted);
+  /* 文字の三角は書体ごとに形も高さも変わり、inline なので回転もしない */
+  .preview-filter-summary-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
 
-  .preview-filters[open] .preview-filter-summary::after {
+  .preview-filter-chevron {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .preview-filters[open] .preview-filter-chevron {
     transform: rotate(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-filter-chevron {
+      transition: none;
+    }
   }
 
   .preview-filter-count {
@@ -1337,6 +1413,16 @@ const publishedMemoFilterParams = new URLSearchParams({
     padding-top: 18px;
   }
 
+  /* 行のどこを押しても記事へ移れるので、行全体を押せる場所として示す */
+  .preview-post-row {
+    cursor: pointer;
+  }
+
+  .preview-post-row:hover > th,
+  .preview-post-row:hover > td {
+    background: var(--bg-hover);
+  }
+
   .preview-title-cell {
     min-width: 340px;
     font-weight: 500;
@@ -1376,18 +1462,78 @@ const publishedMemoFilterParams = new URLSearchParams({
     min-width: 0;
   }
 
-  .preview-pin-icon {
+  /* 固定していない記事でも押せるよう、印ではなく操作として置く。
+     普段は薄く、行に触れたときとfocus時に見せる */
+  .preview-pin-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 2px;
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-label);
+    opacity: 0;
+    /* 見えない間は当たり判定も消す。行のクリックを奪わないため */
+    pointer-events: none;
+    cursor: pointer;
+    transition:
+      color var(--duration-feedback) var(--ease-trace),
+      opacity var(--duration-feedback) var(--ease-trace);
+  }
+
+  /* 他の行操作と同じく、ポインタが乗った行にだけ出す。
+     固定されているかどうかはタイトル左の印が示す */
+  .preview-post-row:hover .preview-pin-toggle,
+  .preview-post-row:focus-within .preview-pin-toggle,
+  .preview-pin-toggle:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 固定済みの印。操作ではないので、固定グループの中でだけ出す */
+  .preview-pin-mark {
+    display: none;
     width: 0.95em;
     height: 0.95em;
     flex: 0 0 auto;
-    color: var(--text-muted);
+    color: var(--color-primary);
     /* 下辺がベースラインに載ると高く見えるので、文字の中心へ下ろす */
     translate: 0 0.1em;
   }
 
-  .preview-post-row:hover .preview-pin-icon {
-    color: var(--text-secondary);
+  .preview-post-group[data-post-group="pinned"] .preview-pin-mark {
+    display: inline-flex;
   }
+
+  .preview-pin-toggle[aria-pressed="true"] {
+    color: var(--color-primary);
+  }
+
+  .preview-pin-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .preview-pin-toggle[data-busy] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-pin-toggle {
+      transition: none;
+    }
+  }
+
+  .preview-pin-icon {
+    width: 0.95em;
+    height: 0.95em;
+    flex: 0 0 auto;
+  }
+
+
 
   .preview-slug {
     color: var(--text-muted);
@@ -1436,6 +1582,8 @@ const publishedMemoFilterParams = new URLSearchParams({
     margin: auto;
     width: min(1060px, calc(100vw - 32px));
     max-height: min(880px, calc(100vh - 48px));
+    /* dialog の既定は overflow: auto。送るのは中身の側だけにする */
+    overflow: hidden;
     padding: 0;
     color: var(--text-primary);
     background: var(--bg-card);
@@ -1496,8 +1644,24 @@ const publishedMemoFilterParams = new URLSearchParams({
     display: none;
   }
 
-  .create-ai-summary::before {
-    content: "✦";
+  .create-ai-chevron {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .create-ai[open] .create-ai-chevron {
+    transform: rotate(180deg);
+  }
+
+  .create-ai-summary svg {
+    flex: 0 0 auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .create-ai-chevron {
+      transition: none;
+    }
   }
 
   .create-ai-panel {
@@ -1570,11 +1734,19 @@ const publishedMemoFilterParams = new URLSearchParams({
 
   .create-body {
     display: grid;
+    flex: 1;
+    min-height: 0;
     gap: 20px 32px;
     padding: 16px;
     overflow-y: auto;
     /* 端まで送っても背面へスクロールを渡さない */
     overscroll-behavior: contain;
+    /* ダイアログとタグ一覧で棒が二本立つので、どちらも見せない */
+    scrollbar-width: none;
+  }
+
+  .create-body::-webkit-scrollbar {
+    display: none;
   }
 
   /* 縦へ伸ばさず横に使う。左は書くもの、右は決めるもの */
@@ -1605,6 +1777,13 @@ const publishedMemoFilterParams = new URLSearchParams({
   .create-label {
     color: var(--text-muted);
     font-size: var(--text-xs);
+  }
+
+  select.create-input {
+    padding-right: 28px;
+    background: var(--bg-base) var(--select-chevron) no-repeat right 8px center;
+    background-size: 12px 12px;
+    appearance: none;
   }
 
   .create-input {
@@ -1673,13 +1852,24 @@ const publishedMemoFilterParams = new URLSearchParams({
     border: 0;
   }
 
+  /* 群の見出しは語 + Line。面や枠で囲わず、位置と線で階層を作る */
   .create-legend {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
     padding: 0;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .create-legend::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
 
   .create-legend-hint {
@@ -1735,6 +1925,11 @@ const publishedMemoFilterParams = new URLSearchParams({
     max-height: 200px;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .create-options-scroll::-webkit-scrollbar {
+    display: none;
   }
 
   .create-option {
@@ -1777,13 +1972,50 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   /* 既定のまま作ることが多いので、開いた人だけが触る */
+  /* 何が隠れているかを閉じた状態でも読めるようにし、開くものだと印で示す。
+     見た目は群の見出し（語 + Line）へ揃える */
   .create-advanced-summary {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
     color: var(--text-muted);
     font-size: var(--text-xs);
     cursor: pointer;
+    list-style: none;
+  }
+
+  .create-advanced-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .create-advanced-summary::after {
+    content: "";
+    flex: 1;
+    min-width: 24px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .create-advanced-summary:hover,
+  .create-advanced-summary:focus-visible {
+    color: var(--text-primary);
+  }
+
+  .create-advanced-title {
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .create-advanced-chevron {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .create-advanced[open] .create-advanced-chevron {
+    transform: rotate(90deg);
   }
 
   .create-grid {
@@ -1880,8 +2112,6 @@ const publishedMemoFilterParams = new URLSearchParams({
   .preview-post-row:focus-within .preview-copy-link,
   .preview-post-row:hover .preview-row-delete,
   .preview-post-row:focus-within .preview-row-delete,
-  preview-posts[data-filter-active] .preview-copy-link,
-  preview-posts[data-filter-active] .preview-row-delete,
   .preview-title-line .preview-copy-link[data-copy-state] {
     opacity: 1;
     pointer-events: auto;
@@ -2311,6 +2541,10 @@ const publishedMemoFilterParams = new URLSearchParams({
     }
   }
 
+  .preview-icon-sprites {
+    display: none;
+  }
+
   .preview-post-row[hidden],
   .preview-post-group[hidden] {
     display: none;
@@ -2319,6 +2553,8 @@ const publishedMemoFilterParams = new URLSearchParams({
 
 <script>
   import { initPreviewPosts } from "~/scripts/previewPosts";
+  import { initPreviewPinToggle } from "~/scripts/previewPinToggle";
 
   initPreviewPosts();
+  initPreviewPinToggle();
 </script>

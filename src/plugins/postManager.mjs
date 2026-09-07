@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { refreshContent } from "./contentRefresh.mjs";
 import {
   appendTags,
   readTags,
@@ -283,6 +284,20 @@ const createPost = async (
     bodyMode: bodyMode ?? "body",
   });
   await fs.writeFile(filePath, content, "utf8");
+
+  // タグを足した記事は、監視が使う古いスキーマでは検証に落ちてストアへ入らない。
+  // 取り込み直してから返し、作成した記事をそのまま開けるようにする。
+  // 記事は既に書けているので、ここで失敗しても作成そのものは成功させる
+  if (added.length > 0) {
+    try {
+      await refreshContent();
+    } catch (error) {
+      server.config.logger.warn(
+        `[post-manager] コンテンツを取り込み直せませんでした。dev サーバーを再起動してください: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   return { slug, addedTags: added };
 };
 

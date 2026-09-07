@@ -21,6 +21,8 @@ import contentReload from "./src/plugins/contentReload.mjs";
 import postManager from "./src/plugins/postManager.mjs";
 import createSuggester from "./src/plugins/createSuggester.mjs";
 import tagEditor from "./src/plugins/tagEditor.mjs";
+import previewPinnedEditor from "./src/plugins/previewPinnedEditor.mjs";
+import contentRefresh from "./src/plugins/contentRefresh.mjs";
 import blockRange from "./src/plugins/blockRange.mjs";
 
 import astroExpressiveCode, {
@@ -53,6 +55,7 @@ export default defineConfig({
       postManager(),
       createSuggester(),
       tagEditor(),
+      previewPinnedEditor(),
     ],
   },
   markdown: {
