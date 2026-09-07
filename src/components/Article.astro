@@ -441,8 +441,13 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
     .article-structure[data-stuck]::before {
       border-bottom-color: var(--color-border-strong);
-      box-shadow: 0 6px 14px rgb(0 0 0 / 8%);
+      box-shadow: 0 6px 12px -6px rgb(0 0 0 / 18%);
       clip-path: inset(0);
+    }
+
+    /* 開いている間はバーの下に本体が続くので、目次直下に線は引かない */
+    .article-structure[data-stuck][open]::before {
+      border-bottom-color: transparent;
     }
 
     .article-structure[data-stuck] summary {
@@ -464,11 +469,19 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     }
 
     .article-structure[data-stuck][open] {
-      max-block-size: calc(80dvb - var(--article-sticky-header-height));
       padding-block-end: 0;
     }
 
+    /*
+     * 追従中に開いた本体はフローから外し、バーの下へ浮かせる。details 自身の
+     * 高さが伸びると後続の本文がその分だけ押し下げられ、スクロールアンカリング
+     * 未対応の Safari では背面が開閉に合わせて動いて見える。要素の高さをバーの
+     * ままに保てば、補正の有無に関係なく背面は動かない
+     */
     .article-structure[data-stuck][open] .article-structure-body {
+      position: absolute;
+      inset-block-start: 100%;
+      inset-inline: calc(-1 * var(--article-structure-side-inset));
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       max-block-size: calc(
@@ -476,6 +489,10 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           var(--article-structure-summary-height)
       );
       min-block-size: 0;
+      padding-inline: var(--article-structure-side-inset);
+      background: var(--color-background);
+      border-bottom: 1px solid var(--color-primary);
+      box-shadow: 0 12px 20px -10px rgb(0 0 0 / 26%);
     }
 
     .article-structure[data-stuck][open] ol {
@@ -499,7 +516,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       visibility: visible;
       background: var(--color-background);
       border-top-color: var(--color-border-strong);
-      border-bottom-color: var(--color-border-strong);
       opacity: 1;
     }
 
