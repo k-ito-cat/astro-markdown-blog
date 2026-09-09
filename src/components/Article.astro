@@ -62,6 +62,16 @@ const tocHeadings = headings.filter(
     heading.depth === HEADING_LEVEL.TWO ||
     heading.depth === HEADING_LEVEL.THREE,
 );
+/*
+ * 現在地は PC の .current-trace と同じく h2 単位で数える。h3 は位置を持たないので
+ * 通し番号を振らず、既定色のまま置く
+ */
+let sectionCount = 0;
+const tocItems = tocHeadings.map((heading) => ({
+  ...heading,
+  sectionIndex:
+    heading.depth === HEADING_LEVEL.TWO ? sectionCount++ : undefined,
+}));
 const isDraft = status === PUBLISHED_STATUS.DRAFT;
 const showContent = !isDraft || forceRenderContent;
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
@@ -89,14 +99,21 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           </summary>
           <div class="article-structure-body">
             <ol>
-              {tocHeadings.map((heading) => (
+              {tocItems.map((item) => (
                 <li
                   class:list={{
-                    "is-h3": heading.depth === HEADING_LEVEL.THREE,
+                    "is-h3": item.depth === HEADING_LEVEL.THREE,
                   }}
+                  data-structure-item={
+                    item.sectionIndex === undefined ? undefined : ""
+                  }
+                  data-heading-id={
+                    item.sectionIndex === undefined ? undefined : item.slug
+                  }
+                  data-section-index={item.sectionIndex}
                 >
-                  <a href={`#${heading.slug}`} data-structure-link>
-                    {heading.text}
+                  <a href={`#${item.slug}`} data-structure-link>
+                    {item.text}
                   </a>
                 </li>
               ))}
@@ -328,9 +345,20 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     padding-left: 18px;
   }
   .article-structure a {
-    color: var(--color-text-sub);
+    color: var(--color-text-muted);
     font-size: var(--text-sm);
     text-decoration: none;
+    transition: color var(--duration-feedback) ease;
+  }
+
+  /* 現在地の示し方は PC の .current-trace と同じ 3 段階に揃える */
+  .article-structure li.is-past > a {
+    color: var(--color-text-sub);
+  }
+
+  .article-structure li.is-current > a {
+    color: var(--color-primary);
+    font-weight: 700;
   }
   .article-structure a:hover {
     color: var(--color-interaction-text);

@@ -319,6 +319,29 @@ const firstSection = sections[0];
   const traceItems = Array.from(
     document.querySelectorAll<HTMLElement>("[data-trace-item]"),
   );
+  // 狭幅の目次（Article の .article-structure）にも同じ現在地を配る。
+  // 判定を二重に持つと読み取り線がずれるため、ここに相乗りさせる
+  const structureItems = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-structure-item]"),
+  );
+
+  const syncCurrentMarks = (items: HTMLElement[], currentIndex: number) => {
+    items.forEach((item) => {
+      const itemIndex = Number(item.dataset.sectionIndex);
+      const link = item.querySelector("a");
+
+      item.classList.toggle("is-past", itemIndex < currentIndex);
+      item.classList.toggle("is-current", itemIndex === currentIndex);
+
+      if (!link) return;
+
+      if (itemIndex === currentIndex) {
+        link.setAttribute("aria-current", "location");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  };
 
   const setCurrentSection = (sectionId: string) => {
     const currentItem = traceItems.find(
@@ -331,21 +354,8 @@ const firstSection = sections[0];
     position &&
       (position.textContent = `${currentIndex + 1} / ${traceItems.length}`);
 
-    traceItems.forEach((item) => {
-      const itemIndex = Number(item.dataset.sectionIndex);
-      const link = item.querySelector("[data-trace-link]");
-
-      item.classList.toggle("is-past", itemIndex < currentIndex);
-      item.classList.toggle("is-current", itemIndex === currentIndex);
-
-      if (link) {
-        if (itemIndex === currentIndex) {
-          link.setAttribute("aria-current", "location");
-        } else {
-          link.removeAttribute("aria-current");
-        }
-      }
-    });
+    syncCurrentMarks(traceItems, currentIndex);
+    syncCurrentMarks(structureItems, currentIndex);
   };
 
   if (output && sections.length > 0) {
