@@ -531,11 +531,25 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
+      touch-action: pan-y;
       scrollbar-width: none;
     }
 
     .article-structure[data-stuck][open] ol::-webkit-scrollbar {
       display: none;
+    }
+
+    /*
+     * 追従中のクロームの上で指を動かしても、裏の記事が流れないようにする。
+     * 上へ引いてヘッダーを退避させる操作が成立するのはヘッダーバーの上だけで、
+     * 目次バーやシートで同じ動きをすると「バーは上がらないのに本文だけ流れる」
+     * 空振りになる。パンそのものを断てば、効かない場所で画面が動くことはなくなる。
+     * シートは左右の余白ごと止め、縦スクロールは目次リストにだけ戻す。リストは
+     * 自身がスクロールコンテナなので、touch-action の交差がそこで止まり pan-y が残る
+     */
+    .article-structure[data-stuck] summary,
+    .article-structure[data-stuck][open] .article-structure-body {
+      touch-action: none;
     }
 
     .article-structure[data-stuck] .article-structure-actions {

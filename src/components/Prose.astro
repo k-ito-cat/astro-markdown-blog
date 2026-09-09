@@ -169,6 +169,27 @@ const { content: Content, status } = Astro.props;
     });
     scrollers.forEach((scroller) => observer.observe(scroller));
   }
+
+  /*
+   * コピーボタンの出し入れ。触れたコードブロックだけ出し、ほかへ触れたら戻す。
+   * hover のある端末はプラグイン側の hover 表示に任せる
+   */
+  const touchOnly = matchMedia("(hover: none)");
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!touchOnly.matches) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    const block = target?.closest<HTMLElement>(".expressive-code") ?? null;
+
+    document
+      .querySelectorAll<HTMLElement>(".expressive-code[data-copy-visible]")
+      .forEach((node) => {
+        if (node !== block) delete node.dataset.copyVisible;
+      });
+
+    if (block) block.dataset.copyVisible = "";
+  });
 </script>
 
 <style is:global>
@@ -681,6 +702,36 @@ const { content: Content, status } = Astro.props;
 
   .prose .expressive-code .copy button {
     border-radius: var(--radius-label);
+  }
+
+  /*
+   * コピーボタンは hover のない端末でだけ大きく描かれる。プラグイン側が
+   * ボタンを 2rem から 2.5rem へ広げる一方、アイコンの余白は 0.475rem のままで、
+   * 描画サイズが 16.8px から 24.8px へ跳ねる。操作 icon は 16–18px という規定
+   * （design/foundations.md）を外れ、SP だけ本文より大きな図形になる。
+   * 触りやすさのための 2.5rem は保ち、アイコンだけ hover 環境と同じ寸法へ戻す
+   */
+  @media (hover: none) {
+    .prose .expressive-code .copy button::after {
+      margin: 0.725rem;
+    }
+
+    /*
+     * hover のある端末では、プラグインが枠に触れるまでボタンを隠す。
+     * hover のない端末では出しっぱなしになり、コードの上に常にボタンが乗る。
+     * 読む邪魔になるので、そのブロックに触れるまでは同じように隠す。
+     * 隠している間は指を通し、一度目のタップで出して二度目でコピーさせる
+     */
+    .prose .expressive-code .copy button {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--duration-feedback) ease;
+    }
+
+    .prose .expressive-code[data-copy-visible] .copy button {
+      opacity: 0.75;
+      pointer-events: auto;
+    }
   }
 
   .prose .expressive-code .copy:has(.feedback.show) button::after {
