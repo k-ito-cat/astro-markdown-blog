@@ -55,6 +55,10 @@ const navItems = [
           </a>
         )
       }
+      <button class="edge-link" type="button" data-paper-toggle>
+        <Icon name="octicon:file-16" aria-hidden="true" />
+        <span data-paper-label>まぶしさを抑える</span>
+      </button>
     </nav>
   </div>
 
@@ -96,6 +100,10 @@ const navItems = [
             </a>
           )
         }
+        <button type="button" data-paper-toggle>
+          <Icon name="octicon:file-16" aria-hidden="true" />
+          <span data-paper-label>まぶしさを抑える</span>
+        </button>
       </nav>
     </details>
   </div>
@@ -140,11 +148,13 @@ const navItems = [
 
   /*
    * 掴める面であることを形だけで示す。文言も方向の記号も置かない。
-   * 下端の罫線にまたがせて、線が中央だけ太くなったように見せる
+   * 罫線から離してバーの内側に置く。罫線に重ねると継ぎ目の記号に見えて、
+   * 下に並ぶ目次バーまで掴めるように読めてしまう。掴める面はヘッダ全体なので、
+   * 印もその内側に収める
    */
   .mobile-bar::after {
     position: absolute;
-    inset-block-end: -2px;
+    inset-block-end: 8px;
     inset-inline-start: 50%;
     width: 36px;
     height: 3px;
@@ -153,7 +163,9 @@ const navItems = [
     border-radius: 999px;
     opacity: 1;
     transform: translateX(-50%);
-    transition: opacity var(--duration-feedback) ease;
+    transition:
+      opacity var(--duration-feedback) ease,
+      transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   /*
@@ -261,6 +273,20 @@ const navItems = [
     height: 3px;
     background: var(--color-border-strong);
     border-radius: 999px;
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /*
+   * 指を置いた時点で線を膨らませる。掴めたことをその場で返すためのもので、
+   * 当たり判定は変わらない。data-chrome-dragging は 6px 動くまで付かないので、
+   * 触った瞬間を表す印は別に持つ
+   */
+  :global(html[data-chrome-pressed]) .mobile-bar::after {
+    transform: translateX(-50%) scale(1.2, 1.6);
+  }
+
+  :global(html[data-chrome-pressed]) .chrome-grabber {
+    transform: scale(1.2, 1.6);
   }
 
   @media (max-width: 959px) {
@@ -430,8 +456,12 @@ const navItems = [
     opacity: 1;
   }
 
-  .mobile-menu nav a {
+  .mobile-menu nav :is(a, button) {
     position: relative;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-align: start;
     display: grid;
     grid-template-columns: 18px minmax(0, 1fr);
     align-items: center;
@@ -443,16 +473,16 @@ const navItems = [
     text-decoration: none;
   }
 
-  .mobile-menu nav a:last-child:nth-child(odd) {
+  .mobile-menu nav :is(a, button):last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 
-  .mobile-menu nav a svg {
+  .mobile-menu nav :is(a, button) svg {
     color: var(--color-secondary);
   }
 
-  .mobile-menu nav a:hover,
-  .mobile-menu nav a:focus-visible {
+  .mobile-menu nav :is(a, button):hover,
+  .mobile-menu nav :is(a, button):focus-visible {
     color: var(--color-interaction-text);
   }
 
@@ -544,6 +574,10 @@ const navItems = [
 
     .edge-link {
       position: relative;
+      background: none;
+      border: 0;
+      cursor: pointer;
+      text-align: start;
       display: grid;
       grid-template-columns: 16px 1fr;
       align-items: center;
@@ -588,7 +622,9 @@ const navItems = [
 
   @media (prefers-reduced-motion: reduce) {
     .mobile-bar,
+    .mobile-bar::after,
     .chrome-handle,
+    .chrome-grabber,
     .menu-open-icon,
     .menu-close-icon,
     .mobile-menu nav,
@@ -712,6 +748,7 @@ const navItems = [
 
   const endDrag = () => {
     dragPointerId = -1;
+    delete root.dataset.chromePressed;
     delete root.dataset.chromeDragging;
     root.style.removeProperty("--chrome-drag-y");
   };
@@ -723,15 +760,23 @@ const navItems = [
       return;
     }
 
-    const origin =
-      event.target instanceof Element
-        ? event.target.closest("[data-chrome-drag]")
-        : null;
+    const target = event.target instanceof Element ? event.target : null;
+    const origin = target?.closest("[data-chrome-drag]") ?? null;
     if (!origin) return;
 
     dragPointerId = event.pointerId;
     dragStartY = event.clientY;
     dragDistance = 0;
+
+    /*
+     * 掴み自体はバーのどこからでも始められるが、手応えは操作子の上では返さない。
+     * ホームやメニューを押しただけで線が動くと、何に反応したのか読めなくなる。
+     * 取っ手自身はボタンでありながら掴み面そのものなので、対象から外さない
+     */
+    const control = target?.closest("a, button, summary");
+    if (!control || control === origin) {
+      root.dataset.chromePressed = "";
+    }
   });
 
   document.addEventListener(
@@ -789,4 +834,49 @@ const navItems = [
     if (event.target === chromeHandle) return;
     setChromeHidden(false);
   });
+
+  /*
+   * 紙の入れ替え。設計上は紙を替えているが、紙の呼び名は一般に通らないので、
+   * 表に出す言葉は起きること（まぶしさ／明るさ）で書く。初期値は head の
+   * インラインスクリプトが決めており、ここでは選び直しと保存だけを担う。
+   * label は押した結果を先に言う
+   */
+  const paperActions = {
+    white: "明るさを戻す",
+    dim: "まぶしさを抑える",
+  };
+  const themeColor = document.querySelector("[data-theme-color]");
+  const paperToggles = document.querySelectorAll<HTMLElement>(
+    "[data-paper-toggle]",
+  );
+  const paperLabels =
+    document.querySelectorAll<HTMLElement>("[data-paper-label]");
+
+  const nextPaper = () => (root.dataset.paper === "dim" ? "white" : "dim");
+
+  const syncPaperLabels = () => {
+    const label = paperActions[nextPaper()];
+    paperLabels.forEach((node) => {
+      node.textContent = label;
+    });
+  };
+
+  paperToggles.forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const paper = nextPaper();
+      root.dataset.paper = paper;
+      themeColor?.setAttribute(
+        "content",
+        paper === "dim" ? "#efe8d9" : "#ffffff",
+      );
+      try {
+        localStorage.setItem("paper", paper);
+      } catch {
+        // 保存できない環境では、その場の選択だけ効かせる
+      }
+      syncPaperLabels();
+    });
+  });
+
+  syncPaperLabels();
 </script>

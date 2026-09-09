@@ -19,7 +19,29 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#FFFFFF" data-theme-color />
+    {/* 紙は描画前に決める。body を出してから替えると一瞬白が見える */}
+    <script is:inline>
+      (() => {
+        const PAPERS = { white: "#ffffff", dim: "#efe8d9" };
+        let paper = "white";
+        try {
+          const saved = localStorage.getItem("paper");
+          paper =
+            saved in PAPERS
+              ? saved
+              : matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dim"
+                : "white";
+        } catch {
+          paper = "white";
+        }
+        document.documentElement.dataset.paper = paper;
+        document
+          .querySelector("[data-theme-color]")
+          ?.setAttribute("content", PAPERS[paper]);
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <link rel="expect" href="#main-content" blocking="render" />

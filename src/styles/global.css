@@ -107,9 +107,22 @@
   --bg-base: var(--color-background);
   --bg-card: var(--color-surface);
   --bg-code: var(--color-code-bg);
-  --bg-hover: #f2f8f4;
-  --bg-selection: #edf7e8;
-  --bg-subtle: #f7faf8;
+  /* 紙を替えても関係が保てるよう、白固定ではなく紙からの混色で持つ */
+  --bg-hover: color-mix(
+    in srgb,
+    var(--color-primary) 6%,
+    var(--color-background)
+  );
+  --bg-selection: color-mix(
+    in srgb,
+    var(--color-accent) 28%,
+    var(--color-background)
+  );
+  --bg-subtle: color-mix(
+    in srgb,
+    var(--color-primary) 4%,
+    var(--color-background)
+  );
   --text-primary: var(--color-text);
   --text-secondary: var(--color-text-sub);
   --text-muted: var(--color-text-muted);
@@ -127,7 +140,11 @@
   --info-bg: var(--color-surface);
   --info-text: var(--color-text);
   --success: var(--color-primary);
-  --success-bg: #f2f8ee;
+  --success-bg: color-mix(
+    in srgb,
+    var(--color-accent) 21%,
+    var(--color-background)
+  );
   --success-text: var(--color-text);
   --warning: var(--color-warning);
   --warning-bg: var(--color-surface);
@@ -135,6 +152,26 @@
   --danger: var(--color-danger);
   --danger-bg: var(--color-surface);
   --danger-text: var(--color-text);
+}
+
+/*
+ * 2 枚目の紙。ダークモードではなく紙そのものを替える。目的は輝度を落とすことなので、
+ * 白 (#ffffff) に対して相対輝度 81% の紙を敷く（画面が出す光が約 19% 減る）。
+ * 設計上の考え方は「紙」だが、表に出す言葉は「まぶしさ」に寄せる。生成りのような
+ * 紙の呼び名は一般に通らないため、値は光の状態を指す dim で持つ。
+ * 骨格の色 (primary) と本文色はそのまま持ち越し、この紙の上で 4.5:1 を割るインクだけ
+ * 濃度を下げる。罫線と accent は白との明度差を保つよう同じ比率で落とす
+ */
+:root[data-paper="dim"] {
+  --color-background: #efe8d9;
+  --color-surface: #efe8d9;
+  --color-accent: #aecd9e;
+  --color-text-muted: #606b67;
+  --color-secondary: #089597;
+  --color-interaction-text: #067577;
+  --color-warning: #985a13;
+  --color-border: #c4d2c7;
+  --color-border-strong: #91b2a3;
 }
 
 @theme {
@@ -199,7 +236,11 @@ body {
 
 ::selection {
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-accent) 70%, white);
+  background: color-mix(
+    in srgb,
+    var(--color-accent) 70%,
+    var(--color-background)
+  );
 }
 
 a {
