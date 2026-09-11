@@ -390,8 +390,11 @@ const initializeEditor = (host: HTMLElement) => {
   const status = requireElement(host, "[data-status]");
   const counter = requireElement(host, "[data-count]");
   const saveButton = requireElement(host, "[data-save]");
+  const saveCount = requireElement(host, "[data-save-count]");
   const diffButton = requireElement(host, "[data-diff]");
+  const mobileDiffButton = requireElement(host, "[data-diff-mobile]");
   const discardButton = requireElement(host, "[data-discard]");
+  const mobileDiscardButton = requireElement(host, "[data-discard-mobile]");
   const prose = requireElement(document, ".preview-detail .prose");
 
   const serverBody = readEmbeddedBody(host);
@@ -466,6 +469,7 @@ const initializeEditor = (host: HTMLElement) => {
   const syncDiff = () => {
     prose.dataset.diff = diffVisible ? "on" : "off";
     diffButton.setAttribute("aria-pressed", String(diffVisible));
+    mobileDiffButton.setAttribute("aria-pressed", String(diffVisible));
     prose
       .querySelectorAll<HTMLElement>(".block-removed")
       .forEach((node) => (node.hidden = !diffVisible));
@@ -475,9 +479,13 @@ const initializeEditor = (host: HTMLElement) => {
     const pending = dirty.size;
     counter.textContent = pending === 0 ? "" : `未保存 ${pending} 箇所`;
     counter.hidden = pending === 0;
+    saveCount.textContent = pending === 0 ? "" : String(pending);
+    saveCount.hidden = pending === 0;
     saveButton.toggleAttribute("disabled", pending === 0 || busy);
     discardButton.toggleAttribute("disabled", pending === 0 || busy);
+    mobileDiscardButton.toggleAttribute("disabled", pending === 0 || busy);
     diffButton.hidden = pending === 0;
+    mobileDiffButton.hidden = pending === 0;
   };
 
   const textOf = (index: number) => blockText(draft, index);
@@ -1386,11 +1394,14 @@ const initializeEditor = (host: HTMLElement) => {
   syncDiff();
 
   saveButton.addEventListener("click", () => void commit());
-  diffButton.addEventListener("click", () => {
+  const toggleDiff = () => {
     diffVisible = !diffVisible;
     syncDiff();
-  });
+  };
+  diffButton.addEventListener("click", toggleDiff);
+  mobileDiffButton.addEventListener("click", toggleDiff);
   discardButton.addEventListener("click", discard);
+  mobileDiscardButton.addEventListener("click", discard);
   document.addEventListener("keydown", (event) => {
     if (
       event.key.toLocaleLowerCase() !== "s" ||

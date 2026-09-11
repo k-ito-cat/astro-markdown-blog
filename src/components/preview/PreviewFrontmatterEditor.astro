@@ -49,7 +49,7 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
   data-max-categories={MAX_CATEGORIES_PER_POST}
 >
   <details class="fm-details" data-preview-pane>
-    <summary class="fm-summary">
+    <summary class="fm-summary" aria-label="フロントマター">
       <Icon name="octicon:list-unordered-16" aria-hidden="true" />
       <span>フロントマター</span>
     </summary>
@@ -777,6 +777,14 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
   .fm-status[data-tone="error"] {
     color: var(--danger-text);
+  }
+
+  @media (max-width: 639px) {
+    .fm-form {
+      inset-inline: 0;
+      width: auto;
+      border-left: 0;
+    }
   }
 </style>
 

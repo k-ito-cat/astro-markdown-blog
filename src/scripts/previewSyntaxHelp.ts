@@ -67,7 +67,32 @@ const initPanes = (root: ParentNode) => {
   if (panes.length === 0) return;
 
   const bar = root.querySelector<HTMLElement>(".body-editor-bar");
+  const mobileActions = root.querySelector<HTMLDetailsElement>(
+    "[data-body-editor-more]",
+  );
   if (bar) trackPaneTop(bar, panes);
+
+  mobileActions
+    ?.querySelectorAll<HTMLElement>("[data-mobile-pane]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const selector = button.dataset.mobilePane;
+        const pane = selector
+          ? root.querySelector<HTMLDetailsElement>(selector)
+          : null;
+        if (!pane) return;
+
+        mobileActions.open = false;
+        pane.open = true;
+      });
+    });
+
+  mobileActions?.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    if (!event.target.closest("button")) return;
+
+    mobileActions.open = false;
+  });
 
   panes.forEach((pane) => {
     pane.addEventListener("toggle", () => {
@@ -83,7 +108,10 @@ const initPanes = (root: ParentNode) => {
     if (event.key !== "Escape") return;
 
     const opened = panes.find((pane) => pane.open);
-    if (!opened) return;
+    if (!opened) {
+      if (mobileActions) mobileActions.open = false;
+      return;
+    }
 
     opened.open = false;
   });
@@ -91,7 +119,15 @@ const initPanes = (root: ParentNode) => {
   // 押した時点で判定する。中の要素が処理中に消えると、離す頃には外と区別できない
   document.addEventListener("pointerdown", (event) => {
     const opened = panes.find((pane) => pane.open);
-    if (!opened) return;
+    if (!opened) {
+      if (
+        mobileActions?.open &&
+        !(event.target instanceof Node && mobileActions.contains(event.target))
+      ) {
+        mobileActions.open = false;
+      }
+      return;
+    }
 
     const target = event.target as Node | null;
     if (target && opened.contains(target)) return;

@@ -203,7 +203,7 @@ const SNIPPET_GROUPS = [
     <p class="body-editor-status" data-status aria-live="polite"></p>
     <span class="body-editor-count" data-count hidden></span>
     <details class="body-editor-guide" data-preview-pane>
-      <summary>
+      <summary aria-label="ヘルプ">
         <Icon name="octicon:question-16" aria-hidden="true" />
         <span>ヘルプ</span>
       </summary>
@@ -265,7 +265,7 @@ const SNIPPET_GROUPS = [
       </div>
     </details>
     <details class="body-editor-help" data-preview-pane>
-      <summary>
+      <summary aria-label="記法">
         <Icon name="octicon:book-16" aria-hidden="true" />
         <span>記法</span>
       </summary>
@@ -309,6 +309,7 @@ const SNIPPET_GROUPS = [
       disabled
     >
       <span>保存</span>
+      <span class="body-editor-save-count" data-save-count hidden></span>
       <span class="body-editor-save-shortcut" aria-hidden="true">
         <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
       </span>
@@ -321,6 +322,26 @@ const SNIPPET_GROUPS = [
       hidden>差分</button
     >
     <button type="button" data-discard disabled>破棄</button>
+    <details class="body-editor-more" data-body-editor-more>
+      <summary>
+        <Icon name="octicon:kebab-horizontal-16" aria-hidden="true" />
+        <span>その他</span>
+      </summary>
+      <div class="body-editor-more-menu">
+        <button type="button" data-mobile-pane=".body-editor-guide">
+          <Icon name="octicon:question-16" aria-hidden="true" />
+          <span>ヘルプ</span>
+        </button>
+        <button type="button" data-mobile-pane=".body-editor-help">
+          <Icon name="octicon:book-16" aria-hidden="true" />
+          <span>記法</span>
+        </button>
+        <button type="button" data-diff-mobile aria-pressed="true" hidden>
+          差分
+        </button>
+        <button type="button" data-discard-mobile disabled>破棄</button>
+      </div>
+    </details>
     </div>
   </div>
   <template data-block-toolbar-icon="help">
@@ -481,6 +502,11 @@ const SNIPPET_GROUPS = [
     white-space: nowrap;
   }
 
+  .body-editor-save-count,
+  .body-editor-more {
+    display: none;
+  }
+
   /* 開いてもバーの高さを変えないよう、中身はバーの下へ浮かせる */
   /* 状態と道具を行の両端へ寄せる。折り返して一行に一つになっても右端に残す */
   .body-editor-tools {
@@ -492,12 +518,14 @@ const SNIPPET_GROUPS = [
   }
 
   .body-editor-help,
-  .body-editor-guide {
+  .body-editor-guide,
+  .body-editor-more {
     position: relative;
   }
 
   .body-editor-help > summary,
-  .body-editor-guide > summary {
+  .body-editor-guide > summary,
+  .body-editor-more > summary {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -513,26 +541,31 @@ const SNIPPET_GROUPS = [
   }
 
   .body-editor-help > summary::-webkit-details-marker,
-  .body-editor-guide > summary::-webkit-details-marker {
+  .body-editor-guide > summary::-webkit-details-marker,
+  .body-editor-more > summary::-webkit-details-marker {
     display: none;
   }
 
   .body-editor-help > summary:hover,
   .body-editor-help > summary:focus-visible,
   .body-editor-guide > summary:hover,
-  .body-editor-guide > summary:focus-visible {
+  .body-editor-guide > summary:focus-visible,
+  .body-editor-more > summary:hover,
+  .body-editor-more > summary:focus-visible {
     background: var(--bg-subtle);
     color: var(--text-primary);
   }
 
   .body-editor-help[open] > summary,
-  .body-editor-guide[open] > summary {
+  .body-editor-guide[open] > summary,
+  .body-editor-more[open] > summary {
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
 
   .body-editor-help svg,
-  .body-editor-guide svg {
+  .body-editor-guide svg,
+  .body-editor-more svg {
     width: 14px;
     height: 14px;
     flex: 0 0 auto;
@@ -551,6 +584,226 @@ const SNIPPET_GROUPS = [
     overflow-y: auto;
     border-left: 1px solid var(--border-strong);
     background: var(--bg-base);
+  }
+
+  .body-editor-more-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    width: 168px;
+    padding: 4px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+  }
+
+  .body-editor-more-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    border-color: transparent;
+  }
+
+  .body-editor-more-menu button[hidden] {
+    display: none;
+  }
+
+  .body-editor-more-menu button[data-discard-mobile] {
+    color: var(--danger);
+  }
+
+  @media (max-width: 959px) {
+    /*
+     * ヘッダーを指で引いている間は、バーも一緒に画面外まで送る。
+     * ヘッダーや目次は transform で動かしているが、バーは吸着位置そのものを
+     * 動かす。バーの中には画面右端へ貼る fixed のペインがあり、transform を
+     * 掛けるとその基準がバーになって画面端へ届かなくなるため。
+     * ヘッダーの分と自身の分を合わせ、さらに 1px 余分に送って罫線を残さない。
+     */
+    .body-editor-bar {
+      --chrome-hidden-shift: calc(
+        -1px - 52px - var(--preview-editor-bar-height, 0px)
+      );
+      --chrome-shift: 0px;
+
+      top: calc(
+        52px +
+          clamp(
+            var(--chrome-hidden-shift),
+            calc(var(--chrome-shift) + var(--chrome-drag-y, 0px)),
+            var(--chrome-rubber-max, 0px)
+          )
+      );
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    :global(:root[data-chrome-hidden]) .body-editor-bar {
+      --chrome-shift: var(--chrome-hidden-shift);
+    }
+
+    .body-editor-bar > :global(.preview-toolbar-state) {
+      grid-column: 1;
+      justify-self: start;
+    }
+
+    .body-editor-tools {
+      grid-column: 1;
+      width: 100%;
+      margin-left: 0;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  }
+
+  /*
+   * タブレットでは状態と操作を意図して二段に分ける。状態の長さによって
+   * 操作群が偶発的に折り返されると、追従バーとペインの開始位置が不安定になる。
+   */
+  @media (min-width: 720px) and (max-width: 959px) {
+    .body-editor-tools > button,
+    .body-editor-tools > details > summary,
+    .body-editor-tools :global(.fm-summary) {
+      min-height: 44px;
+    }
+  }
+
+  /*
+   * 小さな画面では、編集に直結するフロントマターと保存だけを常設する。
+   * 補助操作は「その他」に集約し、どの幅でも 44px のタップ領域を確保する。
+   */
+  @media (max-width: 719px) {
+    .body-editor-bar {
+      min-height: 52px;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .body-editor-tools {
+      flex-wrap: nowrap;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .body-editor-status:empty {
+      display: none;
+    }
+
+    .body-editor-status:not(:empty) {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      padding: 6px 8px;
+      overflow: hidden;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .body-editor-count,
+    .body-editor-save-shortcut,
+    .body-editor-help > summary,
+    .body-editor-guide > summary,
+    .body-editor-tools > [data-diff],
+    .body-editor-tools > [data-discard] {
+      display: none;
+    }
+
+    .body-editor-tools :global(.fm-summary),
+    .body-editor-tools > .body-editor-save,
+    .body-editor-more > summary {
+      min-width: 44px;
+      height: 44px;
+    }
+
+    .body-editor-tools :global(.fm-summary) {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .body-editor-tools :global(.fm-summary span) {
+      display: none;
+    }
+
+    .body-editor-tools > .body-editor-save {
+      margin-left: auto;
+      padding: 0 12px;
+    }
+
+    .body-editor-save-count {
+      display: inline;
+    }
+
+    .body-editor-save-count[hidden] {
+      display: none;
+    }
+
+    .body-editor-more {
+      display: block;
+    }
+
+    .body-editor-more > summary {
+      padding: 0 10px;
+    }
+
+    .body-editor-more-menu button {
+      height: 44px;
+      padding: 0 12px;
+    }
+
+    .body-editor-help-body,
+    .body-editor-pane-body {
+      inset-inline: 0;
+      width: auto;
+      border-left: 0;
+    }
+  }
+
+  /*
+   * 狭幅では目次がこのバーの直下に積み上がる。目次は背景をページの左右余白ごと
+   * 画面端まで伸ばしているので、バーだけ本文カラム幅のままだと帯の幅が揃わず
+   * 段差に見える。余白ぶんのはみ出しを ::before で描いて端まで届かせる。
+   * 中身の位置は動かさないので、幅ごとの padding 指定には触れない。
+   */
+  @media (max-width: 1023px) {
+    .body-editor-bar {
+      --preview-bar-side-inset: 16px;
+
+      /* 指で触る操作子なので、なぞりや長押しで選択が割り込まないようにする */
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    .body-editor-bar::before {
+      position: absolute;
+      z-index: -1;
+      inset-block: 0;
+      inset-inline: calc(-1 * var(--preview-bar-side-inset));
+      content: "";
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* 保存状態はバーの下にぶら下がるので、同じ幅で出す */
+    .body-editor-status:not(:empty) {
+      inset-inline: calc(-1 * var(--preview-bar-side-inset));
+      width: auto;
+    }
+  }
+
+  /* ページの左右余白が広がる幅では、はみ出し量もそれに合わせる */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .body-editor-bar {
+      --preview-bar-side-inset: 24px;
+    }
   }
 
   /* 本文のラベル付き罫線（メモ欄の見出し）と同じ「語 + Line」の形にする */
@@ -1096,5 +1349,9 @@ const SNIPPET_GROUPS = [
     const { initPreviewSyntaxHelp } =
       await import("~/scripts/previewSyntaxHelp");
     initPreviewSyntaxHelp();
+
+    const { initPreviewBarMetrics } =
+      await import("~/scripts/previewBarMetrics");
+    initPreviewBarMetrics();
   }
 </script>

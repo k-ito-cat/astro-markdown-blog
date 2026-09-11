@@ -84,7 +84,11 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             >
               一覧へ戻る
             </a>
-            <CopyLinkButton path={Astro.url.pathname} label="リンクをコピー" />
+            <CopyLinkButton
+              path={Astro.url.pathname}
+              label="リンクをコピー"
+              class="preview-toolbar-copy"
+            />
             {hasPublicPage ? (
               <a class="preview-toolbar-public" href={publicPath}>
                 本番ページ
@@ -104,10 +108,21 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             </button>
           </div>
 
+          <p
+            class="preview-toolbar-state preview-toolbar-state-mobile"
+            data-publication={post.data.status}
+          >
+            <span class="preview-toolbar-publication">
+              {PUBLISHED_STATUS_LABELS[post.data.status]}
+            </span>
+            <span>{WRITING_STATUS_LABELS[post.data.writingStatus]}</span>
+            <span>優先度 {POST_PRIORITY_LABELS[post.data.priority]}</span>
+          </p>
+
           <PreviewBodyEditor entryId={post.id} body={post.body ?? ""}>
             <p
               slot="state"
-              class="preview-toolbar-state"
+              class="preview-toolbar-state preview-toolbar-state-desktop"
               data-publication={post.data.status}
             >
               <span class="preview-toolbar-publication">
@@ -322,6 +337,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
    */
   .preview-toolbar-state {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin: 0;
@@ -346,6 +362,10 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
 
   .preview-toolbar-state[data-publication="draft"] {
     --publication-color: var(--warning);
+  }
+
+  .preview-toolbar-state-mobile {
+    display: none;
   }
 
   .preview-toolbar-note {
@@ -378,6 +398,48 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   @media (min-width: 640px) {
     .preview-layout {
       padding: 36px 24px 96px;
+    }
+  }
+
+  @media (max-width: 959px) {
+    .preview-layout {
+      padding-top: calc(52px + clamp(24px, 5vw, 36px));
+    }
+  }
+
+  @media (max-width: 1023px) {
+    /* 指で触る操作子なので、なぞりや長押しで選択が割り込まないようにする */
+    .preview-toolbar-nav,
+    .preview-toolbar-state {
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .preview-toolbar-nav {
+      justify-content: flex-start;
+      gap: 8px 14px;
+    }
+
+    .preview-toolbar-nav > :first-child {
+      margin-right: auto;
+    }
+
+    .preview-toolbar-nav :is(a, button),
+    :global(.preview-toolbar-copy) {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    .preview-toolbar-state-mobile {
+      display: flex;
+      margin-bottom: 8px;
+    }
+
+    .preview-toolbar-state-desktop {
+      display: none;
     }
   }
 

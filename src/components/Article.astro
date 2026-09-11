@@ -491,7 +491,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
     .article-structure {
       position: sticky;
-      inset-block-start: var(--article-sticky-header-height);
+      inset-block-start: var(--article-structure-offset);
       z-index: 20;
       transition: transform var(--duration-feedback) var(--ease-trace);
     }
@@ -716,7 +716,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .prose h2,
     .prose h3 {
       scroll-margin-top: calc(
-        var(--article-sticky-header-height) +
+        var(--article-structure-offset) +
           var(--article-structure-summary-height) + 24px
       );
     }
