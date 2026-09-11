@@ -219,6 +219,11 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 <style>
   .article {
     --article-sticky-header-height: 52px;
+    /*
+     * 目次が吸着する高さ。既定ではヘッダーの下だが、上にさらに追従する
+     * ものがある画面ではその分を足して積み上げるため、別の名前で持つ。
+     */
+    --article-structure-offset: var(--article-sticky-header-height);
     --article-structure-summary-height: 44px;
     --article-structure-padding-bottom: 14px;
 
@@ -461,6 +466,29 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   @media (max-width: 1023px) {
+    /*
+     * 目次と操作子は指で触る面なので、長押しやなぞりで選択やコピーの UI が
+     * 割り込まないようにする。ここで取りたいのは操作の手応えだけで、
+     * 読ませたい文章は本文の側にある。本文と見出しは従来どおり選択できる。
+     */
+    .article-structure,
+    .article-footer {
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    /*
+     * プレビューには記事の上に追従する編集バーがある。ヘッダー、バー、目次の
+     * 順に積み上げるため、吸着の基準にバーの実高を足す。この変数を配るのは
+     * プレビューのスクリプトだけなので、本番の記事ページは従来どおり動く。
+     */
+    :global(.preview-detail) .article {
+      --article-structure-offset: calc(
+        var(--article-sticky-header-height) +
+          var(--preview-editor-bar-height, 0px)
+      );
+    }
+
     .article-structure {
       position: sticky;
       inset-block-start: var(--article-sticky-header-height);
@@ -514,7 +542,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       max-block-size: calc(
-        80dvb - var(--article-sticky-header-height) -
+        80dvb - var(--article-structure-offset) -
           var(--article-structure-summary-height)
       );
       min-block-size: 0;
@@ -579,7 +607,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .article-structure[data-stuck]:not([open]) {
       /* ヘッダーと同じ理由で 1px 余分に送る（下端の罫線を残さない） */
       --chrome-hidden-shift: calc(
-        -1px - var(--article-sticky-header-height) -
+        -1px - var(--article-structure-offset) -
           var(--article-structure-summary-height)
       );
       --chrome-shift: 0px;
@@ -588,7 +616,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
         clamp(
           var(--chrome-hidden-shift),
           calc(var(--chrome-shift) + var(--chrome-drag-y, 0px)),
-          0px
+          var(--chrome-rubber-max, 0px)
         )
       );
     }

@@ -63,6 +63,7 @@ const navItems = [
   </div>
 
   <div class="mobile-bar" data-chrome-drag>
+    <span class="chrome-pull" aria-hidden="true"></span>
     <a
       href="/"
       class="mobile-home"
@@ -73,11 +74,10 @@ const navItems = [
     </a>
     <details class="mobile-menu" data-mobile-menu>
       <summary aria-label="サイト内ナビゲーション" data-mobile-menu-summary>
-        <span class="menu-open-icon" aria-hidden="true">
-          <Icon name="octicon:three-bars-16" />
-        </span>
-        <span class="menu-close-icon" aria-hidden="true">
-          <Icon name="octicon:x-16" />
+        <span class="menu-bars" aria-hidden="true">
+          <span class="menu-bar"></span>
+          <span class="menu-bar"></span>
+          <span class="menu-bar"></span>
         </span>
       </summary>
       <nav aria-label="モバイルナビゲーション" data-mobile-menu-panel>
@@ -131,6 +131,62 @@ const navItems = [
 
   .desktop-edge {
     display: none;
+  }
+
+  /*
+   * バーは掴んで動かす面なので、指の操作に選択やコピーの UI が割り込まない
+   * ようにする。ここに読ませたい文章はなく、取れて困るのは操作の手応えだけ。
+   * 960px 以上ではバーも取っ手も出ないため、実質は指で触る幅にだけ効く。
+   */
+  .mobile-bar,
+  .chrome-handle {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  /*
+   * 下へ引くと画面上端とバーの間が空く。地の色が覗くとバーだけが浮いて見え、
+   * 引いた手応えが「めくれ」に見えてしまうので、伸びしろの分だけ同じ紙を
+   * バーの真上に足しておく。バーと一緒に動くので、常に隙間へ付いてくる。
+   */
+  .mobile-bar::before {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 100%;
+    height: var(--chrome-rubber-max, 0px);
+    content: "";
+    background: var(--color-background);
+  }
+
+  /*
+   * 引き切るまでの残りを、空いた余白の中に示す。出るのは下へ引いている間だけ。
+   * 満ちたら色を変えて、ここで離せば巻き取ることを先に伝える。
+   */
+  .chrome-pull {
+    position: absolute;
+    inset-inline: 16px;
+    inset-block-end: 100%;
+    height: 2px;
+    margin-block-end: 8px;
+    opacity: 0;
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  :global(html[data-chrome-pulling]) .chrome-pull {
+    opacity: 1;
+  }
+
+  .chrome-pull::after {
+    display: block;
+    width: calc(var(--chrome-pull-progress, 0) * 100%);
+    height: 100%;
+    content: "";
+    background: var(--color-border-strong);
+    border-radius: 999px;
+  }
+
+  :global(html[data-chrome-pull-ready]) .chrome-pull::after {
+    background: var(--color-secondary);
   }
 
   .mobile-bar {
@@ -203,7 +259,7 @@ const navItems = [
         clamp(
           var(--chrome-hidden-shift),
           calc(var(--chrome-shift) + var(--chrome-drag-y, 0px)),
-          0px
+          var(--chrome-rubber-max, 0px)
         )
       );
     }
@@ -325,8 +381,7 @@ const navItems = [
     text-decoration: none;
   }
 
-  .mobile-home svg,
-  .mobile-menu summary svg {
+  .mobile-home svg {
     width: 18px;
     height: 18px;
   }
@@ -358,24 +413,77 @@ const navItems = [
     display: none;
   }
 
-  .menu-open-icon,
-  .menu-close-icon {
+  /*
+   * 三本線と × は同じ線の変形として見せる。別々のアイコンを重ねて
+   * 入れ替えると形が繋がらず、切り替わりが唐突に見える。
+   * 開くも閉じるも同じ transition を逆にたどるので、往復の動きが揃う。
+   */
+  .menu-bars {
     grid-area: menu-icon;
-    display: inline-flex;
-    opacity: 1;
-    transition: opacity var(--duration-feedback) ease;
+    position: relative;
+    width: 18px;
+    height: 14px;
   }
 
-  .menu-close-icon {
+  .menu-bar {
+    /* 吸収と傾きの二段で動かす。開閉にかかる時間はこの倍になる */
+    --menu-bar-step: 120ms;
+
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentcolor;
+    border-radius: 1px;
+    translate: 0 0;
+    rotate: 0deg;
+    /*
+     * 閉じるときは開くときの逆順をたどる。まず傾きが戻って三本に揃い、
+     * そのあと上下の線が元の位置へ離れていく。
+     * 位置と角度を別々に遅らせたいので、transform ではなく translate と
+     * rotate を個別のプロパティとして動かす。
+     */
+    transition:
+      rotate var(--menu-bar-step) var(--ease-trace),
+      opacity var(--menu-bar-step) ease,
+      translate var(--menu-bar-step) var(--ease-trace) var(--menu-bar-step);
+  }
+
+  .menu-bar:nth-child(1) {
+    top: 0;
+  }
+
+  .menu-bar:nth-child(2) {
+    top: 6px;
+  }
+
+  .menu-bar:nth-child(3) {
+    top: 12px;
+  }
+
+  /*
+   * 開くときは、上下の線が中央へ吸い込まれて三本が重なり、
+   * そこから互いに反対へ傾いて × になる。真ん中の線は傾きに合わせて消す。
+   */
+  .mobile-menu[open]:not([data-closing]) .menu-bar {
+    transition:
+      translate var(--menu-bar-step) var(--ease-trace),
+      rotate var(--menu-bar-step) var(--ease-trace) var(--menu-bar-step),
+      opacity var(--menu-bar-step) ease var(--menu-bar-step);
+  }
+
+  .mobile-menu[open]:not([data-closing]) .menu-bar:nth-child(1) {
+    translate: 0 6px;
+    rotate: 45deg;
+  }
+
+  .mobile-menu[open]:not([data-closing]) .menu-bar:nth-child(2) {
     opacity: 0;
   }
 
-  .mobile-menu[open]:not([data-closing]) .menu-open-icon {
-    opacity: 0;
-  }
-
-  .mobile-menu[open]:not([data-closing]) .menu-close-icon {
-    opacity: 1;
+  .mobile-menu[open]:not([data-closing]) .menu-bar:nth-child(3) {
+    translate: 0 -6px;
+    rotate: -45deg;
   }
 
   .mobile-menu nav {
@@ -387,7 +495,10 @@ const navItems = [
     padding: 20px 16px 24px;
     opacity: 1;
     background: var(--color-background);
-    transition: opacity var(--duration-feedback) ease;
+    transform: translateY(0);
+    transition:
+      opacity var(--duration-feedback) ease,
+      transform var(--duration-feedback) var(--ease-trace);
   }
 
   .mobile-menu[open]:not([data-closing]) nav {
@@ -397,6 +508,7 @@ const navItems = [
   .mobile-menu[data-closing] nav {
     pointer-events: none;
     opacity: 0;
+    transform: translateY(-8px);
   }
 
   .mobile-menu nav::before {
@@ -440,20 +552,30 @@ const navItems = [
     transition: transform var(--duration-feedback) var(--ease-trace);
   }
 
-  /* 展開中は本文にスクリムを敷き、メニューを手前に立たせる */
+  /*
+   * 展開中は本文にスクリムを敷き、メニューを手前に立たせる。
+   * 画面いっぱいの面を一様に暗くすると、明るさが一度に変わって目が痛い。
+   * パネルが上から降りるのに続けて、上端から下へ広げる。閉じるときは
+   * 同じ経路を上へ畳む。パネルより少し長くかけ、追って広がるようにする。
+   *
+   * 伸ばすのは clip-path ではなく scaleY。切り抜きを動かすと画面いっぱいの
+   * 塗り直しが毎フレーム走り、端末によってはあからさまに引っかかる。
+   * 単色の面なので、拡大しても見た目は切り抜きと変わらない。
+   */
   .menu-scrim {
     position: fixed;
     z-index: 25;
     inset: 0;
     pointer-events: none;
-    opacity: 0;
-    background: rgb(0 0 0 / 50%);
-    transition: opacity var(--duration-feedback) ease;
+    background: rgb(0 0 0 / 40%);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform var(--duration-state) var(--ease-trace);
   }
 
   .site-header:has(.mobile-menu[open]:not([data-closing])) .menu-scrim {
     pointer-events: auto;
-    opacity: 1;
+    transform: scaleY(1);
   }
 
   .mobile-menu nav :is(a, button) {
@@ -494,10 +616,12 @@ const navItems = [
   @keyframes mobile-menu-surface-in {
     from {
       opacity: 0;
+      transform: translateY(-8px);
     }
 
     to {
       opacity: 1;
+      transform: translateY(0);
     }
   }
 
@@ -623,10 +747,10 @@ const navItems = [
   @media (prefers-reduced-motion: reduce) {
     .mobile-bar,
     .mobile-bar::after,
+    .chrome-pull,
     .chrome-handle,
     .chrome-grabber,
-    .menu-open-icon,
-    .menu-close-icon,
+    .menu-bar,
     .mobile-menu nav,
     .mobile-menu nav::before,
     .mobile-menu nav::after,
@@ -642,6 +766,19 @@ const navItems = [
     body {
       padding-top: 52px;
     }
+
+    /*
+     * ヘッダーを下へ引いたときに伸びる量の上限。ヘッダーと一緒に動くもの
+     * （目次、プレビューの編集バー）が同じ値を見られるよう html に置く。
+     * 退避中の下引きは戻す操作なので、そのときは伸びしろを持たせない。
+     */
+    :root {
+      --chrome-rubber-max: 48px;
+    }
+
+    :root[data-chrome-hidden] {
+      --chrome-rubber-max: 0px;
+    }
   }
 </style>
 
@@ -652,7 +789,11 @@ const navItems = [
     "[data-mobile-menu-summary]",
   );
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const closeDuration = 160;
+  /*
+   * 閉じ切るまで open を外さない。線は傾きを戻してから離れる二段の動きなので、
+   * 片方だけの時間で外すと途中で消える（CSS の --menu-bar-step の倍）
+   */
+  const closeDuration = 240;
   const closeScrollDistance = 72;
 
   if (mobileMenu && mobileMenuSummary) {
@@ -730,6 +871,19 @@ const navItems = [
   // 確定に必要な移動量と、タップと見なす許容量
   const commitDistance = 24;
   const tapSlop = 6;
+  /*
+   * 表示中に下へ引いたときは、引いた分がそのまま付いてくると「降りる」操作に
+   * 見えてしまう。抵抗をかけて伸びを抑え、引き切って離したところで上へ巻き取る。
+   * 退避中の下引きは戻す操作なので、抵抗はかけず指の動きどおりに追わせる。
+   */
+  const rubberMax = 48;
+  const pullCommitDistance = 56;
+  /*
+   * 伸びは漸近させる。引くほど鈍り、確定に必要な量まで引いたところで上限の
+   * 八割ほどに達してそれ以上は動かない。進み具合の線が満ちるのと、指が感じる
+   * 「引き切った」ところを揃えるための値
+   */
+  const rubberSoftness = 35;
 
   let dragPointerId = -1;
   let dragStartY = 0;
@@ -750,7 +904,10 @@ const navItems = [
     dragPointerId = -1;
     delete root.dataset.chromePressed;
     delete root.dataset.chromeDragging;
+    delete root.dataset.chromePulling;
+    root.removeAttribute("data-chrome-pull-ready");
     root.style.removeProperty("--chrome-drag-y");
+    root.style.removeProperty("--chrome-pull-progress");
   };
 
   document.addEventListener("pointerdown", (event) => {
@@ -787,8 +944,23 @@ const navItems = [
       dragDistance = event.clientY - dragStartY;
       if (Math.abs(dragDistance) < tapSlop) return;
 
+      const pulling = dragDistance > 0 && !isChromeHidden();
+      const offset = pulling
+        ? rubberMax * (1 - Math.exp(-dragDistance / rubberSoftness))
+        : dragDistance;
+
       root.dataset.chromeDragging = "";
-      root.style.setProperty("--chrome-drag-y", `${dragDistance}px`);
+      root.style.setProperty("--chrome-drag-y", `${offset}px`);
+
+      if (pulling) {
+        const progress = Math.min(1, dragDistance / pullCommitDistance);
+        root.dataset.chromePulling = "";
+        root.style.setProperty("--chrome-pull-progress", `${progress}`);
+        root.toggleAttribute("data-chrome-pull-ready", progress >= 1);
+      } else {
+        delete root.dataset.chromePulling;
+        root.removeAttribute("data-chrome-pull-ready");
+      }
     },
     { passive: true },
   );
@@ -796,10 +968,17 @@ const navItems = [
   const finishDrag = (event: PointerEvent) => {
     if (event.pointerId !== dragPointerId) return;
 
-    // 引き切ったかどうかだけで決める。届かなければ元の位置へ戻す
+    /*
+     * 引き切ったかどうかだけで決める。届かなければ元の位置へ戻す。
+     * 表示中は上へ送っても下へ引き切っても退避させる。下は伸びに抵抗がある分、
+     * 手が動く距離は長くなるので、確定に必要な量も上より大きく取る
+     */
     if (isChromeHidden()) {
       if (dragDistance > commitDistance) setChromeHidden(false);
-    } else if (dragDistance < -commitDistance) {
+    } else if (
+      dragDistance < -commitDistance ||
+      dragDistance > pullCommitDistance
+    ) {
       setChromeHidden(true);
     }
 
