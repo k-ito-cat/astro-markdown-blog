@@ -369,12 +369,14 @@ const SNIPPET_GROUPS = [
    * ページのどこにいても保存できるよう追従させる。
    * ここがスタッキングコンテキストの境界になるので、中から出る右ペインの
    * 重なりもこの値で決まる。本文脇の道具（.block-toolbar ほか、10〜12）と
-   * モバイルの固定バー（30）より上、左レール（40）より下に置く。
+   * 追従中の目次（20）より上、メニューのスクリム（25）とヘッダー（30）
+   * より下に置く。上に出すと、メニューを開いてもバーが暗まず手前に残り、
+   * 開いたメニュー自体を覆ってしまう。
    */
   .body-editor-bar {
     position: sticky;
     top: 0;
-    z-index: 35;
+    z-index: 24;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -717,11 +719,31 @@ const SNIPPET_GROUPS = [
       display: none;
     }
 
+    /*
+     * 指が届く範囲は 44px 要るが、その寸法のまま枠を描くと、本文の上に
+     * 大きな箱が並んで編集の道具のほうが主役に見える。見た目は 34px に
+     * 抑え、足りない分は当たり判定だけを広げて補う。
+     */
     .body-editor-tools :global(.fm-summary),
     .body-editor-tools > .body-editor-save,
     .body-editor-more > summary {
-      min-width: 44px;
-      height: 44px;
+      position: relative;
+      min-width: 34px;
+      height: 34px;
+    }
+
+    .body-editor-tools :global(.fm-summary)::before,
+    .body-editor-tools > .body-editor-save::before,
+    .body-editor-more > summary::before {
+      position: absolute;
+      inset: -5px;
+      content: "";
+    }
+
+    /* 枠も一段弱める。並ぶ数が多いので、線が強いと縞に見える */
+    .body-editor-tools :global(.fm-summary),
+    .body-editor-more > summary {
+      border-color: var(--border);
     }
 
     .body-editor-tools :global(.fm-summary) {
@@ -785,7 +807,12 @@ const SNIPPET_GROUPS = [
     .body-editor-bar::before {
       position: absolute;
       z-index: -1;
-      inset-block: 0;
+      /*
+       * 絶対配置の基準はバーの padding box なので、0 のままだと下端が
+       * バーの罫線の内側で止まり、線が 1px ずれて二重に見える。
+       * 罫線の外側まで伸ばして 1 本に重ねる
+       */
+      inset-block: 0 -1px;
       inset-inline: calc(-1 * var(--preview-bar-side-inset));
       content: "";
       background: var(--bg-base);

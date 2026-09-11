@@ -407,6 +407,16 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     }
   }
 
+  /*
+   * 左レールが立つ幅では、上を塞ぐヘッダーが無くなる。狭い幅と同じ余白を
+   * 取ると、一番上にいるとき頭上が空きすぎて、道具だけが宙に浮いて見える。
+   */
+  @media (min-width: 960px) {
+    .preview-layout {
+      padding-top: 20px;
+    }
+  }
+
   @media (max-width: 1023px) {
     /* 指で触る操作子なので、なぞりや長押しで選択が割り込まないようにする */
     .preview-toolbar-nav,

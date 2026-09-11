@@ -1470,6 +1470,12 @@ const initializeEditor = (host: HTMLElement) => {
   let keepSelection = false;
   prose.addEventListener("mouseup", (event) => {
     if (active || busy || event.shiftKey) return;
+    /*
+     * 二度押しで語が選ばれるのは編集に入るための動きなので、範囲選択の
+     * 起点にしない。一行のブロックでは選んだ語の端が次のブロックに触れ、
+     * 触れただけの隣まで選択に含まれてしまう
+     */
+    if (event.detail >= 2) return;
 
     keepSelection = selectFromTextSelection();
   });
@@ -1514,6 +1520,17 @@ const initializeEditor = (host: HTMLElement) => {
       if (marker) undo(marker);
       return;
     }
+  });
+
+  /*
+   * 編集に入るのは二度押しのときだけにする。一度触れただけで書き換えの構えに
+   * 入ると、読んでいる途中の指が当たっただけで編集が始まってしまう。
+   */
+  prose.addEventListener("dblclick", (event) => {
+    if (active || busy || event.shiftKey || selected) return;
+
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
 
     // 画像は Lightbox、コピーボタンとトグルの開閉は本来の動作を優先する
     if (target.tagName === "IMG" || target.closest("button, summary")) return;
@@ -1523,10 +1540,11 @@ const initializeEditor = (host: HTMLElement) => {
 
     const node = target.closest<HTMLElement>("[data-md-index]");
     if (!node || node.hidden) return;
-    // 範囲選択の終了クリックで編集に入らないようにする
-    if (!window.getSelection()?.isCollapsed) return;
 
-    if (link) event.preventDefault();
+    // 二度押しで語が選ばれるので、編集に移る前に解いておく
+    window.getSelection()?.removeAllRanges();
+
+    event.preventDefault();
     open(indexOf(node), "replace");
   });
 };
