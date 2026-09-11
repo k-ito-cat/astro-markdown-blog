@@ -2,7 +2,6 @@
 type RelationRecord = { slug: string; title: string };
 type RelationGroup = {
   label: string;
-  description: string;
   records: RelationRecord[];
 };
 type Props = {
@@ -29,7 +28,6 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
       {meaningfulGroups.map((group) => (
         <section>
           <p class="relation-label">{group.label}</p>
-          <p class="relation-description">{group.description}</p>
           <ul>
             {group.records.map((record) => (
               <li>
@@ -41,8 +39,7 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
       ))}
       {sameField.length > 0 && (
         <section>
-          <p class="relation-label">関連する記録</p>
-          <p class="relation-description">共通する分野やタグと近い記録</p>
+          <p class="relation-label">同じ分野の記事</p>
           <ul>
             {sameField.map((record) => (
               <li>
@@ -56,13 +53,13 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
         <div class="sequence">
           {older && (
             <a href={`${basePath}/${older.slug}`}>
-              <small>ひとつ前の記録</small>
+              <small>前の記事</small>
               <span>{older.title}</span>
             </a>
           )}
           {newer && (
             <a href={`${basePath}/${newer.slug}`}>
-              <small>ひとつ後の記録</small>
+              <small>次の記事</small>
               <span>{newer.title}</span>
             </a>
           )}
@@ -85,15 +82,10 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
   }
 
   .relation-label {
-    margin: 0;
+    /* 説明文を置かなくなったので、見出しと一覧の間はここで空ける */
+    margin: 0 0 10px;
     color: var(--color-primary);
     font-weight: 700;
-  }
-
-  .relation-description {
-    margin: 4px 0 10px;
-    color: var(--color-text-muted);
-    font-size: var(--text-xs);
   }
 
   .record-relations ul {

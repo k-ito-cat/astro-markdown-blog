@@ -194,9 +194,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           sizes="176px"
           loading="eager"
         />
-        <p class="draft-note">
-          この記録は検討中です。本文は公開されていません。
-        </p>
+        <p class="draft-note">この記事は公開予定です。</p>
       </div>
     )
   }
@@ -255,8 +253,17 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
    * .current-trace が同じ役割を担うため、二重に置かない。
    */
   .article-structure {
+    /*
+     * 背景を端まで伸ばすときの基準。画面幅ではなく、記事が実際に置ける幅を
+     * 見る。960px 以上では左端にレールが立ち、body がその分だけ右へ寄るため、
+     * 画面幅で測ると伸ばす量が左右でずれる。
+     */
+    --article-structure-viewport: 100vw;
     --article-structure-side-inset: calc(
-      (100vw - min(var(--measure-prose), 100vw - 32px)) / 2
+      (
+          var(--article-structure-viewport) -
+            min(var(--measure-prose), var(--article-structure-viewport) - 32px)
+        ) / 2
     );
 
     position: relative;
@@ -640,8 +647,28 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   @media (min-width: 640px) and (max-width: 1023px) {
     .article-structure {
       --article-structure-side-inset: calc(
-        (100vw - min(var(--measure-prose), 100vw - 48px)) / 2
+        (
+            var(--article-structure-viewport) -
+              min(
+                var(--measure-prose),
+                var(--article-structure-viewport) - 48px
+              )
+          ) / 2
       );
+    }
+  }
+
+  /*
+   * 左レールが立つ幅。記事はレールのぶん右へ寄り、上を塞ぐバーは無くなる。
+   * 目次もそれに合わせ、基準幅を狭め、吸着は画面の上端に戻す。
+   */
+  @media (min-width: 960px) {
+    .article {
+      --article-sticky-header-height: 0px;
+    }
+
+    .article-structure {
+      --article-structure-viewport: calc(100vw - 48px);
     }
   }
 

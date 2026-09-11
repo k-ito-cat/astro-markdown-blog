@@ -13,7 +13,6 @@ export type LinkedRecord = { slug: string; title: string };
 
 export type RelationGroup = {
   label: string;
-  description: string;
   records: LinkedRecord[];
 };
 
@@ -55,23 +54,19 @@ export const getPostRelations = (
 
   const groups: RelationGroup[] = [
     {
-      label: "この記録の前提",
-      description: "先に理解しておくと、この記録を辿りやすくなります。",
+      label: "前提",
       records: resolveRecords(post.data.relations?.prerequisites),
     },
     {
-      label: "関連する記録",
-      description: "同じ論点を別の位置から扱っています。",
+      label: "関連記事",
       records: resolveRecords(post.data.relations?.related),
     },
     {
-      label: "ここから続く記録",
-      description: "この理解を前提に、先へ進めた記録です。",
+      label: "続き",
       records: resolveRecords(post.data.relations?.developments),
     },
     {
-      label: "この記録を置き換えたもの",
-      description: "認識の更新により、現在はこちらを参照します。",
+      label: "新しい版",
       records: resolveRecords(post.data.relations?.replacements),
     },
   ];

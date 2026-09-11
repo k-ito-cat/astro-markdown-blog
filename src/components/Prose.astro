@@ -642,12 +642,17 @@ const { content: Content, status } = Astro.props;
     margin: 56px 0;
   }
 
+  /*
+   * 引用は面ではなく線で示す。地を塗ると本文の紙が途切れて別の箱に見え、
+   * 注釈（markdown-alert）との区別も付きにくい。縦の罫線だけを引いて、
+   * 本文の流れに乗せたまま出どころが別であることを示す。
+   */
   .prose blockquote {
-    --quote-background: #f5f5f5;
     margin: 24px 0;
-    padding: 12px 16px;
+    padding: 4px 0 4px 16px;
     border: 0;
-    background: var(--quote-background);
+    border-left: 2px solid var(--color-border-strong);
+    background: none;
     color: var(--text-primary);
   }
 
