@@ -10,6 +10,7 @@ import rehypeExternalLinks, {
   remarkExternalLinksInHtml,
 } from "./src/plugins/rehypeExternalLinks.mjs";
 import remarkDividerVariant from "./src/plugins/remarkDividerVariant.mjs";
+import remarkLinkCardDev from "./src/plugins/remarkLinkCardDev.mjs";
 import remarkReviewCallout from "./src/plugins/remarkReviewCallout.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
@@ -76,10 +77,12 @@ export default defineConfig({
         ],
         // リンクカードは本文の外部リンクごとに OGP を取りに行く。dev では記事を
         // 保存するたびにコンテンツの同期の中で走り、リンク 1 本あたり最大 10 秒
-        // 待つため、追加した記事が一覧に出るまで止まる。dev では外す
+        // 待つため、追加した記事が一覧に出るまで止まる。そこで dev は取得を
+        // 伴わない簡易カードへ差し替え、待ちを作らずに見た目だけ確かめられる
+        // ようにする
         ...(process.env.NODE_ENV === "production"
           ? [[remarkLinkCardPlus, { noFavicon: true }]]
-          : []),
+          : [remarkLinkCardDev]),
         [
           remarkExternalLinksInHtml,
           { internalHosts: ["k-ito-blog.netlify.app"] },
