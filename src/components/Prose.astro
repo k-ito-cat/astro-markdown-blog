@@ -110,7 +110,6 @@ const { content: Content, status } = Astro.props;
           scrollY = window.scrollY;
           lightbox.openAt(idx);
         });
-        (img as HTMLImageElement).style.cursor = "zoom-in";
       });
     });
 
@@ -830,13 +829,28 @@ const { content: Content, status } = Astro.props;
     margin: 24px auto;
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
-    cursor: zoom-in;
+    /*
+     * 押すとライトボックスが開くことを示す。zoom-in のほうが意味は近いが、
+     * macOS の Chrome はこの値を描画せず矢印のまま出すため、どの環境でも
+     * 確実に見える pointer を使う。
+     */
+    cursor: pointer;
   }
 
   /* キャプション付きの画像。画像とキャプションの左端を揃える */
   .prose figure {
     max-width: var(--measure-prose);
     margin: 24px auto;
+  }
+
+  /*
+   * 画像とキャプションは 1 つのまとまりに見えるので、画像からわずかに
+   * はみ出した位置でもカーソルを変えたままにしておく。
+   * expressive-code も figure を使うため、クラスを持たない
+   * 画像由来のものだけに当てる。
+   */
+  .prose figure:not([class]) {
+    cursor: pointer;
   }
 
   .prose figure img {
@@ -849,6 +863,8 @@ const { content: Content, status } = Astro.props;
     color: var(--text-muted);
     font-size: var(--text-sm);
     line-height: 1.7;
+    /* ここは読んで選ぶための文。figure から拡大のカーソルを継がせない */
+    cursor: text;
   }
 
   .prose .prose-memo-section {
