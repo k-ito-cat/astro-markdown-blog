@@ -337,6 +337,24 @@ const { content: Content, status } = Astro.props;
     }
   }
 
+  /*
+   * 和文の折り返しを読みやすい位置に寄せる。既定では文字単位で改行されるため、
+   * 「スミソニ / アン」のように語の途中で切れる。
+   *
+   * 2 つを並べて、効く環境から順に段階的に良くなるようにしている。
+   * どちらも未対応のブラウザは既定の挙動に落ちるだけで、崩れはしない。
+   *   - word-break: auto-phrase … 文節単位で折り返す。Chromium 119+。
+   *     WebKit は Technology Preview のみで、iOS では現状まだ効かない
+   *   - text-wrap: pretty … 段落全体を見て行末の不揃いと孤立語を減らす。
+   *     WebKit は Safari 26 から。文節は見ないが、iOS ではこちらが受け皿になる
+   */
+  .prose p,
+  .prose li,
+  .prose blockquote {
+    word-break: auto-phrase;
+    text-wrap: pretty;
+  }
+
   .prose p {
     margin: var(--space-paragraph) 0;
   }
@@ -658,9 +676,13 @@ const { content: Content, status } = Astro.props;
     border-top: 2px solid var(--border-strong);
   }
 
-  /* ラベル付き。見た目はメモ欄の見出しと同じ「語 + Line」に揃える */
+  /*
+   * ラベル付き。見た目はメモ欄の見出しと同じ「語 + Line」に揃える。
+   * 余白も見出しに倣って非対称にする。上は hr と同じだけ空けて区切りとして
+   * 働かせ、下は詰めてラベルを直後の本文に結びつける。
+   */
   .prose [data-divider="labeled"] {
-    margin: 56px 0;
+    margin: 40px 0 12px;
   }
 
   /*
