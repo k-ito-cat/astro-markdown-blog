@@ -19,176 +19,197 @@ const { content: Content, status } = Astro.props;
 </div>
 
 <script>
-  // medium-zoom で画像をLightbox表示
-  // @ts-ignore 型定義が無いライブラリのため
-  import("glightbox").then(({ default: GLightbox }) => {
-    const imgEls = Array.from(document.querySelectorAll(".prose img"));
-    if (imgEls.length === 0) return;
+  import {
+    observePage,
+    onPageCleanup,
+    pageSignal,
+    onPageLoad,
+    onPageEvent,
+  } from "~/scripts/pageLifecycle";
 
-    const elements = imgEls.map((img) => ({
-      href: (img as HTMLImageElement).src,
-      type: "image",
-      alt: (img as HTMLImageElement).alt,
-    }));
+  onPageLoad(() => {
+    const signal = pageSignal();
+    // medium-zoom で画像をLightbox表示
+    // @ts-ignore 型定義が無いライブラリのため
+    import("glightbox").then(({ default: GLightbox }) => {
+      if (signal.aborted) return;
+      const imgEls = Array.from(document.querySelectorAll(".prose img"));
+      if (imgEls.length === 0) return;
 
-    // @ts-ignore 型定義がないため
-    const lightbox = (GLightbox as any)({
-      elements,
-      touchNavigation: true,
-      // タップでは外側の判定が働かないため、閉じるボタンは残す
-      closeButton: true,
-      // 内蔵の外側クリックはモバイル判定のとき無効になるので、下で自前に置き換える
-      closeOnOutsideClick: false,
-      loop: false,
-      slideEffect: "slide",
-      cssEasing: "cubic-bezier(0.4,0,0.2,1)",
-      speed: 50,
-      // 既定の zoom は動きが大きく遅いので、自前のアニメーションへ差し替える
-      openEffect: "zoom",
-      closeEffect: "zoom",
-      cssEfects: {
-        zoom: { in: "proseZoom", out: "proseZoomOut" },
-      },
+      const elements = imgEls.map((img) => ({
+        href: (img as HTMLImageElement).src,
+        type: "image",
+        alt: (img as HTMLImageElement).alt,
+      }));
+
+      // @ts-ignore 型定義がないため
+      const lightbox = (GLightbox as any)({
+        elements,
+        touchNavigation: true,
+        // タップでは外側の判定が働かないため、閉じるボタンは残す
+        closeButton: true,
+        // 内蔵の外側クリックはモバイル判定のとき無効になるので、下で自前に置き換える
+        closeOnOutsideClick: false,
+        loop: false,
+        slideEffect: "slide",
+        cssEasing: "cubic-bezier(0.4,0,0.2,1)",
+        speed: 50,
+        // 既定の zoom は動きが大きく遅いので、自前のアニメーションへ差し替える
+        openEffect: "zoom",
+        closeEffect: "zoom",
+        cssEfects: {
+          zoom: { in: "proseZoom", out: "proseZoomOut" },
+        },
+      });
+
+      onPageCleanup(() => lightbox.destroy());
+
+      // 開いている間 html に overflow: hidden が付き、閉じると読んでいた位置を失う。
+      // 元の位置へ戻し、画像を見終わった場所から読み進められるようにする
+      let scrollY = 0;
+
+      lightbox.on("open", () => {
+        // スクロールバーが消えたぶんを内側で受ける。glightbox も同じ補正をするが、
+        // body の margin を使うため、中央寄せの本文が横へずれてしまう
+        const scrollbar =
+          window.innerWidth - document.documentElement.clientWidth;
+        if (scrollbar > 0) {
+          document.body.style.paddingRight = `${scrollbar}px`;
+        }
+
+        // モバイル判定のままだと説明欄の位置などが変わる。画面幅によらず同じ見た目にする
+        document.body.classList.remove("glightbox-mobile");
+
+        // 画像の外側を触ったら閉じる。開くたびに器が作り直されるので都度つなぐ
+        document
+          .querySelector(".glightbox-container")
+          ?.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (
+              target.closest(".ginner-container") ||
+              target.closest(".gbtn")
+            ) {
+              return;
+            }
+
+            lightbox.close();
+          });
+      });
+
+      lightbox.on("close", () => {
+        document.body.style.paddingRight = "";
+        window.scrollTo({ top: scrollY, behavior: "instant" });
+      });
+
+      // 各画像クリックで該当インデックスを開く
+      imgEls.forEach((img, idx) => {
+        img.addEventListener("click", () => {
+          // 開く前に控える。glightbox は open を通知する前に html へ overflow: hidden を
+          // 付けるため、通知後に読むとモバイルでは 0 に潰れていて、閉じたとき先頭へ飛ぶ
+          scrollY = window.scrollY;
+          lightbox.openAt(idx);
+        });
+        (img as HTMLImageElement).style.cursor = "zoom-in";
+      });
     });
 
-    // 開いている間 html に overflow: hidden が付き、閉じると読んでいた位置を失う。
-    // 元の位置へ戻し、画像を見終わった場所から読み進められるようにする
-    let scrollY = 0;
+    // 見出し(h2/h3/h4)をリンク化
+    const headingEls = document.querySelectorAll(
+      ".prose h2[id], .prose h3[id], .prose h4[id]",
+    );
+    headingEls.forEach((headingEl) => {
+      const id = (headingEl as HTMLElement).id;
+      if (!id) return;
+      if (headingEl.querySelector("a.heading-self-link")) return;
 
-    lightbox.on("open", () => {
-      // スクロールバーが消えたぶんを内側で受ける。glightbox も同じ補正をするが、
-      // body の margin を使うため、中央寄せの本文が横へずれてしまう
-      const scrollbar =
-        window.innerWidth - document.documentElement.clientWidth;
-      if (scrollbar > 0) {
-        document.body.style.paddingRight = `${scrollbar}px`;
+      const navLink = document.createElement("a");
+      navLink.href = `#${id}`;
+      navLink.classList.add("heading-self-link");
+      // 既存の子要素をリンク内へ移動
+      while (headingEl.firstChild) navLink.appendChild(headingEl.firstChild);
+      headingEl.appendChild(navLink);
+    });
+
+    const memoHeading = document.querySelector(".prose h2#メモ");
+    if (memoHeading && !memoHeading.closest(".prose-memo-section")) {
+      const prose = memoHeading.closest<HTMLElement>(".prose");
+      const isPublished = prose?.dataset.isPublished === "true";
+      const memoSection = document.createElement("section");
+      memoSection.className = "prose-memo-section";
+      memoSection.classList.toggle("is-published", isPublished);
+      memoHeading.parentNode?.insertBefore(memoSection, memoHeading);
+
+      let currentNode = memoHeading.nextSibling;
+      memoSection.appendChild(memoHeading);
+      while (currentNode) {
+        const nextNode = currentNode.nextSibling;
+        memoSection.appendChild(currentNode);
+        currentNode = nextNode;
       }
 
-      // モバイル判定のままだと説明欄の位置などが変わる。画面幅によらず同じ見た目にする
-      document.body.classList.remove("glightbox-mobile");
-
-      // 画像の外側を触ったら閉じる。開くたびに器が作り直されるので都度つなぐ
-      document
-        .querySelector(".glightbox-container")
-        ?.addEventListener("click", (event) => {
-          const target = event.target;
-          if (!(target instanceof HTMLElement)) return;
-          if (target.closest(".ginner-container") || target.closest(".gbtn")) {
-            return;
-          }
-
-          lightbox.close();
-        });
-    });
-
-    lightbox.on("close", () => {
-      document.body.style.paddingRight = "";
-      window.scrollTo({ top: scrollY, behavior: "instant" });
-    });
-
-    // 各画像クリックで該当インデックスを開く
-    imgEls.forEach((img, idx) => {
-      img.addEventListener("click", () => {
-        // 開く前に控える。glightbox は open を通知する前に html へ overflow: hidden を
-        // 付けるため、通知後に読むとモバイルでは 0 に潰れていて、閉じたとき先頭へ飛ぶ
-        scrollY = window.scrollY;
-        lightbox.openAt(idx);
-      });
-      (img as HTMLImageElement).style.cursor = "zoom-in";
-    });
-  });
-
-  // 見出し(h2/h3/h4)をリンク化
-  const headingEls = document.querySelectorAll(
-    ".prose h2[id], .prose h3[id], .prose h4[id]",
-  );
-  headingEls.forEach((headingEl) => {
-    const id = (headingEl as HTMLElement).id;
-    if (!id) return;
-    if (headingEl.querySelector("a.heading-self-link")) return;
-
-    const navLink = document.createElement("a");
-    navLink.href = `#${id}`;
-    navLink.classList.add("heading-self-link");
-    // 既存の子要素をリンク内へ移動
-    while (headingEl.firstChild) navLink.appendChild(headingEl.firstChild);
-    headingEl.appendChild(navLink);
-  });
-
-  const memoHeading = document.querySelector(".prose h2#メモ");
-  if (memoHeading && !memoHeading.closest(".prose-memo-section")) {
-    const prose = memoHeading.closest<HTMLElement>(".prose");
-    const isPublished = prose?.dataset.isPublished === "true";
-    const memoSection = document.createElement("section");
-    memoSection.className = "prose-memo-section";
-    memoSection.classList.toggle("is-published", isPublished);
-    memoHeading.parentNode?.insertBefore(memoSection, memoHeading);
-
-    let currentNode = memoHeading.nextSibling;
-    memoSection.appendChild(memoHeading);
-    while (currentNode) {
-      const nextNode = currentNode.nextSibling;
-      memoSection.appendChild(currentNode);
-      currentNode = nextNode;
+      const memoNote = document.createElement("p");
+      memoNote.className = "prose-memo-note";
+      memoNote.textContent = isPublished
+        ? "このメモは本番にも表示されます。メモを削除するか、公開状態を変更してください。"
+        : "編集用メモです。公開済みにする前に削除してください。";
+      memoHeading.insertAdjacentElement("afterend", memoNote);
     }
 
-    const memoNote = document.createElement("p");
-    memoNote.className = "prose-memo-note";
-    memoNote.textContent = isPublished
-      ? "このメモは本番にも表示されます。メモを削除するか、公開状態を変更してください。"
-      : "編集用メモです。公開済みにする前に削除してください。";
-    memoHeading.insertAdjacentElement("afterend", memoNote);
-  }
+    // 横に溢れる表は、マウス以外でも送れるようフォーカスできるようにする
+    // 器に包まれた表はその器を、生 HTML の表は自身を送る
+    const scrollers = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".prose .prose-table, .prose > table, .prose :not(.prose-table) > table",
+      ),
+    );
+    if (scrollers.length > 0) {
+      const syncScrollable = (scroller: HTMLElement) => {
+        // 溢れていないうちは、意味のないタブ位置を作らない
+        if (scroller.scrollWidth > scroller.clientWidth) {
+          scroller.tabIndex = 0;
+          scroller.setAttribute("role", "region");
+          scroller.setAttribute("aria-label", "横にスクロールできる表");
+          return;
+        }
 
-  // 横に溢れる表は、マウス以外でも送れるようフォーカスできるようにする
-  // 器に包まれた表はその器を、生 HTML の表は自身を送る
-  const scrollers = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      ".prose .prose-table, .prose > table, .prose :not(.prose-table) > table",
-    ),
-  );
-  if (scrollers.length > 0) {
-    const syncScrollable = (scroller: HTMLElement) => {
-      // 溢れていないうちは、意味のないタブ位置を作らない
-      if (scroller.scrollWidth > scroller.clientWidth) {
-        scroller.tabIndex = 0;
-        scroller.setAttribute("role", "region");
-        scroller.setAttribute("aria-label", "横にスクロールできる表");
-        return;
-      }
+        scroller.removeAttribute("tabindex");
+        scroller.removeAttribute("role");
+        scroller.removeAttribute("aria-label");
+      };
 
-      scroller.removeAttribute("tabindex");
-      scroller.removeAttribute("role");
-      scroller.removeAttribute("aria-label");
-    };
+      scrollers.forEach(syncScrollable);
 
-    scrollers.forEach(syncScrollable);
+      const observer = observePage(
+        new ResizeObserver((entries) => {
+          entries.forEach((entry) =>
+            syncScrollable(entry.target as HTMLElement),
+          );
+        }),
+      );
+      scrollers.forEach((scroller) => observer.observe(scroller));
+    }
 
-    const observer = new ResizeObserver((entries) => {
-      entries.forEach((entry) => syncScrollable(entry.target as HTMLElement));
+    /*
+     * コピーボタンの出し入れ。触れたコードブロックだけ出し、ほかへ触れたら戻す。
+     * hover のある端末はプラグイン側の hover 表示に任せる
+     */
+    const touchOnly = matchMedia("(hover: none)");
+
+    onPageEvent(document, "pointerdown", (event) => {
+      if (!touchOnly.matches) return;
+
+      const target = event.target instanceof Element ? event.target : null;
+      const block = target?.closest<HTMLElement>(".expressive-code") ?? null;
+
+      document
+        .querySelectorAll<HTMLElement>(".expressive-code[data-copy-visible]")
+        .forEach((node) => {
+          if (node !== block) delete node.dataset.copyVisible;
+        });
+
+      if (block) block.dataset.copyVisible = "";
     });
-    scrollers.forEach((scroller) => observer.observe(scroller));
-  }
-
-  /*
-   * コピーボタンの出し入れ。触れたコードブロックだけ出し、ほかへ触れたら戻す。
-   * hover のある端末はプラグイン側の hover 表示に任せる
-   */
-  const touchOnly = matchMedia("(hover: none)");
-
-  document.addEventListener("pointerdown", (event) => {
-    if (!touchOnly.matches) return;
-
-    const target = event.target instanceof Element ? event.target : null;
-    const block = target?.closest<HTMLElement>(".expressive-code") ?? null;
-
-    document
-      .querySelectorAll<HTMLElement>(".expressive-code[data-copy-visible]")
-      .forEach((node) => {
-        if (node !== block) delete node.dataset.copyVisible;
-      });
-
-    if (block) block.dataset.copyVisible = "";
   });
 </script>
 

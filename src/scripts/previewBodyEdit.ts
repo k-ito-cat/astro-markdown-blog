@@ -1,4 +1,9 @@
 import {
+  onPageEvent,
+  onPageCleanup,
+  pageSignal,
+} from "~/scripts/pageLifecycle";
+import {
   blockText,
   deleteBlock,
   insertBlock,
@@ -265,7 +270,7 @@ const restoreAfterReload = (prose: HTMLElement, currentBody: string) => {
     return;
   }
   setTimeout(reveal, REVEAL_MAX_WAIT);
-  window.addEventListener("load", reveal, { once: true });
+  onPageEvent(window, "load", reveal, { once: true });
 };
 
 const toBase64 = (file: File) =>
@@ -1358,6 +1363,8 @@ const initializeEditor = (host: HTMLElement) => {
     if (commitMove) reorder(index, target);
   };
 
+  onPageCleanup(() => endDrag(false));
+
   dragHandle.addEventListener("pointerdown", (event) => {
     if (active || busy || !hovered) return;
 
@@ -1402,7 +1409,7 @@ const initializeEditor = (host: HTMLElement) => {
   mobileDiffButton.addEventListener("click", toggleDiff);
   discardButton.addEventListener("click", discard);
   mobileDiscardButton.addEventListener("click", discard);
-  document.addEventListener("keydown", (event) => {
+  onPageEvent(document, "keydown", (event) => {
     if (
       event.key.toLocaleLowerCase() !== "s" ||
       (!event.metaKey && !event.ctrlKey) ||
@@ -1420,9 +1427,16 @@ const initializeEditor = (host: HTMLElement) => {
   });
 
   // 保存前に再読み込みが走ると保留中の変更が消えるため、明示的に引き止める
-  window.addEventListener("beforeunload", (event) => {
-    if (dirty.size > 0 || isDirtyEditor()) event.preventDefault();
+  onPageEvent(window, "beforeunload", (event) => {
+    if (dirty.size > 0 || isDirtyEditor() || busy) event.preventDefault();
   });
+  document.addEventListener(
+    "astro:before-preparation",
+    (event) => {
+      if (dirty.size > 0 || isDirtyEditor() || busy) event.preventDefault();
+    },
+    { signal: pageSignal() },
+  );
 
   prose.addEventListener("pointerover", (event) => {
     if (active || busy) return;
@@ -1480,7 +1494,7 @@ const initializeEditor = (host: HTMLElement) => {
     keepSelection = selectFromTextSelection();
   });
 
-  document.addEventListener("keydown", (event) => {
+  onPageEvent(document, "keydown", (event) => {
     if (event.key === "Escape") clearSelection();
   });
 

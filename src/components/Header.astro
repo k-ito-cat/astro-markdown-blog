@@ -783,279 +783,296 @@ const navItems = [
 </style>
 
 <script>
-  const mobileMenu =
-    document.querySelector<HTMLDetailsElement>("[data-mobile-menu]");
-  const mobileMenuSummary = mobileMenu?.querySelector<HTMLElement>(
-    "[data-mobile-menu-summary]",
-  );
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  /*
-   * 閉じ切るまで open を外さない。線は傾きを戻してから離れる二段の動きなので、
-   * 片方だけの時間で外すと途中で消える（CSS の --menu-bar-step の倍）
-   */
-  const closeDuration = 240;
-  const closeScrollDistance = 72;
+  import {
+    onPageLoad,
+    onPageEvent,
+    onPageCleanup,
+  } from "~/scripts/pageLifecycle";
 
-  if (mobileMenu && mobileMenuSummary) {
-    let closeTimer = 0;
-    let openedAtScrollY = window.scrollY;
-    let scrollUpdateQueued = false;
+  onPageLoad(() => {
+    const mobileMenu =
+      document.querySelector<HTMLDetailsElement>("[data-mobile-menu]");
+    const mobileMenuSummary = mobileMenu?.querySelector<HTMLElement>(
+      "[data-mobile-menu-summary]",
+    );
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    /*
+     * 閉じ切るまで open を外さない。線は傾きを戻してから離れる二段の動きなので、
+     * 片方だけの時間で外すと途中で消える（CSS の --menu-bar-step の倍）
+     */
+    const closeDuration = 240;
+    const closeScrollDistance = 72;
 
-    const finishClosing = () => {
-      window.clearTimeout(closeTimer);
-      mobileMenu.open = false;
-      delete mobileMenu.dataset.closing;
+    if (mobileMenu && mobileMenuSummary) {
+      let closeTimer = 0;
+      onPageCleanup(() => window.clearTimeout(closeTimer));
+      let openedAtScrollY = window.scrollY;
+      let scrollUpdateQueued = false;
+
+      const finishClosing = () => {
+        window.clearTimeout(closeTimer);
+        mobileMenu.open = false;
+        delete mobileMenu.dataset.closing;
+      };
+
+      const closeMobileMenu = () => {
+        if (!mobileMenu.open || mobileMenu.dataset.closing !== undefined)
+          return;
+
+        if (reducedMotion.matches) {
+          finishClosing();
+          return;
+        }
+
+        mobileMenu.dataset.closing = "";
+        closeTimer = window.setTimeout(finishClosing, closeDuration);
+      };
+
+      mobileMenuSummary.addEventListener("click", (event) => {
+        if (!mobileMenu.open) return;
+        event.preventDefault();
+        closeMobileMenu();
+      });
+
+      mobileMenu.addEventListener("toggle", () => {
+        if (!mobileMenu.open) return;
+        openedAtScrollY = window.scrollY;
+      });
+
+      onPageEvent(document, "click", (event) => {
+        if (!mobileMenu.open) return;
+        const target = event.target;
+        if (target instanceof Node && !mobileMenu.contains(target)) {
+          closeMobileMenu();
+        }
+      });
+
+      onPageEvent(
+        window,
+        "scroll",
+        () => {
+          if (!mobileMenu.open || scrollUpdateQueued) return;
+          scrollUpdateQueued = true;
+
+          requestAnimationFrame(() => {
+            if (
+              Math.abs(window.scrollY - openedAtScrollY) >= closeScrollDistance
+            ) {
+              closeMobileMenu();
+            }
+            scrollUpdateQueued = false;
+          });
+        },
+        { passive: true },
+      );
+    }
+
+    /*
+     * 上部バーの出し入れ。自動では動かさない。バーを指で上へ引くとヘッダーと
+     * 追従中の目次がまとめて退避し、上端に出る取っ手をタップするか下へ引くと戻る。
+     * 引いている最中の移動量は --chrome-drag-y に流し、位置は CSS 側で clamp する
+     */
+    const root = document.documentElement;
+    const siteHeader = document.querySelector<HTMLElement>(".site-header");
+    const chromeHandle = document.querySelector<HTMLElement>(
+      "[data-chrome-handle]",
+    );
+    const compactViewport = matchMedia("(max-width: 959px)");
+    // 確定に必要な移動量と、タップと見なす許容量
+    const commitDistance = 24;
+    const tapSlop = 6;
+    /*
+     * 表示中に下へ引いたときは、引いた分がそのまま付いてくると「降りる」操作に
+     * 見えてしまう。抵抗をかけて伸びを抑え、引き切って離したところで上へ巻き取る。
+     * 退避中の下引きは戻す操作なので、抵抗はかけず指の動きどおりに追わせる。
+     */
+    const rubberMax = 48;
+    const pullCommitDistance = 56;
+    /*
+     * 伸びは漸近させる。引くほど鈍り、確定に必要な量まで引いたところで上限の
+     * 八割ほどに達してそれ以上は動かない。進み具合の線が満ちるのと、指が感じる
+     * 「引き切った」ところを揃えるための値
+     */
+    const rubberSoftness = 35;
+
+    let dragPointerId = -1;
+    let dragStartY = 0;
+    let dragDistance = 0;
+    let suppressNextClick = false;
+
+    const isChromeHidden = () => root.dataset.chromeHidden !== undefined;
+
+    const setChromeHidden = (hidden: boolean) => {
+      if (hidden) {
+        root.dataset.chromeHidden = "";
+        return;
+      }
+      delete root.dataset.chromeHidden;
     };
 
-    const closeMobileMenu = () => {
-      if (!mobileMenu.open || mobileMenu.dataset.closing !== undefined) return;
+    const endDrag = () => {
+      dragPointerId = -1;
+      delete root.dataset.chromePressed;
+      delete root.dataset.chromeDragging;
+      delete root.dataset.chromePulling;
+      root.removeAttribute("data-chrome-pull-ready");
+      root.style.removeProperty("--chrome-drag-y");
+      root.style.removeProperty("--chrome-pull-progress");
+    };
 
-      if (reducedMotion.matches) {
-        finishClosing();
+    onPageEvent(document, "pointerdown", (event) => {
+      suppressNextClick = false;
+
+      if (
+        dragPointerId !== -1 ||
+        !compactViewport.matches ||
+        mobileMenu?.open
+      ) {
         return;
       }
 
-      mobileMenu.dataset.closing = "";
-      closeTimer = window.setTimeout(finishClosing, closeDuration);
-    };
+      const target = event.target instanceof Element ? event.target : null;
+      const origin = target?.closest("[data-chrome-drag]") ?? null;
+      if (!origin) return;
 
-    mobileMenuSummary.addEventListener("click", (event) => {
-      if (!mobileMenu.open) return;
-      event.preventDefault();
-      closeMobileMenu();
-    });
+      dragPointerId = event.pointerId;
+      dragStartY = event.clientY;
+      dragDistance = 0;
 
-    mobileMenu.addEventListener("toggle", () => {
-      if (!mobileMenu.open) return;
-      openedAtScrollY = window.scrollY;
-    });
-
-    document.addEventListener("click", (event) => {
-      if (!mobileMenu.open) return;
-      const target = event.target;
-      if (target instanceof Node && !mobileMenu.contains(target)) {
-        closeMobileMenu();
+      /*
+       * 掴み自体はバーのどこからでも始められるが、手応えは操作子の上では返さない。
+       * ホームやメニューを押しただけで線が動くと、何に反応したのか読めなくなる。
+       * 取っ手自身はボタンでありながら掴み面そのものなので、対象から外さない
+       */
+      const control = target?.closest("a, button, summary");
+      if (!control || control === origin) {
+        root.dataset.chromePressed = "";
       }
     });
 
-    window.addEventListener(
-      "scroll",
-      () => {
-        if (!mobileMenu.open || scrollUpdateQueued) return;
-        scrollUpdateQueued = true;
+    onPageEvent(
+      document,
+      "pointermove",
+      (event) => {
+        if (event.pointerId !== dragPointerId) return;
 
-        requestAnimationFrame(() => {
-          if (
-            Math.abs(window.scrollY - openedAtScrollY) >= closeScrollDistance
-          ) {
-            closeMobileMenu();
-          }
-          scrollUpdateQueued = false;
-        });
+        dragDistance = event.clientY - dragStartY;
+        if (Math.abs(dragDistance) < tapSlop) return;
+
+        const pulling = dragDistance > 0 && !isChromeHidden();
+        const offset = pulling
+          ? rubberMax * (1 - Math.exp(-dragDistance / rubberSoftness))
+          : dragDistance;
+
+        root.dataset.chromeDragging = "";
+        root.style.setProperty("--chrome-drag-y", `${offset}px`);
+
+        if (pulling) {
+          const progress = Math.min(1, dragDistance / pullCommitDistance);
+          root.dataset.chromePulling = "";
+          root.style.setProperty("--chrome-pull-progress", `${progress}`);
+          root.toggleAttribute("data-chrome-pull-ready", progress >= 1);
+        } else {
+          delete root.dataset.chromePulling;
+          root.removeAttribute("data-chrome-pull-ready");
+        }
       },
       { passive: true },
     );
-  }
 
-  /*
-   * 上部バーの出し入れ。自動では動かさない。バーを指で上へ引くとヘッダーと
-   * 追従中の目次がまとめて退避し、上端に出る取っ手をタップするか下へ引くと戻る。
-   * 引いている最中の移動量は --chrome-drag-y に流し、位置は CSS 側で clamp する
-   */
-  const root = document.documentElement;
-  const siteHeader = document.querySelector<HTMLElement>(".site-header");
-  const chromeHandle = document.querySelector<HTMLElement>(
-    "[data-chrome-handle]",
-  );
-  const compactViewport = matchMedia("(max-width: 959px)");
-  // 確定に必要な移動量と、タップと見なす許容量
-  const commitDistance = 24;
-  const tapSlop = 6;
-  /*
-   * 表示中に下へ引いたときは、引いた分がそのまま付いてくると「降りる」操作に
-   * 見えてしまう。抵抗をかけて伸びを抑え、引き切って離したところで上へ巻き取る。
-   * 退避中の下引きは戻す操作なので、抵抗はかけず指の動きどおりに追わせる。
-   */
-  const rubberMax = 48;
-  const pullCommitDistance = 56;
-  /*
-   * 伸びは漸近させる。引くほど鈍り、確定に必要な量まで引いたところで上限の
-   * 八割ほどに達してそれ以上は動かない。進み具合の線が満ちるのと、指が感じる
-   * 「引き切った」ところを揃えるための値
-   */
-  const rubberSoftness = 35;
-
-  let dragPointerId = -1;
-  let dragStartY = 0;
-  let dragDistance = 0;
-  let suppressNextClick = false;
-
-  const isChromeHidden = () => root.dataset.chromeHidden !== undefined;
-
-  const setChromeHidden = (hidden: boolean) => {
-    if (hidden) {
-      root.dataset.chromeHidden = "";
-      return;
-    }
-    delete root.dataset.chromeHidden;
-  };
-
-  const endDrag = () => {
-    dragPointerId = -1;
-    delete root.dataset.chromePressed;
-    delete root.dataset.chromeDragging;
-    delete root.dataset.chromePulling;
-    root.removeAttribute("data-chrome-pull-ready");
-    root.style.removeProperty("--chrome-drag-y");
-    root.style.removeProperty("--chrome-pull-progress");
-  };
-
-  document.addEventListener("pointerdown", (event) => {
-    suppressNextClick = false;
-
-    if (dragPointerId !== -1 || !compactViewport.matches || mobileMenu?.open) {
-      return;
-    }
-
-    const target = event.target instanceof Element ? event.target : null;
-    const origin = target?.closest("[data-chrome-drag]") ?? null;
-    if (!origin) return;
-
-    dragPointerId = event.pointerId;
-    dragStartY = event.clientY;
-    dragDistance = 0;
-
-    /*
-     * 掴み自体はバーのどこからでも始められるが、手応えは操作子の上では返さない。
-     * ホームやメニューを押しただけで線が動くと、何に反応したのか読めなくなる。
-     * 取っ手自身はボタンでありながら掴み面そのものなので、対象から外さない
-     */
-    const control = target?.closest("a, button, summary");
-    if (!control || control === origin) {
-      root.dataset.chromePressed = "";
-    }
-  });
-
-  document.addEventListener(
-    "pointermove",
-    (event) => {
+    const finishDrag = (event: PointerEvent) => {
       if (event.pointerId !== dragPointerId) return;
 
-      dragDistance = event.clientY - dragStartY;
-      if (Math.abs(dragDistance) < tapSlop) return;
-
-      const pulling = dragDistance > 0 && !isChromeHidden();
-      const offset = pulling
-        ? rubberMax * (1 - Math.exp(-dragDistance / rubberSoftness))
-        : dragDistance;
-
-      root.dataset.chromeDragging = "";
-      root.style.setProperty("--chrome-drag-y", `${offset}px`);
-
-      if (pulling) {
-        const progress = Math.min(1, dragDistance / pullCommitDistance);
-        root.dataset.chromePulling = "";
-        root.style.setProperty("--chrome-pull-progress", `${progress}`);
-        root.toggleAttribute("data-chrome-pull-ready", progress >= 1);
-      } else {
-        delete root.dataset.chromePulling;
-        root.removeAttribute("data-chrome-pull-ready");
+      /*
+       * 引き切ったかどうかだけで決める。届かなければ元の位置へ戻す。
+       * 表示中は上へ送っても下へ引き切っても退避させる。下は伸びに抵抗がある分、
+       * 手が動く距離は長くなるので、確定に必要な量も上より大きく取る
+       */
+      if (isChromeHidden()) {
+        if (dragDistance > commitDistance) setChromeHidden(false);
+      } else if (
+        dragDistance < -commitDistance ||
+        dragDistance > pullCommitDistance
+      ) {
+        setChromeHidden(true);
       }
-    },
-    { passive: true },
-  );
 
-  const finishDrag = (event: PointerEvent) => {
-    if (event.pointerId !== dragPointerId) return;
+      // 引いた後の指離しでリンクやメニューが反応しないようにする
+      suppressNextClick = Math.abs(dragDistance) > tapSlop;
+      endDrag();
+    };
+
+    onPageEvent(document, "pointerup", finishDrag);
+    onPageEvent(document, "pointercancel", (event) => {
+      if (event.pointerId !== dragPointerId) return;
+      endDrag();
+    });
+
+    onPageEvent(
+      document,
+      "click",
+      (event) => {
+        if (!suppressNextClick) return;
+        suppressNextClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true,
+    );
+
+    chromeHandle?.addEventListener("click", () => {
+      setChromeHidden(false);
+    });
+
+    // 退避中にキーボードで入ってきた場合、見えない位置に焦点を残さない
+    siteHeader?.addEventListener("focusin", (event) => {
+      if (event.target === chromeHandle) return;
+      setChromeHidden(false);
+    });
 
     /*
-     * 引き切ったかどうかだけで決める。届かなければ元の位置へ戻す。
-     * 表示中は上へ送っても下へ引き切っても退避させる。下は伸びに抵抗がある分、
-     * 手が動く距離は長くなるので、確定に必要な量も上より大きく取る
+     * 紙の入れ替え。設計上は紙を替えているが、紙の呼び名は一般に通らないので、
+     * 表に出す言葉は起きること（まぶしさ／明るさ）で書く。初期値は head の
+     * インラインスクリプトが決めており、ここでは選び直しと保存だけを担う。
+     * label は押した結果を先に言う
      */
-    if (isChromeHidden()) {
-      if (dragDistance > commitDistance) setChromeHidden(false);
-    } else if (
-      dragDistance < -commitDistance ||
-      dragDistance > pullCommitDistance
-    ) {
-      setChromeHidden(true);
-    }
+    const paperActions = {
+      white: "明るさを戻す",
+      dim: "まぶしさを抑える",
+    };
+    const themeColor = document.querySelector("[data-theme-color]");
+    const paperToggles = document.querySelectorAll<HTMLElement>(
+      "[data-paper-toggle]",
+    );
+    const paperLabels =
+      document.querySelectorAll<HTMLElement>("[data-paper-label]");
 
-    // 引いた後の指離しでリンクやメニューが反応しないようにする
-    suppressNextClick = Math.abs(dragDistance) > tapSlop;
-    endDrag();
-  };
+    const nextPaper = () => (root.dataset.paper === "dim" ? "white" : "dim");
 
-  document.addEventListener("pointerup", finishDrag);
-  document.addEventListener("pointercancel", (event) => {
-    if (event.pointerId !== dragPointerId) return;
-    endDrag();
-  });
+    const syncPaperLabels = () => {
+      const label = paperActions[nextPaper()];
+      paperLabels.forEach((node) => {
+        node.textContent = label;
+      });
+    };
 
-  document.addEventListener(
-    "click",
-    (event) => {
-      if (!suppressNextClick) return;
-      suppressNextClick = false;
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true,
-  );
-
-  chromeHandle?.addEventListener("click", () => {
-    setChromeHidden(false);
-  });
-
-  // 退避中にキーボードで入ってきた場合、見えない位置に焦点を残さない
-  siteHeader?.addEventListener("focusin", (event) => {
-    if (event.target === chromeHandle) return;
-    setChromeHidden(false);
-  });
-
-  /*
-   * 紙の入れ替え。設計上は紙を替えているが、紙の呼び名は一般に通らないので、
-   * 表に出す言葉は起きること（まぶしさ／明るさ）で書く。初期値は head の
-   * インラインスクリプトが決めており、ここでは選び直しと保存だけを担う。
-   * label は押した結果を先に言う
-   */
-  const paperActions = {
-    white: "明るさを戻す",
-    dim: "まぶしさを抑える",
-  };
-  const themeColor = document.querySelector("[data-theme-color]");
-  const paperToggles = document.querySelectorAll<HTMLElement>(
-    "[data-paper-toggle]",
-  );
-  const paperLabels =
-    document.querySelectorAll<HTMLElement>("[data-paper-label]");
-
-  const nextPaper = () => (root.dataset.paper === "dim" ? "white" : "dim");
-
-  const syncPaperLabels = () => {
-    const label = paperActions[nextPaper()];
-    paperLabels.forEach((node) => {
-      node.textContent = label;
+    paperToggles.forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const paper = nextPaper();
+        root.dataset.paper = paper;
+        themeColor?.setAttribute(
+          "content",
+          paper === "dim" ? "#efe8d9" : "#ffffff",
+        );
+        try {
+          localStorage.setItem("paper", paper);
+        } catch {
+          // 保存できない環境では、その場の選択だけ効かせる
+        }
+        syncPaperLabels();
+      });
     });
-  };
 
-  paperToggles.forEach((toggle) => {
-    toggle.addEventListener("click", () => {
-      const paper = nextPaper();
-      root.dataset.paper = paper;
-      themeColor?.setAttribute(
-        "content",
-        paper === "dim" ? "#efe8d9" : "#ffffff",
-      );
-      try {
-        localStorage.setItem("paper", paper);
-      } catch {
-        // 保存できない環境では、その場の選択だけ効かせる
-      }
-      syncPaperLabels();
-    });
+    syncPaperLabels();
   });
-
-  syncPaperLabels();
 </script>

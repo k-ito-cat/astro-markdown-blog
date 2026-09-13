@@ -476,6 +476,9 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
 
 <script>
   import { initPreviewPostManager } from "~/scripts/previewPostManager";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initPreviewPostManager();
+  onPageLoad(() => {
+    initPreviewPostManager();
+  });
 </script>

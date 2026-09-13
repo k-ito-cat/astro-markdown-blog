@@ -790,6 +790,9 @@ const sortedTags = [...TAGS].sort((a, b) => a.localeCompare(b, "ja"));
 
 <script>
   import { initPreviewFrontmatter } from "~/scripts/previewFrontmatter";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initPreviewFrontmatter();
+  onPageLoad(() => {
+    initPreviewFrontmatter();
+  });
 </script>

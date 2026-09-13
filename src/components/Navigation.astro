@@ -309,112 +309,125 @@ const firstSection = sections[0];
 </style>
 
 <script>
-  const output = document.querySelector<HTMLElement>("[data-current-heading]");
-  const position = document.querySelector<HTMLElement>(
-    "[data-section-position]",
-  );
-  const sections = Array.from(
-    document.querySelectorAll<HTMLElement>(".prose h2[id]"),
-  );
-  const traceItems = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-trace-item]"),
-  );
-  // 狭幅の目次（Article の .article-structure）にも同じ現在地を配る。
-  // 判定を二重に持つと読み取り線がずれるため、ここに相乗りさせる
-  const structureItems = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-structure-item]"),
-  );
+  import {
+    onPageLoad,
+    onPageEvent,
+    pageReferrer,
+  } from "~/scripts/pageLifecycle";
 
-  const syncCurrentMarks = (items: HTMLElement[], currentIndex: number) => {
-    items.forEach((item) => {
-      const itemIndex = Number(item.dataset.sectionIndex);
-      const link = item.querySelector("a");
-
-      item.classList.toggle("is-past", itemIndex < currentIndex);
-      item.classList.toggle("is-current", itemIndex === currentIndex);
-
-      if (!link) return;
-
-      if (itemIndex === currentIndex) {
-        link.setAttribute("aria-current", "location");
-      } else {
-        link.removeAttribute("aria-current");
-      }
-    });
-  };
-
-  const setCurrentSection = (sectionId: string) => {
-    const currentItem = traceItems.find(
-      (item) => item.dataset.headingId === sectionId,
+  onPageLoad(() => {
+    const output = document.querySelector<HTMLElement>(
+      "[data-current-heading]",
     );
-    if (!currentItem) return;
-
-    const currentIndex = Number(currentItem.dataset.sectionIndex);
-    output && (output.textContent = sections[currentIndex]?.textContent ?? "");
-    position &&
-      (position.textContent = `${currentIndex + 1} / ${traceItems.length}`);
-
-    syncCurrentMarks(traceItems, currentIndex);
-    syncCurrentMarks(structureItems, currentIndex);
-  };
-
-  if (output && sections.length > 0) {
-    const hashId = decodeURIComponent(window.location.hash.slice(1));
-    const hashItem = traceItems.find(
-      (item) => item.dataset.headingId === hashId,
+    const position = document.querySelector<HTMLElement>(
+      "[data-section-position]",
     );
-    const initialIndex = Number(hashItem?.dataset.sectionIndex ?? 0);
-    setCurrentSection(sections[initialIndex]?.id ?? sections[0].id);
+    const sections = Array.from(
+      document.querySelectorAll<HTMLElement>(".prose h2[id]"),
+    );
+    const traceItems = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-trace-item]"),
+    );
+    // 狭幅の目次（Article の .article-structure）にも同じ現在地を配る。
+    // 判定を二重に持つと読み取り線がずれるため、ここに相乗りさせる
+    const structureItems = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-structure-item]"),
+    );
 
-    let updateQueued = false;
-    const updateFromScrollPosition = () => {
-      const readingLine = window.innerHeight * 0.22;
-      const current = sections.reduce(
-        (latest, heading) =>
-          heading.getBoundingClientRect().top <= readingLine ? heading : latest,
-        sections[0],
-      );
-      setCurrentSection(current.id);
-      updateQueued = false;
-    };
+    const syncCurrentMarks = (items: HTMLElement[], currentIndex: number) => {
+      items.forEach((item) => {
+        const itemIndex = Number(item.dataset.sectionIndex);
+        const link = item.querySelector("a");
 
-    const queueUpdate = () => {
-      if (updateQueued) return;
-      updateQueued = true;
-      requestAnimationFrame(updateFromScrollPosition);
-    };
+        item.classList.toggle("is-past", itemIndex < currentIndex);
+        item.classList.toggle("is-current", itemIndex === currentIndex);
 
-    window.addEventListener("scroll", queueUpdate, { passive: true });
-    window.addEventListener("hashchange", queueUpdate);
-    updateFromScrollPosition();
-  }
+        if (!link) return;
 
-  document
-    .querySelectorAll<HTMLAnchorElement>("[data-reading-return]")
-    .forEach((link) => {
-      const sourcePaths = JSON.parse(
-        link.dataset.returnPaths ?? "[]",
-      ) as string[];
-      if (!document.referrer || sourcePaths.length === 0) return;
-
-      const referrer = new URL(document.referrer);
-      const canReturnToSource =
-        referrer.origin === window.location.origin &&
-        sourcePaths.includes(referrer.pathname);
-      if (!canReturnToSource || window.history.length <= 1) return;
-
-      link.addEventListener("click", (event) => {
-        if (
-          event.button !== 0 ||
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey
-        )
-          return;
-
-        event.preventDefault();
-        window.history.back();
+        if (itemIndex === currentIndex) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
       });
-    });
+    };
+
+    const setCurrentSection = (sectionId: string) => {
+      const currentItem = traceItems.find(
+        (item) => item.dataset.headingId === sectionId,
+      );
+      if (!currentItem) return;
+
+      const currentIndex = Number(currentItem.dataset.sectionIndex);
+      output &&
+        (output.textContent = sections[currentIndex]?.textContent ?? "");
+      position &&
+        (position.textContent = `${currentIndex + 1} / ${traceItems.length}`);
+
+      syncCurrentMarks(traceItems, currentIndex);
+      syncCurrentMarks(structureItems, currentIndex);
+    };
+
+    if (output && sections.length > 0) {
+      const hashId = decodeURIComponent(window.location.hash.slice(1));
+      const hashItem = traceItems.find(
+        (item) => item.dataset.headingId === hashId,
+      );
+      const initialIndex = Number(hashItem?.dataset.sectionIndex ?? 0);
+      setCurrentSection(sections[initialIndex]?.id ?? sections[0].id);
+
+      let updateQueued = false;
+      const updateFromScrollPosition = () => {
+        const readingLine = window.innerHeight * 0.22;
+        const current = sections.reduce(
+          (latest, heading) =>
+            heading.getBoundingClientRect().top <= readingLine
+              ? heading
+              : latest,
+          sections[0],
+        );
+        setCurrentSection(current.id);
+        updateQueued = false;
+      };
+
+      const queueUpdate = () => {
+        if (updateQueued) return;
+        updateQueued = true;
+        requestAnimationFrame(updateFromScrollPosition);
+      };
+
+      onPageEvent(window, "scroll", queueUpdate, { passive: true });
+      onPageEvent(window, "hashchange", queueUpdate);
+      updateFromScrollPosition();
+    }
+
+    document
+      .querySelectorAll<HTMLAnchorElement>("[data-reading-return]")
+      .forEach((link) => {
+        const sourcePaths = JSON.parse(
+          link.dataset.returnPaths ?? "[]",
+        ) as string[];
+        if (!pageReferrer() || sourcePaths.length === 0) return;
+
+        const referrer = new URL(pageReferrer());
+        const canReturnToSource =
+          referrer.origin === window.location.origin &&
+          sourcePaths.includes(referrer.pathname);
+        if (!canReturnToSource || window.history.length <= 1) return;
+
+        link.addEventListener("click", (event) => {
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+
+          event.preventDefault();
+          window.history.back();
+        });
+      });
+  });
 </script>

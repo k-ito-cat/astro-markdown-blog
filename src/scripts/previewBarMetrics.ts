@@ -1,3 +1,4 @@
+import { observePage } from "~/scripts/pageLifecycle";
 /**
  * 追従する編集バーの実高を CSS 変数として配る。
  *
@@ -17,5 +18,5 @@ export function initPreviewBarMetrics() {
   };
 
   publish();
-  new ResizeObserver(publish).observe(bar);
+  observePage(new ResizeObserver(publish)).observe(bar);
 }

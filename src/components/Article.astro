@@ -263,7 +263,8 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       (
           var(--article-structure-viewport) -
             min(var(--measure-prose), var(--article-structure-viewport) - 32px)
-        ) / 2
+        ) /
+        2
     );
 
     position: relative;
@@ -653,7 +654,8 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
                 var(--measure-prose),
                 var(--article-structure-viewport) - 48px
               )
-          ) / 2
+          ) /
+          2
       );
     }
   }
@@ -751,88 +753,101 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 </style>
 
 <script>
-  document
-    .querySelectorAll<HTMLDetailsElement>(".article-structure")
-    .forEach((details) => {
-      details
-        .querySelectorAll<HTMLAnchorElement>("[data-structure-link]")
-        .forEach((link) => {
-          link.addEventListener("click", () => {
-            if (matchMedia("(max-width: 1023px)").matches) {
-              details.open = false;
-            }
+  import {
+    observePage,
+    onPageLoad,
+    onPageEvent,
+  } from "~/scripts/pageLifecycle";
+
+  onPageLoad(() => {
+    document
+      .querySelectorAll<HTMLDetailsElement>(".article-structure")
+      .forEach((details) => {
+        details
+          .querySelectorAll<HTMLAnchorElement>("[data-structure-link]")
+          .forEach((link) => {
+            link.addEventListener("click", () => {
+              if (matchMedia("(max-width: 1023px)").matches) {
+                details.open = false;
+              }
+            });
           });
-        });
 
-      const sentinel = details.previousElementSibling;
-      if (!(sentinel instanceof HTMLElement)) return;
+        const sentinel = details.previousElementSibling;
+        if (!(sentinel instanceof HTMLElement)) return;
 
-      const mobileViewport = matchMedia("(max-width: 1023px)");
-      const isOpenStickySheet = () =>
-        mobileViewport.matches &&
-        details.open &&
-        details.hasAttribute("data-stuck");
-      let scrollCloseGuard = 0;
+        const mobileViewport = matchMedia("(max-width: 1023px)");
+        const isOpenStickySheet = () =>
+          mobileViewport.matches &&
+          details.open &&
+          details.hasAttribute("data-stuck");
+        let scrollCloseGuard = 0;
 
-      details.querySelector("summary")?.addEventListener("click", () => {
-        const currentGuard = ++scrollCloseGuard;
-        requestAnimationFrame(() => {
+        details.querySelector("summary")?.addEventListener("click", () => {
+          const currentGuard = ++scrollCloseGuard;
           requestAnimationFrame(() => {
-            if (scrollCloseGuard === currentGuard) {
-              scrollCloseGuard = 0;
-            }
+            requestAnimationFrame(() => {
+              if (scrollCloseGuard === currentGuard) {
+                scrollCloseGuard = 0;
+              }
+            });
           });
         });
-      });
 
-      document.addEventListener("pointerdown", (event) => {
-        if (
-          isOpenStickySheet() &&
-          event.target instanceof Node &&
-          !details.contains(event.target)
-        ) {
-          details.open = false;
-        }
-      });
-
-      document.addEventListener(
-        "scroll",
-        () => {
-          if (scrollCloseGuard === 0 && isOpenStickySheet()) {
+        onPageEvent(document, "pointerdown", (event) => {
+          if (
+            isOpenStickySheet() &&
+            event.target instanceof Node &&
+            !details.contains(event.target)
+          ) {
             details.open = false;
           }
-        },
-        { passive: true },
-      );
+        });
 
-      const syncReadingMode = ([entry]: IntersectionObserverEntry[]) => {
-        if (!mobileViewport.matches) {
-          delete details.dataset.stuck;
-          return;
-        }
+        onPageEvent(
+          document,
+          "scroll",
+          () => {
+            if (scrollCloseGuard === 0 && isOpenStickySheet()) {
+              details.open = false;
+            }
+          },
+          { passive: true },
+        );
 
-        const hasReachedHeader =
-          !entry.isIntersecting && entry.boundingClientRect.top <= 52;
-        const wasStuck = details.hasAttribute("data-stuck");
-        const structureBody = details.querySelector(".article-structure-body");
-        const hasFocusInsideStructure =
-          structureBody instanceof HTMLElement &&
-          structureBody.contains(document.activeElement);
+        const syncReadingMode = ([entry]: IntersectionObserverEntry[]) => {
+          if (!mobileViewport.matches) {
+            delete details.dataset.stuck;
+            return;
+          }
 
-        details.toggleAttribute("data-stuck", hasReachedHeader);
+          const hasReachedHeader =
+            !entry.isIntersecting && entry.boundingClientRect.top <= 52;
+          const wasStuck = details.hasAttribute("data-stuck");
+          const structureBody = details.querySelector(
+            ".article-structure-body",
+          );
+          const hasFocusInsideStructure =
+            structureBody instanceof HTMLElement &&
+            structureBody.contains(document.activeElement);
 
-        if (
-          !hasReachedHeader ||
-          (hasReachedHeader && !wasStuck && !hasFocusInsideStructure)
-        ) {
-          details.open = false;
-        }
-      };
+          details.toggleAttribute("data-stuck", hasReachedHeader);
 
-      const observer = new IntersectionObserver(syncReadingMode, {
-        rootMargin: "-52px 0px 0px 0px",
-        threshold: 0,
+          if (
+            !hasReachedHeader ||
+            (hasReachedHeader && !wasStuck && !hasFocusInsideStructure)
+          ) {
+            details.open = false;
+          }
+        };
+
+        const observer = observePage(
+          new IntersectionObserver(syncReadingMode, {
+            rootMargin: "-52px 0px 0px 0px",
+            threshold: 0,
+          }),
+        );
+        observer.observe(sentinel);
       });
-      observer.observe(sentinel);
-    });
+  });
 </script>

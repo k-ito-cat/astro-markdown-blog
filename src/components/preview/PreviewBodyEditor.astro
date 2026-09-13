@@ -174,7 +174,7 @@ const SNIPPET_GROUPS = [
 ] as const;
 ---
 
-<script is:inline>
+<script is:inline data-astro-rerun>
   // 再読み込み直後のスクロール位置復元を見せないため、描画前に覆いを出す。
   // 万一解除されなくても白いままにならないよう保険の時限解除を置く。
   try {
@@ -1368,17 +1368,25 @@ const SNIPPET_GROUPS = [
 </style>
 
 <script>
-  // dev 専用機能なので、本番バンドルに含めない
-  if (import.meta.env.DEV) {
-    const { initPreviewBodyEdit } = await import("~/scripts/previewBodyEdit");
-    initPreviewBodyEdit();
+  import { onPageLoad, pageSignal } from "~/scripts/pageLifecycle";
 
-    const { initPreviewSyntaxHelp } =
-      await import("~/scripts/previewSyntaxHelp");
-    initPreviewSyntaxHelp();
+  onPageLoad(async () => {
+    const signal = pageSignal();
+    // dev 専用機能なので、本番バンドルに含めない
+    if (import.meta.env.DEV) {
+      const { initPreviewBodyEdit } = await import("~/scripts/previewBodyEdit");
+      if (signal.aborted) return;
+      initPreviewBodyEdit();
 
-    const { initPreviewBarMetrics } =
-      await import("~/scripts/previewBarMetrics");
-    initPreviewBarMetrics();
-  }
+      const { initPreviewSyntaxHelp } =
+        await import("~/scripts/previewSyntaxHelp");
+      if (signal.aborted) return;
+      initPreviewSyntaxHelp();
+
+      const { initPreviewBarMetrics } =
+        await import("~/scripts/previewBarMetrics");
+      if (signal.aborted) return;
+      initPreviewBarMetrics();
+    }
+  });
 </script>

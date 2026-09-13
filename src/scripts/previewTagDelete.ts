@@ -1,4 +1,5 @@
 const ENDPOINT = "/__tag";
+const initializedButtons = new WeakSet<HTMLElement>();
 
 const getMessage = (payload: unknown, fallback: string) => {
   if (
@@ -27,8 +28,10 @@ const getUsage = (payload: unknown) => {
  */
 export const initTagDelete = (root: ParentNode) => {
   root.querySelectorAll<HTMLElement>("[data-tag-delete]").forEach((button) => {
+    if (initializedButtons.has(button)) return;
     const tag = button.dataset.tagDelete;
     if (!tag) return;
+    initializedButtons.add(button);
 
     button.addEventListener("click", async (event) => {
       // ラベルの中にあるため、チェックが切り替わらないよう止める

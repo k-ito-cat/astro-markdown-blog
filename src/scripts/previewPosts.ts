@@ -1,3 +1,5 @@
+import { onPageEvent } from "~/scripts/pageLifecycle";
+import { navigate } from "astro:transitions/client";
 import {
   POST_PRIORITY,
   POST_PRIORITY_LABELS,
@@ -271,7 +273,7 @@ const writeStateToUrl = (state: PreviewState) => {
   if (state.recentDays > 0) {
     url.searchParams.set("recent", String(state.recentDays));
   }
-  window.history.replaceState(null, "", url);
+  window.history.replaceState(window.history.state, "", url);
 };
 
 const getGroupDefinitions = (group: GroupName): GroupDefinition[] => {
@@ -760,7 +762,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
 
     const href = `/preview/posts/${slug}`;
     if (event.metaKey || event.ctrlKey) window.open(href, "_blank");
-    else window.location.assign(href);
+    else void navigate(href);
   });
 
   root.addEventListener("click", (event) => {
@@ -783,7 +785,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         row.hidden = expanded;
       });
   });
-  document.addEventListener("pointerdown", (event) => {
+  onPageEvent(document, "pointerdown", (event) => {
     if (
       filterDetails.open &&
       event.target instanceof Node &&
@@ -809,7 +811,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
       anchor.classList.remove("is-tooltip-dismissed");
     });
   });
-  document.addEventListener("keydown", (event) => {
+  onPageEvent(document, "keydown", (event) => {
     if (event.key !== "Escape") return;
     filterDetails.open = false;
     root
@@ -821,7 +823,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         ?.classList.add("is-tooltip-dismissed");
     }
   });
-  window.addEventListener("popstate", () => {
+  onPageEvent(window, "popstate", () => {
     state = readStateFromUrl(categoryValues, tagValues, recentDayOptions);
     syncControls();
     render();

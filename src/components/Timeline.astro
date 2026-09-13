@@ -431,48 +431,56 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
 </style>
 
 <script>
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const entries = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-record-entry]"),
-  );
-  const timelineRoot = document.querySelector<HTMLElement>(
-    "[data-timeline-root]",
-  );
-  const timelineMist = document.querySelector<HTMLElement>(
-    "[data-timeline-mist]",
-  );
+  import { observePage, onPageLoad } from "~/scripts/pageLifecycle";
 
-  if (!reducedMotion.matches && "IntersectionObserver" in window) {
-    if (timelineRoot && timelineMist) {
-      timelineRoot.classList.add("has-mist");
-      const mistObserver = new IntersectionObserver(
-        ([timelineEntry]) => {
-          timelineMist.classList.toggle(
-            "is-visible",
-            timelineEntry?.isIntersecting ?? false,
-          );
-        },
-        { rootMargin: "-80% 0px 0px 0px" },
-      );
-      mistObserver.observe(timelineRoot);
-    }
-
-    const revealObserver = new IntersectionObserver(
-      (observedEntries) => {
-        observedEntries.forEach((observedEntry) => {
-          if (!observedEntry.isIntersecting) return;
-          observedEntry.target.classList.remove("is-awaiting-reveal");
-          revealObserver.unobserve(observedEntry.target);
-        });
-      },
-      { rootMargin: "0px 0px -8%", threshold: 0.05 },
+  onPageLoad(() => {
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    const entries = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-record-entry]"),
+    );
+    const timelineRoot = document.querySelector<HTMLElement>(
+      "[data-timeline-root]",
+    );
+    const timelineMist = document.querySelector<HTMLElement>(
+      "[data-timeline-mist]",
     );
 
-    entries.forEach((entry) => {
-      if (entry.getBoundingClientRect().top <= window.innerHeight * 0.92)
-        return;
-      entry.classList.add("is-awaiting-reveal");
-      revealObserver.observe(entry);
-    });
-  }
+    if (!reducedMotion.matches && "IntersectionObserver" in window) {
+      if (timelineRoot && timelineMist) {
+        timelineRoot.classList.add("has-mist");
+        const mistObserver = observePage(
+          new IntersectionObserver(
+            ([timelineEntry]) => {
+              timelineMist.classList.toggle(
+                "is-visible",
+                timelineEntry?.isIntersecting ?? false,
+              );
+            },
+            { rootMargin: "-80% 0px 0px 0px" },
+          ),
+        );
+        mistObserver.observe(timelineRoot);
+      }
+
+      const revealObserver = observePage(
+        new IntersectionObserver(
+          (observedEntries) => {
+            observedEntries.forEach((observedEntry) => {
+              if (!observedEntry.isIntersecting) return;
+              observedEntry.target.classList.remove("is-awaiting-reveal");
+              revealObserver.unobserve(observedEntry.target);
+            });
+          },
+          { rootMargin: "0px 0px -8%", threshold: 0.05 },
+        ),
+      );
+
+      entries.forEach((entry) => {
+        if (entry.getBoundingClientRect().top <= window.innerHeight * 0.92)
+          return;
+        entry.classList.add("is-awaiting-reveal");
+        revealObserver.observe(entry);
+      });
+    }
+  });
 </script>

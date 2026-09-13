@@ -91,6 +91,9 @@ const hasLabel = Boolean(label || Astro.slots.has("label"));
 
 <script>
   import { initCopyLink } from "~/scripts/copyLink";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initCopyLink();
+  onPageLoad(() => {
+    initCopyLink();
+  });
 </script>

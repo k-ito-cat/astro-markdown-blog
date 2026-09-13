@@ -1,3 +1,8 @@
+import {
+  onPageEvent,
+  onPageCleanup,
+  observePage,
+} from "~/scripts/pageLifecycle";
 const FEEDBACK_MS = 1600;
 
 const setState = (button: HTMLElement, state: "copied" | "failed") => {
@@ -24,6 +29,7 @@ const copy = async (button: HTMLElement) => {
  */
 const trackPaneTop = (bar: HTMLElement, panes: HTMLDetailsElement[]) => {
   let frame = 0;
+  onPageCleanup(() => cancelAnimationFrame(frame));
 
   const apply = () => {
     frame = 0;
@@ -47,10 +53,10 @@ const trackPaneTop = (bar: HTMLElement, panes: HTMLDetailsElement[]) => {
   };
 
   panes.forEach((pane) => pane.addEventListener("toggle", apply));
-  window.addEventListener("scroll", follow, { passive: true });
-  window.addEventListener("resize", follow);
+  onPageEvent(window, "scroll", follow, { passive: true });
+  onPageEvent(window, "resize", follow);
   if (typeof ResizeObserver !== "undefined") {
-    new ResizeObserver(follow).observe(bar);
+    observePage(new ResizeObserver(follow)).observe(bar);
   }
 
   apply();
@@ -104,7 +110,7 @@ const initPanes = (root: ParentNode) => {
     });
   });
 
-  document.addEventListener("keydown", (event) => {
+  onPageEvent(document, "keydown", (event) => {
     if (event.key !== "Escape") return;
 
     const opened = panes.find((pane) => pane.open);
@@ -117,7 +123,7 @@ const initPanes = (root: ParentNode) => {
   });
 
   // 押した時点で判定する。中の要素が処理中に消えると、離す頃には外と区別できない
-  document.addEventListener("pointerdown", (event) => {
+  onPageEvent(document, "pointerdown", (event) => {
     const opened = panes.find((pane) => pane.open);
     if (!opened) {
       if (

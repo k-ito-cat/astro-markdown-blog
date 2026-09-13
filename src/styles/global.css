@@ -293,10 +293,6 @@ samp {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  @view-transition {
-    navigation: auto;
-  }
-
   ::view-transition-group(root) {
     animation-duration: var(--duration-page);
     animation-timing-function: ease-out;
@@ -308,10 +304,6 @@ samp {
     --duration-feedback: 0ms;
     --duration-state: 0ms;
     --duration-page: 0ms;
-  }
-
-  @view-transition {
-    navigation: none;
   }
 
   html {

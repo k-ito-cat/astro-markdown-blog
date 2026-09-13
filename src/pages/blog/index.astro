@@ -863,8 +863,10 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 <script>
   import { initPostSearch } from "~/scripts/postSearch";
   import { initTagCollapse } from "~/scripts/tagCollapse";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initPostSearch();
-  initTagCollapse();
-  document.addEventListener("astro:page-load", initTagCollapse);
+  onPageLoad(() => {
+    initPostSearch();
+    initTagCollapse();
+  });
 </script>

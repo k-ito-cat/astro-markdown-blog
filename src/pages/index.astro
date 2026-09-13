@@ -268,46 +268,50 @@ const monthsByYear = Array.from(
 </style>
 
 <script>
-  const monthLinks = Array.from(
-    document.querySelectorAll<HTMLAnchorElement>("[data-month-link]"),
-  );
-  const monthTargets = monthLinks.map((link) =>
-    document.getElementById(decodeURIComponent(link.hash.slice(1))),
-  );
+  import { onPageLoad, onPageEvent } from "~/scripts/pageLifecycle";
 
-  if (monthLinks.length > 0) {
-    let updateQueued = false;
+  onPageLoad(() => {
+    const monthLinks = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>("[data-month-link]"),
+    );
+    const monthTargets = monthLinks.map((link) =>
+      document.getElementById(decodeURIComponent(link.hash.slice(1))),
+    );
 
-    const syncCurrentMonth = () => {
-      updateQueued = false;
-      // 画面上部を読み取り線とし、それを最後に越えた月を現在地とする
-      const readingLine = window.innerHeight * 0.22;
-      let currentIndex = 0;
-      monthTargets.forEach((target, index) => {
-        if (!target || target.hidden) return;
-        if (target.getBoundingClientRect().top <= readingLine)
-          currentIndex = index;
-      });
+    if (monthLinks.length > 0) {
+      let updateQueued = false;
 
-      monthLinks.forEach((link, index) => {
-        link.classList.toggle("is-past", index < currentIndex);
-        link.classList.toggle("is-current", index === currentIndex);
-        if (index === currentIndex) {
-          link.setAttribute("aria-current", "location");
-        } else {
-          link.removeAttribute("aria-current");
-        }
-      });
-    };
+      const syncCurrentMonth = () => {
+        updateQueued = false;
+        // 画面上部を読み取り線とし、それを最後に越えた月を現在地とする
+        const readingLine = window.innerHeight * 0.22;
+        let currentIndex = 0;
+        monthTargets.forEach((target, index) => {
+          if (!target || target.hidden) return;
+          if (target.getBoundingClientRect().top <= readingLine)
+            currentIndex = index;
+        });
 
-    const queueUpdate = () => {
-      if (updateQueued) return;
-      updateQueued = true;
-      requestAnimationFrame(syncCurrentMonth);
-    };
+        monthLinks.forEach((link, index) => {
+          link.classList.toggle("is-past", index < currentIndex);
+          link.classList.toggle("is-current", index === currentIndex);
+          if (index === currentIndex) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      };
 
-    window.addEventListener("scroll", queueUpdate, { passive: true });
-    window.addEventListener("resize", queueUpdate);
-    syncCurrentMonth();
-  }
+      const queueUpdate = () => {
+        if (updateQueued) return;
+        updateQueued = true;
+        requestAnimationFrame(syncCurrentMonth);
+      };
+
+      onPageEvent(window, "scroll", queueUpdate, { passive: true });
+      onPageEvent(window, "resize", queueUpdate);
+      syncCurrentMonth();
+    }
+  });
 </script>

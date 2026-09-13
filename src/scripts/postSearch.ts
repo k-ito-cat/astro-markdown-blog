@@ -1,3 +1,4 @@
+import { onPageEvent, observePage } from "~/scripts/pageLifecycle";
 const normalize = (value: string) =>
   value.normalize("NFKC").toLocaleLowerCase("ja");
 
@@ -210,7 +211,11 @@ export const initPostSearch = () => {
     if (query) search.set("q", query);
     if (selectedYear) search.set("year", selectedYear);
     const rest = search.toString();
-    window.history.replaceState(null, "", rest ? `/blog?${rest}` : "/blog");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      rest ? `/blog?${rest}` : "/blog",
+    );
   };
 
   // 全期間のときは年次を伏せ、「期間で絞る」で開いて年を選ぶ
@@ -244,9 +249,9 @@ export const initPostSearch = () => {
   renderAxis();
   if (initialQuery || selectedYear) syncUrl();
   if (elements.yearTrack)
-    new ResizeObserver(() => slideYearAxis(elements, selectedYear)).observe(
-      elements.yearTrack.parentElement ?? elements.yearTrack,
-    );
+    observePage(
+      new ResizeObserver(() => slideYearAxis(elements, selectedYear)),
+    ).observe(elements.yearTrack.parentElement ?? elements.yearTrack);
   // 時系列順ページの年次導線から来たときは、着地時点で一覧を見せる
   if (selectedYear && elements.list) {
     const list = elements.list;
@@ -295,7 +300,7 @@ export const initPostSearch = () => {
       apply();
     });
   });
-  document.addEventListener("keydown", (event) => {
+  onPageEvent(document, "keydown", (event) => {
     const target = event.target;
     const isEditing =
       target instanceof HTMLElement &&

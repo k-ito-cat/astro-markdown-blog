@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
 import Header from "../components/Header.astro";
 import ogDefault from "~/assets/og-default.png";
 
@@ -16,6 +17,7 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
 <!doctype html>
 <html lang="ja">
   <head>
+    <ClientRouter fallback="none" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
@@ -44,7 +46,6 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
-    <link rel="expect" href="#main-content" blocking="render" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -62,12 +63,7 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
 </html>
 
 <script>
-  const absorbSkippedTransition = (event: PageRevealEvent | PageSwapEvent) => {
-    void event.viewTransition?.ready.catch(() => undefined);
-  };
-
-  window.addEventListener("pageswap", absorbSkippedTransition);
-  window.addEventListener("pagereveal", absorbSkippedTransition);
+  import "~/scripts/pageLifecycle";
 </script>
 
 <style>

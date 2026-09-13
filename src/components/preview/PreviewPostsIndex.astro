@@ -137,12 +137,14 @@ const publishedMemoFilterParams = new URLSearchParams({
   data-group="none"
   data-max-categories={MAX_CATEGORIES_PER_POST}
 >
-  {/*
-   * astro-icon は同じアイコンの一つ目に <symbol> を置き、以降を <use> で参照させる。
-   * 一覧の行は絞り込みのたびに DOM から外れるため、定義が行の中にあると、
-   * その行が結果から外れた瞬間に残りの行のアイコンが全部消える。
-   * 表より前でひととおり描いて、定義の置き場を固定する。
-   */}
+  {
+    /*
+     * astro-icon は同じアイコンの一つ目に <symbol> を置き、以降を <use> で参照させる。
+     * 一覧の行は絞り込みのたびに DOM から外れるため、定義が行の中にあると、
+     * その行が結果から外れた瞬間に残りの行のアイコンが全部消える。
+     * 表より前でひととおり描いて、定義の置き場を固定する。
+     */
+  }
   <div class="preview-icon-sprites" aria-hidden="true">
     <Icon name="octicon:pin-16" />
     <Icon name="octicon:trash-16" />
@@ -1533,8 +1535,6 @@ const publishedMemoFilterParams = new URLSearchParams({
     flex: 0 0 auto;
   }
 
-
-
   .preview-slug {
     color: var(--text-muted);
     background: none;
@@ -2554,7 +2554,10 @@ const publishedMemoFilterParams = new URLSearchParams({
 <script>
   import { initPreviewPosts } from "~/scripts/previewPosts";
   import { initPreviewPinToggle } from "~/scripts/previewPinToggle";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initPreviewPosts();
-  initPreviewPinToggle();
+  onPageLoad(() => {
+    initPreviewPosts();
+    initPreviewPinToggle();
+  });
 </script>

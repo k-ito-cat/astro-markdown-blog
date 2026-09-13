@@ -86,7 +86,7 @@ const FILTERS = [
 ] as const;
 ---
 
-<script is:inline>
+<script is:inline data-astro-rerun>
   // 開閉状態は記事を移動しても保つ。描画前に当てないと開閉がちらつく
   try {
     if (sessionStorage.getItem("preview-sidebar:collapsed")) {
@@ -511,6 +511,9 @@ const FILTERS = [
 
 <script>
   import { initPreviewSidebar } from "~/scripts/previewSidebar";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
 
-  initPreviewSidebar();
+  onPageLoad(() => {
+    initPreviewSidebar();
+  });
 </script>

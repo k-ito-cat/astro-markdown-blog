@@ -1,3 +1,4 @@
+import { onPageEvent, onPageCleanup } from "~/scripts/pageLifecycle";
 export const initTagCollapse = () => {
   const nav = document.querySelector<HTMLElement>("[data-tag-nav]");
   const list = document.querySelector<HTMLElement>("#tag-list");
@@ -40,7 +41,8 @@ export const initTagCollapse = () => {
   });
 
   let resizeTimer = 0;
-  window.addEventListener("resize", () => {
+  onPageCleanup(() => window.clearTimeout(resizeTimer));
+  onPageEvent(window, "resize", () => {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(measure, 150);
   });
