@@ -222,6 +222,41 @@
 html {
   scroll-behavior: smooth;
   background: var(--color-background);
+
+  /*
+   * page の scrollbar。構造を示す Line として扱い、面を持たせず細い線だけ残す。
+   * 紙を替えても関係が保てるよう、色は primary からの混色で持つ。
+   * scrollbar-width を省くと macOS の overlay scrollbar が色指定を無視するため、
+   * 太さと色は必ず対で書く。track は macOS で透明のままになるので、
+   * つまみ側だけで見えるようにする。WebKit の点滅を避けるため transition は掛けない
+   */
+  --scrollbar-thumb: color-mix(in srgb, var(--color-primary) 28%, transparent);
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* 高コントラストを求める設定では、薄い線ではなく確実に見える濃さにする */
+@media (prefers-contrast: more) {
+  html {
+    --scrollbar-thumb: var(--color-primary);
+  }
+}
+
+/* scrollbar-color 未対応の環境（Safari 26.2 未満）向け */
+@supports not (scrollbar-color: auto) {
+  html::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 2px;
+  }
 }
 
 body {
