@@ -2,6 +2,8 @@
 import { Icon } from "astro-icon/components";
 
 const pathname = Astro.url.pathname;
+// 記事内検索は記事ページにしか無いので、入口も記事ページのメニューだけへ置く
+const isArticle = /^\/blog\/[^/]/.test(pathname);
 const navItems = [
   {
     href: "/",
@@ -81,7 +83,21 @@ const navItems = [
     >
       <Icon name="octicon:home-16" aria-hidden="true" />
     </a>
-    <details class="mobile-menu" data-mobile-menu>
+    <div class="mobile-actions">
+      {
+        isArticle && (
+          <button
+            type="button"
+            class="mobile-search"
+            aria-label="記事内を検索"
+            data-article-search-open
+            hidden
+          >
+            <Icon name="octicon:search-16" aria-hidden="true" />
+          </button>
+        )
+      }
+      <details class="mobile-menu" data-mobile-menu>
       <summary aria-label="サイト内ナビゲーション" data-mobile-menu-summary>
         <span class="menu-bars" aria-hidden="true">
           <span class="menu-bar"></span>
@@ -117,8 +133,9 @@ const navItems = [
           <Icon name="octicon:question-16" aria-hidden="true" />
           <span data-glossary-label>用語の注釈を隠す</span>
         </button>
-      </nav>
-    </details>
+        </nav>
+      </details>
+    </div>
   </div>
   <button
     class="chrome-handle"
@@ -372,7 +389,21 @@ const navItems = [
     }
   }
 
+  /*
+   * バーの右側。検索とメニューを並べて置く。position は持たせない。
+   * メニューの面は .mobile-bar を基準に敷いているので、間に基準を作らない
+   */
+  .mobile-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .mobile-search[hidden] {
+    display: none;
+  }
+
   .mobile-home,
+  .mobile-search,
   .mobile-menu summary {
     position: relative;
     display: inline-flex;
@@ -394,9 +425,17 @@ const navItems = [
     text-decoration: none;
   }
 
-  .mobile-home svg {
+  .mobile-home svg,
+  .mobile-search svg {
     width: 18px;
     height: 18px;
+  }
+
+  .mobile-search {
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
   }
 
   .mobile-home[aria-current="page"]::after {
@@ -411,6 +450,8 @@ const navItems = [
 
   .mobile-home:hover,
   .mobile-home:focus-visible,
+  .mobile-search:hover,
+  .mobile-search:focus-visible,
   .mobile-menu summary:hover,
   .mobile-menu summary:focus-visible,
   .mobile-menu[open] summary {

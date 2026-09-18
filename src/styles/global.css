@@ -243,6 +243,20 @@ body {
   );
 }
 
+/*
+ * 記事内検索のヒット。読者が付けた Mark として扱うので、本文のマーカーと
+ * 同じ Accent を使い、今いるヒットだけ濃く塗る。highlight の擬似要素では
+ * 塗りと文字色しか指定できないため、位置は濃度の差で示す
+ */
+::highlight(article-search) {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+::highlight(article-search-current) {
+  color: var(--color-text);
+  background: var(--color-marker-default);
+}
+
 a {
   color: var(--link);
   text-underline-offset: 0.2em;

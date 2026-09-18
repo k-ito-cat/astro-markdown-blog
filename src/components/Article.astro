@@ -4,6 +4,8 @@ import { Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
 import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import wipCat from "~/assets/wip-cat.png";
+import ArticleSearch from "./ArticleSearch.astro";
+import ArticleSearchDialog from "./ArticleSearchDialog.astro";
 import Prose from "./Prose.astro";
 import Categories from "./Categories.astro";
 import Meta from "./Meta.astro";
@@ -88,6 +90,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   {
     showContent && tocHeadings.length > 0 && (
       <>
+        <ArticleSearch />
         <span class="article-structure-sentinel" aria-hidden="true" />
         <details class="article-structure">
           <summary>
@@ -180,6 +183,8 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       </>
     )
   }
+
+  {showContent && <ArticleSearchDialog />}
 
   {
     showContent ? (
@@ -295,8 +300,29 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     height: 1px;
   }
 
+  /*
+   * 記事内検索は目次と同じ列に立つ。幅と中央寄せを目次に合わせないと、
+   * 本文とも目次とも端が揃わない。下の余白も目次の 24px と同じ間隔にする
+   */
+  .article :global(.article-search) {
+    max-width: var(--measure-prose);
+    margin: 0 auto 16px;
+  }
+
+  /*
+   * 狭幅はヘッダーのバーに虫眼鏡があるので、本文の上へ重ねて置かない。
+   * バーが消える 960px から、目次が欄外へ移る 1024px までの間だけ出す
+   */
+  @media (max-width: 959px) {
+    .article :global(.article-search) {
+      display: none;
+    }
+  }
+
+  /* 広幅では欄外の .current-trace が同じ役割を持つので、こちらは出さない */
   @media (min-width: 1024px) {
-    .article-structure {
+    .article-structure,
+    .article :global(.article-search) {
       display: none;
     }
   }

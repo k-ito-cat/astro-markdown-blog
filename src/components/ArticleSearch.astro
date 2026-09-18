@@ -1,0 +1,105 @@
+---
+import { Icon } from "astro-icon/components";
+
+/*
+ * 記事内検索の入口。目次（狭幅）と現在位置（広幅）の上へ同じものを置き、
+ * 幅で出し分ける。中身はページに一つだけ置く ArticleSearchDialog が持つ。
+ *
+ * 探している語はここへ出す。ダイアログを閉じたあとも、何で絞っているのかと
+ * 解除の手があることが、本文を読む位置から見えるようにする。
+ */
+---
+
+<div class="article-search" data-article-search-entry-group>
+  <button type="button" class="article-search-open" data-article-search-entry>
+    <Icon name="octicon:search-16" aria-hidden="true" />
+    <span data-article-search-label>記事内を検索</span>
+  </button>
+  <button
+    type="button"
+    class="article-search-reset"
+    aria-label="検索を解除"
+    data-article-search-reset
+    hidden
+  >
+    <Icon name="octicon:x-16" aria-hidden="true" />
+  </button>
+</div>
+
+<style>
+  /* 置かれた列の幅いっぱいに広げ、語は左、解除は右端へ寄せる */
+  .article-search {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+  }
+
+  .article-search-open {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 0;
+    color: var(--color-text-muted);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    text-align: start;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color var(--duration-feedback) ease;
+  }
+
+  .article-search-open:hover,
+  .article-search-open:focus-visible {
+    color: var(--color-primary);
+  }
+
+  /* 探している語が入っている間は、既定の案内と読み分けられるようにする */
+  .article-search[data-active] .article-search-open {
+    color: var(--color-primary);
+  }
+
+  .article-search-open :global(svg) {
+    flex: none;
+    width: 13px;
+    height: 13px;
+  }
+
+  .article-search-open span {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .article-search-reset {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: var(--color-text-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color var(--duration-feedback) ease;
+  }
+
+  .article-search-reset[hidden] {
+    display: none;
+  }
+
+  .article-search-reset:hover,
+  .article-search-reset:focus-visible {
+    color: var(--color-primary);
+  }
+
+  .article-search-reset :global(svg) {
+    width: 12px;
+    height: 12px;
+  }
+</style>
