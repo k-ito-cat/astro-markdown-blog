@@ -7,6 +7,12 @@ const toTerms = (query: string) =>
 
 const REVEAL_CLASS = "is-search-revealed";
 
+// scrollend が無い環境で、送りが止まったとみなすまでの待ち
+const SCROLL_SETTLE_MS = 150;
+
+// これ以上動かしたら、clickではなく送りの操作だったとみなす
+const DRAG_CLICK_THRESHOLD_PX = 4;
+
 // 非表示から表示に変わった要素にだけ、ごく短いフェードを掛ける
 const reveal = (element: HTMLElement) => {
   element.classList.remove(REVEAL_CLASS);
@@ -62,43 +68,154 @@ const getElements = () => {
       document.querySelectorAll<HTMLAnchorElement>("[data-year-filter]"),
     ),
     yearTrack: document.querySelector<HTMLElement>("[data-year-track]"),
-    yearsNav: document.querySelector<HTMLElement>("[data-years]"),
-    yearToggle: document.querySelector<HTMLButtonElement>("[data-year-toggle]"),
+    yearWindow: document.querySelector<HTMLElement>("[data-year-window]"),
     list: document.querySelector<HTMLElement>("[data-record-list]"),
     total: Number(count.dataset.total ?? "0"),
   };
 };
 
-// 選んだ年（未選択なら最新年）が窓の右寄りに来るよう軌道を滑らせる。
-// 窓には過去2年ぶんが残り、ひとつ新しい年は右に小さく覗く
-const slideYearAxis = (
+const yearSlots = (elements: NonNullable<ReturnType<typeof getElements>>) =>
+  Array.from(elements.yearTrack?.children ?? []) as HTMLElement[];
+
+const slotYear = (slot: HTMLElement) =>
+  slot.querySelector<HTMLElement>("[data-year-filter]")?.dataset.yearFilter ??
+  "";
+
+/*
+ * いま中央にある枠を大きく見せ、そこより新しい側は1年だけ覗かせる。
+ * 選択（絞り込み）とは別で、送っている最中の見た目だけを扱う。
+ * 中央が動けばマスクも動くので、送るほど先の年が現れる
+ */
+const markYearFocus = (
   elements: NonNullable<ReturnType<typeof getElements>>,
-  year: string,
 ) => {
-  const track = elements.yearTrack;
-  if (!track) return;
-  const slots = Array.from(track.children) as HTMLElement[];
-  const focusIndex = year
-    ? slots.findIndex((slot) =>
-        slot.querySelector(`[data-year-filter="${year}"]`),
-      )
-    : slots.length - 1;
-  if (focusIndex < 0) return;
+  const axis = elements.yearWindow;
+  if (!axis) return;
+
+  // 0 件の年は data-year-filter を持たないので、枠の種類で選ぶ
+  const slots = yearSlots(elements).filter(
+    (slot) => !slot.classList.contains("axis-pad"),
+  );
+  const center = axis.scrollLeft + axis.clientWidth / 2;
+  const distanceTo = (slot: HTMLElement) =>
+    Math.abs(slot.offsetLeft + slot.offsetWidth / 2 - center);
+  const focusIndex = slots.reduce(
+    (best, slot, index) =>
+      distanceTo(slot) < distanceTo(slots[best]) ? index : best,
+    0,
+  );
 
   slots.forEach((slot, index) => {
     slot.classList.toggle("is-focus", index === focusIndex);
-    // 右に見せるのは1年ぶんだけ。それより先は枠だけ残して隠す
     slot.classList.toggle("is-ahead", index === focusIndex + 1);
     slot.classList.toggle("is-beyond", index > focusIndex + 1);
   });
+};
 
-  // 枠ごとに間隔が違うので、位置は数え上げではなく実測で合わせる
-  const focus = slots[focusIndex];
-  const view = track.parentElement;
-  if (!focus || !view) return;
-  const shift =
-    view.clientWidth / 2 - (focus.offsetLeft + focus.offsetWidth / 2);
-  track.style.translate = `${shift}px 0`;
+// clickや初期表示など、読者の送り以外で選択が変わったときだけ中央へ寄せる
+const centerYearSlot = (
+  elements: NonNullable<ReturnType<typeof getElements>>,
+  year: string,
+  behavior: ScrollBehavior,
+) => {
+  const window_ = elements.yearWindow;
+  const slot = yearSlots(elements).find(
+    (candidate) => slotYear(candidate) === (year || "all"),
+  );
+  if (!window_ || !slot) return;
+
+  window_.scrollTo({
+    left: slot.offsetLeft + slot.offsetWidth / 2 - window_.clientWidth / 2,
+    behavior,
+  });
+};
+
+/*
+ * マウスでも指と同じように掴んで送れるようにする。PCにはtouchの送りが無く、
+ * 縦のhome wheelでは横へ動かないため、送りの入口がscrollbarだけになる。
+ * clickとKeyboardからも同じ選択へ到達できるので、gestureは近道として足す
+ */
+const enableYearDrag = (
+  elements: NonNullable<ReturnType<typeof getElements>>,
+) => {
+  const axis = elements.yearWindow;
+  if (!axis) return;
+
+  let startX = 0;
+  let startLeft = 0;
+  let dragging = false;
+  let moved = 0;
+
+  axis.addEventListener("pointerdown", (event) => {
+    // 指とpenは既定の送りに任せる。奪うとsnapの慣性まで失う
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+    dragging = true;
+    moved = 0;
+    startX = event.clientX;
+    startLeft = axis.scrollLeft;
+    // 掴んでいる間は吸着を外す。効かせたままだと指の動きに付いてこない
+    axis.style.scrollSnapType = "none";
+    axis.setPointerCapture(event.pointerId);
+    axis.dataset.dragging = "";
+  });
+
+  axis.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+
+    const delta = event.clientX - startX;
+    moved = Math.max(moved, Math.abs(delta));
+    axis.scrollLeft = startLeft - delta;
+  });
+
+  const release = (event: PointerEvent) => {
+    if (!dragging) return;
+
+    dragging = false;
+    delete axis.dataset.dragging;
+    axis.style.scrollSnapType = "";
+    if (axis.hasPointerCapture(event.pointerId))
+      axis.releasePointerCapture(event.pointerId);
+
+    // 吸着を戻しただけでは止まった位置に留まるので、近い枠まで送る
+    const year = snappedYear(elements);
+    if (year !== null) centerYearSlot(elements, year, "smooth");
+  };
+
+  axis.addEventListener("pointerup", release);
+  axis.addEventListener("pointercancel", release);
+
+  // 送るつもりの操作が年の選択にならないようにする
+  axis.addEventListener(
+    "click",
+    (event) => {
+      if (moved > DRAG_CLICK_THRESHOLD_PX) event.stopPropagation();
+      moved = 0;
+    },
+    { capture: true },
+  );
+};
+
+// 中央に最も近い枠を、いま選ばれている期間として読む
+const snappedYear = (elements: NonNullable<ReturnType<typeof getElements>>) => {
+  const window_ = elements.yearWindow;
+  if (!window_) return null;
+
+  const center = window_.scrollLeft + window_.clientWidth / 2;
+  const nearest = yearSlots(elements)
+    // 0 件の年と端の余白は吸着しないので、選択の候補から外す
+    .filter(
+      (slot) =>
+        slotYear(slot) !== "" && !slot.classList.contains("is-unsnapped"),
+    )
+    .reduce<{ slot: HTMLElement; distance: number } | null>((best, slot) => {
+      const distance = Math.abs(
+        slot.offsetLeft + slot.offsetWidth / 2 - center,
+      );
+      return !best || distance < best.distance ? { slot, distance } : best;
+    }, null);
+
+  return nearest ? slotYear(nearest.slot) : null;
 };
 
 const updateView = (
@@ -181,12 +298,12 @@ const updateView = (
     link.classList.toggle("is-selected", link === matched);
   });
   elements.yearFilters.forEach((link) => {
-    link.classList.toggle(
-      "is-selected",
-      link.dataset.yearFilter === (year || "all"),
-    );
+    const selected = link.dataset.yearFilter === (year || "all");
+    link.classList.toggle("is-selected", selected);
+    if (selected) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
   });
-  slideYearAxis(elements, year);
+  markYearFocus(elements);
   elements.count.textContent = `${hasCondition ? visible : elements.total}件の記録`;
   if (elements.empty) elements.empty.hidden = !(hasCondition && visible === 0);
   elements.clears.forEach((button) => {
@@ -218,26 +335,16 @@ export const initPostSearch = () => {
     );
   };
 
-  // 全期間のときは年次を伏せ、「期間で絞る」で開いて年を選ぶ
-  let axisOpen = Boolean(selectedYear);
-  const renderAxis = () => {
-    elements.yearsNav?.classList.toggle("is-closed", !axisOpen);
-    if (!elements.yearToggle) return;
-    elements.yearToggle.textContent = axisOpen ? "全期間" : "期間で絞る";
-    elements.yearToggle.setAttribute("aria-expanded", String(axisOpen));
-  };
-
   const apply = () => {
     updateView(elements, elements.input.value, selectedYear);
-    renderAxis();
     syncUrl();
   };
 
   const clear = () => {
     elements.input.value = "";
     selectedYear = "";
-    axisOpen = false;
     apply();
+    centerYearSlot(elements, selectedYear, "smooth");
     elements.input.focus();
   };
 
@@ -246,12 +353,62 @@ export const initPostSearch = () => {
   );
 
   updateView(elements, elements.input.value, selectedYear);
-  renderAxis();
   if (initialQuery || selectedYear) syncUrl();
-  if (elements.yearTrack)
+
+  if (elements.yearWindow) {
+    const axis = elements.yearWindow;
+    centerYearSlot(elements, selectedYear, "instant");
+    markYearFocus(elements);
+    enableYearDrag(elements);
+    // 幅が変わると中央の位置がずれる。選択はそのままに位置だけ合わせ直す
     observePage(
-      new ResizeObserver(() => slideYearAxis(elements, selectedYear)),
-    ).observe(elements.yearTrack.parentElement ?? elements.yearTrack);
+      new ResizeObserver(() => {
+        centerYearSlot(elements, selectedYear, "instant");
+        markYearFocus(elements);
+      }),
+    ).observe(axis);
+
+    // 見た目は送りに追従させる。絞り込みは止まってから
+    let pending = 0;
+    axis.addEventListener(
+      "scroll",
+      () => {
+        if (pending) return;
+        pending = requestAnimationFrame(() => {
+          pending = 0;
+          markYearFocus(elements);
+        });
+      },
+      { passive: true },
+    );
+
+    // 送りが落ち着いた時点の枠を選択として読む。途中の枠では絞り込まない
+    const settle = () => {
+      const year = snappedYear(elements);
+      if (year === null) return;
+
+      const next = year === "all" ? "" : year;
+      if (next === selectedYear) return;
+
+      selectedYear = next;
+      apply();
+    };
+
+    if ("onscrollend" in window) {
+      axis.addEventListener("scrollend", settle);
+    } else {
+      // scrollend 未対応（Safari 18.2 未満）。止まってから同じ判定を行う
+      let timer = 0;
+      axis.addEventListener(
+        "scroll",
+        () => {
+          window.clearTimeout(timer);
+          timer = window.setTimeout(settle, SCROLL_SETTLE_MS);
+        },
+        { passive: true },
+      );
+    }
+  }
   // 時系列順ページの年次導線から来たときは、着地時点で一覧を見せる
   if (selectedYear && elements.list) {
     const list = elements.list;
@@ -284,11 +441,6 @@ export const initPostSearch = () => {
       if (!isSmallScreen()) elements.input.focus({ preventScroll: true });
     });
   });
-  elements.yearToggle?.addEventListener("click", () => {
-    if (axisOpen) selectedYear = "";
-    axisOpen = !axisOpen;
-    apply();
-  });
   elements.yearFilters.forEach((link) => {
     link.addEventListener("click", (event) => {
       const year = link.dataset.yearFilter;
@@ -298,6 +450,7 @@ export const initPostSearch = () => {
       // 年の軸は現在地が動くと混乱するので、一覧への送りは行わない
       selectedYear = year === "all" || selectedYear === year ? "" : year;
       apply();
+      centerYearSlot(elements, selectedYear, "smooth");
     });
   });
   onPageEvent(document, "keydown", (event) => {

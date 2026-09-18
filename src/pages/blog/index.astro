@@ -7,7 +7,6 @@ import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
 import leftReachingCat from "~/assets/left-reaching-cat.png";
-import leftSleepingCat from "~/assets/left-sleeping-cat.png";
 import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
 
 const allPosts = await getCollection(
@@ -104,25 +103,8 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
       </div>
     </header>
 
-    <nav class="years is-closed" id="years" aria-label="年" data-years>
-      <button
-        type="button"
-        class="years-toggle"
-        data-year-toggle
-        aria-expanded="false"
-        aria-controls="year-axis"
-      >
-        期間で絞る
-      </button>
-      <span class="years-sleeper" aria-hidden="true">
-        <Image
-          src={leftSleepingCat}
-          alt=""
-          widths={[160, 320]}
-          sizes="160px"
-          loading="eager"
-        />
-      </span>
+    <nav class="years" id="years" aria-label="期間" data-years>
+      <a href="/blog" class="years-all" data-year-filter="all">全期間</a>
       <span class="years-cat" aria-hidden="true">
         <Image
           src={leftReachingCat}
@@ -132,13 +114,24 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
           loading="eager"
         />
       </span>
-      <div class="years-window" id="year-axis">
+      <div class="years-window" id="year-axis" data-year-window>
         <ul data-year-track>
+          <li class="axis-pad" aria-hidden="true"></li>
+          <li class="year-all">
+            <a href="/blog" draggable="false" data-year-filter="all">
+              <span class="year-label">全期間</span>
+              <span class="year-count">（{allPosts.length}件）</span>
+            </a>
+          </li>
           {
             axisYears.map(({ year, count }) =>
               count > 0 ? (
                 <li>
-                  <a href={`/blog?year=${year}`} data-year-filter={year}>
+                  <a
+                    href={`/blog?year=${year}`}
+                    draggable="false"
+                    data-year-filter={year}
+                  >
                     <>
                       <span class="year-label">{year}</span>
                       <span class="year-count">（{count}件）</span>
@@ -146,7 +139,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
                   </a>
                 </li>
               ) : (
-                <li>
+                <li class="is-unsnapped">
                   <span class="year-empty" aria-disabled="true">
                     <>
                       <span class="year-label">{year}</span>
@@ -157,6 +150,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
               ),
             )
           }
+          <li class="axis-pad" aria-hidden="true"></li>
         </ul>
       </div>
     </nav>
@@ -383,83 +377,15 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     /* 猫（1355:839）。軸線の下、ぶら下がる年次の側に置く */
     --years-cat-width: 4.5rem;
     --years-cat-height: calc(var(--years-cat-width) * 839 / 1355);
-    /* 眠り猫（1264:469）。高さを基準にして帯の中に収める */
-    --years-sleeper-height: 2.5rem;
-
     position: relative;
     /* 猫の高さ + 上の軸線から離すぶん */
     min-height: calc(var(--years-cat-height) + 16px);
 
-    /*
-     * 窓の左半分に「過去2枠 + 選択枠の手前の間隔 + 選択枠の半分0.5枠」が入る幅。
-     * --axis-visible = (2 + --axis-gap + 0.5) * 2 の関係を保つこと
-     */
-    --axis-gap: 0;
+    /* 一度に見える枠の数。中央の枠の左右に 2 枠ずつ並ぶ */
     --axis-visible: 5;
     --axis-slot: calc(100% / var(--axis-visible));
 
     margin-top: 32px;
-  }
-
-  /* 窓。軌道はこの中を横に滑る */
-  .years-toggle {
-    display: block;
-    margin-bottom: 10px;
-    padding: 4px 0;
-    color: var(--color-primary);
-    font-family: var(--font-machine);
-    font-size: 11px;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-  }
-
-  .years-toggle:hover,
-  .years-toggle:focus-visible {
-    color: var(--color-interaction-text);
-  }
-
-  /* 全期間のときは年次を伏せ、空いた軸の中央で猫が眠る */
-  .years.is-closed .years-window > ul {
-    visibility: hidden;
-    opacity: 0;
-  }
-
-  .years-sleeper {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: calc(var(--years-sleeper-height) * 1264 / 469);
-    height: var(--years-sleeper-height);
-    visibility: hidden;
-    opacity: 0;
-    /* 出るときはゆったり */
-    transform: translateX(-50%);
-    transition:
-      opacity 700ms ease-out,
-      visibility 0s linear 700ms;
-    pointer-events: none;
-  }
-
-  .years.is-closed .years-sleeper {
-    visibility: visible;
-    opacity: 0.8;
-    transition:
-      opacity 700ms ease-out,
-      visibility 0s;
-  }
-
-  .years-sleeper img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: bottom center;
-  }
-
-  /* 手を出す猫は年次と一緒に、こちらは素早く消える */
-  .years.is-closed .years-cat {
-    visibility: hidden;
-    opacity: 0;
   }
 
   /* 地面の罫線 */
@@ -491,45 +417,48 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     opacity: 0.8;
   }
 
-  .years-cat {
-    visibility: visible;
-    opacity: 1;
-    transition:
-      opacity var(--duration-feedback) ease,
-      visibility 0s;
-  }
-
   @media (min-width: 640px) {
     .years {
       --years-cat-width: 6.5rem;
-      --years-sleeper-height: 3rem;
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .years-sleeper,
-    .years-cat,
-    .years-window > ul {
-      transition: none;
-    }
-  }
-
+  /*
+   * 軸は指で送る。送って中央に来た枠がそのまま期間の選択になるので、
+   * 位置の操作をこちらが握らず、scroll snap に委ねる。内側の scrollbar は
+   * 情報ではないので隠す（page の scrollbar は残す）
+   */
   .years-window {
     position: relative;
-    overflow: hidden;
+    overflow-x: auto;
+    /* 軸線。窓の中へ置くと内容と一緒に流れるので、枠線として持たせる */
+    border-top: 1px solid
+      color-mix(in srgb, var(--color-primary) 32%, transparent);
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
     /* 上は軸線ぶん、下は地面の罫線と年次が近づきすぎないぶん */
     padding: 9px 0 20px;
+    /* マウスでも掴んで送れる。触れる前から掴めることを形で示す */
+    cursor: grab;
+    /*
+     * この軸でできるのは送ることと年を選ぶことだけ。文字の選択もlinkの
+     * drag も送りを途切れさせるだけなので、どちらも起こさない
+     */
+    user-select: none;
+    -webkit-user-select: none;
   }
 
-  .years-window::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 1px;
-    background: var(--color-primary);
-    opacity: 0.32;
+  .years-window[data-dragging] {
+    cursor: grabbing;
+  }
+
+  .years-window a {
+    -webkit-user-drag: none;
+  }
+
+  .years-window::-webkit-scrollbar {
+    display: none;
   }
 
   .years-window > ul {
@@ -537,17 +466,63 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     margin: 0;
     padding: 0;
     list-style: none;
-    transition: translate var(--duration-state) var(--ease-trace);
+  }
+
+  /*
+   * 端の枠も中央まで送れるようにする。container の padding は scroll できる
+   * 範囲に入らない実装があるため、幅を持つ枠として置く
+   */
+  .years-window > ul > li.axis-pad {
+    flex: 0 0 calc(50% - var(--axis-slot) / 2);
+    scroll-snap-align: none;
   }
 
   .years-window > ul > li {
     flex: 0 0 var(--axis-slot);
     min-width: 0;
+    scroll-snap-align: center;
   }
 
-  /* 選択中の年は手前を広く空け、過去側の詰まった間隔と差をつける */
-  .years-window > ul > li.is-focus {
-    margin-left: calc(var(--axis-slot) * var(--axis-gap));
+  /* 軸の外に置く全期間。送らずに解除へ戻れる入口として常設する */
+  .years-all {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 4px 0;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    text-decoration: none;
+  }
+
+  .years-all:hover,
+  .years-all:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .years-all.is-selected {
+    color: var(--color-text-muted);
+  }
+
+  /* 記録の無い年は目盛として置くだけ。送っても止まらない */
+  .years-window > ul > li.is-unsnapped {
+    scroll-snap-align: none;
+  }
+
+  /*
+   * 中央より新しい側は1年だけ薄く覗かせ、その先は枠を残して隠す。
+   * 中央は送るたびに動くので、マスクも一緒に動いて先が現れる
+   */
+  .years-window > ul > li.is-ahead {
+    opacity: 0.55;
+  }
+
+  .years-window > ul > li.is-beyond {
+    visibility: hidden;
+  }
+
+  /* 未来側は枠自体が薄いので、0件ぶんの減衰は掛けない */
+  .years-window > ul > li.is-ahead .year-empty {
+    opacity: 1;
   }
 
   .years a,
@@ -578,20 +553,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   .years .year-empty {
     color: var(--color-text-muted);
     opacity: 0.45;
-  }
-
-  /* 未来側は枠自体が薄いので、0件ぶんの減衰は掛けない */
-  .years-window > ul > li.is-ahead .year-empty {
-    opacity: 1;
-  }
-
-  /* フォーカスより先（新しい側）は1年だけ薄く覗かせ、その先は隠す */
-  .years-window > ul > li.is-ahead {
-    opacity: 0.55;
-  }
-
-  .years-window > ul > li.is-beyond {
-    visibility: hidden;
   }
 
   .years a:hover,
