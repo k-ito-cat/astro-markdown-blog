@@ -311,7 +311,8 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
     line-height: 1.55;
     opacity: 1;
     transition: opacity var(--duration-page) ease-out;
-    word-break: auto-phrase;
+    line-break: strict;
+    text-wrap: balance;
   }
 
   .tl-entry.is-awaiting-reveal .tl-title {
