@@ -43,6 +43,8 @@ document.addEventListener("astro:before-swap", (event) => {
   pageController = new AbortController();
   event.newDocument.documentElement.dataset.paper =
     document.documentElement.dataset.paper;
+  event.newDocument.documentElement.dataset.glossary =
+    document.documentElement.dataset.glossary;
 });
 
 document.addEventListener("astro:page-load", () => {

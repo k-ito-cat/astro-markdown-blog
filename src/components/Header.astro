@@ -59,6 +59,15 @@ const navItems = [
         <Icon name="octicon:file-16" aria-hidden="true" />
         <span data-paper-label>まぶしさを抑える</span>
       </button>
+      <button
+        class="edge-link"
+        type="button"
+        aria-pressed="true"
+        data-glossary-toggle
+      >
+        <Icon name="octicon:question-16" aria-hidden="true" />
+        <span data-glossary-label>用語の注釈を隠す</span>
+      </button>
     </nav>
   </div>
 
@@ -103,6 +112,10 @@ const navItems = [
         <button type="button" data-paper-toggle>
           <Icon name="octicon:file-16" aria-hidden="true" />
           <span data-paper-label>まぶしさを抑える</span>
+        </button>
+        <button type="button" aria-pressed="true" data-glossary-toggle>
+          <Icon name="octicon:question-16" aria-hidden="true" />
+          <span data-glossary-label>用語の注釈を隠す</span>
         </button>
       </nav>
     </details>
@@ -1074,5 +1087,51 @@ const navItems = [
     });
 
     syncPaperLabels();
+
+    /*
+     * 単語モード。本文の用語に付く注釈の出し入れだけを切り替える。
+     * 初期値は head のインラインスクリプトが決めており、ここでは
+     * 選び直しと保存を担う。label は押した結果を先に言う
+     */
+    const glossaryActions = {
+      on: "用語の注釈を隠す",
+      off: "用語の注釈を出す",
+    };
+    const glossaryToggles = document.querySelectorAll<HTMLElement>(
+      "[data-glossary-toggle]",
+    );
+    const glossaryLabels = document.querySelectorAll<HTMLElement>(
+      "[data-glossary-label]",
+    );
+
+    const nextGlossary = () => (root.dataset.glossary === "on" ? "off" : "on");
+
+    const syncGlossary = () => {
+      const label = glossaryActions[nextGlossary()];
+      glossaryLabels.forEach((node) => {
+        node.textContent = label;
+      });
+      glossaryToggles.forEach((toggle) => {
+        toggle.setAttribute(
+          "aria-pressed",
+          String(root.dataset.glossary === "on"),
+        );
+      });
+    };
+
+    glossaryToggles.forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const glossary = nextGlossary();
+        root.dataset.glossary = glossary;
+        try {
+          localStorage.setItem("glossary", glossary);
+        } catch {
+          // 保存できない環境では、その場の選択だけ効かせる
+        }
+        syncGlossary();
+      });
+    });
+
+    syncGlossary();
   });
 </script>

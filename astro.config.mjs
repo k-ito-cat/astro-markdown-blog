@@ -12,6 +12,7 @@ import rehypeExternalLinks, {
 import remarkDividerVariant from "./src/plugins/remarkDividerVariant.mjs";
 import remarkLinkCardDev from "./src/plugins/remarkLinkCardDev.mjs";
 import remarkReviewCallout from "./src/plugins/remarkReviewCallout.mjs";
+import remarkGlossaryTerm from "./src/plugins/remarkGlossaryTerm.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
@@ -70,6 +71,9 @@ export default defineConfig({
         remarkGithubBlockquoteAlert,
         remarkDividerVariant,
         remarkImageFigure,
+        // リンクカードより先に置く。説明の中のリンクを段落直下から外し、
+        // カード化の対象に入らないようにする
+        remarkGlossaryTerm,
         // 色は本文で使う 3 つに絞る。既定（色指定なし）と合わせて 4 種
         [
           remarkFlexibleMarkers,

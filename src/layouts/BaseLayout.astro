@@ -42,6 +42,15 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
         document
           .querySelector("[data-theme-color]")
           ?.setAttribute("content", PAPERS[paper]);
+
+        // 単語モード。既定は on。本文に出る痕跡なので描画前に決める
+        let glossary = "on";
+        try {
+          glossary = localStorage.getItem("glossary") === "off" ? "off" : "on";
+        } catch {
+          glossary = "on";
+        }
+        document.documentElement.dataset.glossary = glossary;
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />

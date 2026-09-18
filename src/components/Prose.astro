@@ -26,9 +26,13 @@ const { content: Content, status } = Astro.props;
     onPageLoad,
     onPageEvent,
   } from "~/scripts/pageLifecycle";
+  import { initGlossaryTerms } from "~/scripts/glossaryTerm";
 
   onPageLoad(() => {
     const signal = pageSignal();
+
+    initGlossaryTerms(signal);
+
     // medium-zoom で画像をLightbox表示
     // @ts-ignore 型定義が無いライブラリのため
     import("glightbox").then(({ default: GLightbox }) => {
@@ -411,6 +415,81 @@ const { content: Content, status } = Astro.props;
 
   .prose .flexible-marker-red {
     --marker-color: var(--color-marker-red);
+  }
+
+  /*
+   * 用語の注釈。語に残す痕跡なので Mark の語彙（accent の短い線）で表し、
+   * 単語モードを切っているときは痕跡ごと消して素の本文へ戻す
+   */
+  :root[data-glossary="on"] .prose .glossary-term-word {
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(
+      in srgb,
+      var(--color-accent) 85%,
+      var(--text-muted)
+    );
+  }
+
+  .prose .glossary-term-mark {
+    display: none;
+    position: relative;
+    margin-inline-start: 0.15em;
+    padding: 0;
+    color: var(--text-muted);
+    font-family: var(--font-machine);
+    font-size: 0.78em;
+    line-height: 1;
+    vertical-align: 0.35em;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  :root[data-glossary="on"] .prose .glossary-term-mark {
+    display: inline;
+  }
+
+  /* 文字が小さいので、行の高さを崩さずに触れる範囲だけ広げる */
+  .prose .glossary-term-mark::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    width: 24px;
+    height: 24px;
+    content: "";
+    transform: translate(-50%, -50%);
+  }
+
+  .prose .glossary-term-mark:hover,
+  .prose .glossary-term-mark[aria-expanded="true"] {
+    color: var(--link-hover);
+  }
+
+  .prose .glossary-term-bubble {
+    display: none;
+    position: fixed;
+    inset: auto;
+    max-width: min(24rem, calc(100vw - 2rem));
+    margin: 0;
+    padding: 0.7em 0.9em;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    line-height: 1.75;
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    /* accent の短い線で、本文ではなく注釈だと分かるようにする。
+       浮かせる影は使わず、紙の面と罫線だけで本文から切り離す */
+    border-inline-start: 2px solid var(--color-accent);
+  }
+
+  .prose .glossary-term-bubble:is(:popover-open, [data-open]) {
+    display: block;
+  }
+
+  .prose .glossary-term-bubble p {
+    margin: 0;
   }
 
   .prose strong {
