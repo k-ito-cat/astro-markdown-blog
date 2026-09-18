@@ -564,12 +564,45 @@ const { content: Content, status } = Astro.props;
     list-style: none;
   }
 
+  /*
+   * チェックは記事の状態表示であって操作する部品ではない。四角い枠は押せる物の
+   * 記号になるため描かず、済みはチェックの線、未完了は短い線だけを左脇へ置く。
+   * disabled な input はブラウザ既定の描画が勝って灰色になるので、見た目は
+   * 捨てて自前で描く。状態は支援技術へ渡す必要があるため要素自体は残す
+   */
+  .prose .task-list-item {
+    position: relative;
+  }
+
   .prose .task-list-item input[type="checkbox"] {
-    margin: 0 0.4em 0.25em -1.4em;
-    vertical-align: middle;
-    accent-color: var(--color-primary);
-    /* 読み物なので操作はさせないが、薄く見えないようにする */
-    opacity: 1;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    clip-path: inset(50%);
+  }
+
+  /* 未完了。まだ手が付いていないことを示す短い線 */
+  .prose .task-list-item::before {
+    position: absolute;
+    inset-block-start: 0.85em;
+    inset-inline-start: -1.35em;
+    width: 0.62em;
+    height: 1.5px;
+    content: "";
+    background: var(--text-muted);
+    transform: translateY(-50%);
+  }
+
+  /* 済み。人が付けた痕跡なのでチェックの線で描く */
+  .prose .task-list-item:has(input:checked)::before {
+    inset-inline-start: -1.2em;
+    width: 0.3em;
+    height: 0.6em;
+    background: none;
+    border: solid var(--color-primary);
+    border-width: 0 1.5px 1.5px 0;
+    transform: translateY(-65%) rotate(45deg);
   }
 
   /* 表は器の側でスクロールさせ、表には最小幅を持たせる。
