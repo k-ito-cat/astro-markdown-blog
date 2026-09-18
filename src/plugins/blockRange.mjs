@@ -7,27 +7,60 @@ import { isUnifiedProcessor } from "@astrojs/markdown-remark";
  * プラグインを通ると失われる。そのため変換前の木から位置だけを控えておき、
  * rehype の最後でトップレベル要素へ出現順に割り当てる。
  */
+/*
+ * 脚注の定義は原文ではトップレベルに並ぶが、描画時は本文から外され、末尾の
+ * 1 つの section へまとめられる。数が合わなくなるので、両側から外して数える。
+ * 定義そのものは本文の編集対象にしない
+ */
+const isFootnoteDefinition = (node) => node.type === "footnoteDefinition";
+
+const isFootnoteSection = (node) =>
+  node.type === "element" && node.properties?.dataFootnotes !== undefined;
+
 const collectBlockOffsets = () => (tree, file) => {
-  file.data.blockOffsets = tree.children.map((node) =>
-    node.position
-      ? [node.position.start.offset, node.position.end.offset]
-      : null,
+  file.data.blockOffsets = tree.children
+    .filter((node) => !isFootnoteDefinition(node))
+    .map((node) =>
+      node.position
+        ? [node.position.start.offset, node.position.end.offset]
+        : null,
+    );
+};
+
+/* dev 専用の仕組みなので、諦めた理由はその場で出す。黙って無効になると原因を追えない */
+const giveUp = (file, reason) => {
+  console.warn(
+    `[block-range] ${file.path ?? "(unknown)"}: ${reason}。インライン編集を無効にします`,
   );
 };
 
 const stampBlockRanges = () => (tree, file) => {
   const offsets = file.data.blockOffsets;
-  if (!Array.isArray(offsets) || offsets.some((offset) => offset === null)) {
+  if (!Array.isArray(offsets)) {
+    giveUp(file, "原文の位置を取得できていません");
+    return;
+  }
+  if (offsets.some((offset) => offset === null)) {
+    const missing = offsets.filter((offset) => offset === null).length;
+    giveUp(file, `位置を持たないブロックが ${missing} 個あります`);
     return;
   }
 
   // 生 HTML とリンクカードは rehype-raw より前のこの時点では raw ノードのまま。
   // 属性は持てないが、原文ブロックとの対応を保つため数には入れる。
   const blocks = tree.children.filter(
-    (node) => node.type === "element" || node.type === "raw",
+    (node) =>
+      (node.type === "element" || node.type === "raw") &&
+      !isFootnoteSection(node),
   );
   // 個数が合わないまま範囲を割り当てると、部分書き込みが本文を壊す。
-  if (blocks.length !== offsets.length) return;
+  if (blocks.length !== offsets.length) {
+    giveUp(
+      file,
+      `原文 ${offsets.length} ブロックに対し描画は ${blocks.length} ブロック`,
+    );
+    return;
+  }
 
   blocks.forEach((node, index) => {
     if (node.type !== "element") return;

@@ -62,6 +62,11 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
+      // 脚注の見出しと戻りlinkは既定が英語。読み上げにだけ出るので日本語にする
+      remarkRehype: {
+        footnoteLabel: "脚注",
+        footnoteBackLabel: "本文の該当箇所へ戻る",
+      },
       remarkPlugins: [
         // 添削は Alert より先に拾う。`[!REVIEW]` を独自の器に振り替えるため
         [

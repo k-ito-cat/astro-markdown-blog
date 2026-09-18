@@ -410,6 +410,11 @@ const initializeEditor = (host: HTMLElement) => {
   if (blocks.length === 0) {
     hint.textContent =
       "この記事は構成上インライン編集に対応していません（本文の位置を特定できませんでした）";
+    // 印が無いのか、束ねる段で消えたのかで原因が違う。切り分けられるよう出す
+    console.warn("[preview] インライン編集を無効にしました", {
+      marked: prose.querySelectorAll("[data-md-range]").length,
+      blockList: document.querySelector("[data-md-blocks]") ? "あり" : "なし",
+    });
     return;
   }
   fillMissingRanges(prose, blocks);

@@ -1,6 +1,6 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
-import "glightbox/dist/css/glightbox.min.css";
+import { Icon } from "astro-icon/components";
 import {
   PUBLISHED_STATUS,
   type PublishedStatus,
@@ -18,104 +18,53 @@ const { content: Content, status } = Astro.props;
   <Content />
 </div>
 
+<dialog class="lightbox" aria-label="画像の拡大表示" data-lightbox>
+  <div class="lightbox-track" data-lightbox-track></div>
+  <button
+    type="button"
+    class="lightbox-control lightbox-close"
+    aria-label="閉じる"
+    data-lightbox-close
+  >
+    <Icon name="octicon:x-16" aria-hidden="true" />
+  </button>
+  <button
+    type="button"
+    class="lightbox-control lightbox-step lightbox-prev"
+    aria-label="前の画像"
+    data-lightbox-step="-1"
+  >
+    <Icon name="octicon:chevron-left-16" aria-hidden="true" />
+  </button>
+  <button
+    type="button"
+    class="lightbox-control lightbox-step lightbox-next"
+    aria-label="次の画像"
+    data-lightbox-step="1"
+  >
+    <Icon name="octicon:chevron-right-16" aria-hidden="true" />
+  </button>
+  <p class="lightbox-counter" aria-live="polite" data-lightbox-counter></p>
+</dialog>
+
 <script>
   import {
     observePage,
-    onPageCleanup,
     pageSignal,
     onPageLoad,
     onPageEvent,
   } from "~/scripts/pageLifecycle";
+  import { initFootnoteMark } from "~/scripts/footnoteMark";
   import { initGlossaryTerms } from "~/scripts/glossaryTerm";
+  import { initLightbox } from "~/scripts/lightbox";
 
   onPageLoad(() => {
     const signal = pageSignal();
 
     initGlossaryTerms(signal);
+    initFootnoteMark(signal);
 
-    // medium-zoom で画像をLightbox表示
-    // @ts-ignore 型定義が無いライブラリのため
-    import("glightbox").then(({ default: GLightbox }) => {
-      if (signal.aborted) return;
-      const imgEls = Array.from(document.querySelectorAll(".prose img"));
-      if (imgEls.length === 0) return;
-
-      const elements = imgEls.map((img) => ({
-        href: (img as HTMLImageElement).src,
-        type: "image",
-        alt: (img as HTMLImageElement).alt,
-      }));
-
-      // @ts-ignore 型定義がないため
-      const lightbox = (GLightbox as any)({
-        elements,
-        touchNavigation: true,
-        // タップでは外側の判定が働かないため、閉じるボタンは残す
-        closeButton: true,
-        // 内蔵の外側クリックはモバイル判定のとき無効になるので、下で自前に置き換える
-        closeOnOutsideClick: false,
-        loop: false,
-        slideEffect: "slide",
-        cssEasing: "cubic-bezier(0.4,0,0.2,1)",
-        speed: 50,
-        // 既定の zoom は動きが大きく遅いので、自前のアニメーションへ差し替える
-        openEffect: "zoom",
-        closeEffect: "zoom",
-        cssEfects: {
-          zoom: { in: "proseZoom", out: "proseZoomOut" },
-        },
-      });
-
-      onPageCleanup(() => lightbox.destroy());
-
-      // 開いている間 html に overflow: hidden が付き、閉じると読んでいた位置を失う。
-      // 元の位置へ戻し、画像を見終わった場所から読み進められるようにする
-      let scrollY = 0;
-
-      lightbox.on("open", () => {
-        // スクロールバーが消えたぶんを内側で受ける。glightbox も同じ補正をするが、
-        // body の margin を使うため、中央寄せの本文が横へずれてしまう
-        const scrollbar =
-          window.innerWidth - document.documentElement.clientWidth;
-        if (scrollbar > 0) {
-          document.body.style.paddingRight = `${scrollbar}px`;
-        }
-
-        // モバイル判定のままだと説明欄の位置などが変わる。画面幅によらず同じ見た目にする
-        document.body.classList.remove("glightbox-mobile");
-
-        // 画像の外側を触ったら閉じる。開くたびに器が作り直されるので都度つなぐ
-        document
-          .querySelector(".glightbox-container")
-          ?.addEventListener("click", (event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLElement)) return;
-            if (
-              target.closest(".ginner-container") ||
-              target.closest(".gbtn")
-            ) {
-              return;
-            }
-
-            lightbox.close();
-          });
-      });
-
-      lightbox.on("close", () => {
-        document.body.style.paddingRight = "";
-        window.scrollTo({ top: scrollY, behavior: "instant" });
-      });
-
-      // 各画像クリックで該当インデックスを開く
-      imgEls.forEach((img, idx) => {
-        img.addEventListener("click", () => {
-          // 開く前に控える。glightbox は open を通知する前に html へ overflow: hidden を
-          // 付けるため、通知後に読むとモバイルでは 0 に潰れていて、閉じたとき先頭へ飛ぶ
-          scrollY = window.scrollY;
-          lightbox.openAt(idx);
-        });
-      });
-    });
+    initLightbox(signal);
 
     // 見出し(h2/h3/h4)をリンク化
     const headingEls = document.querySelectorAll(
@@ -217,47 +166,46 @@ const { content: Content, status } = Astro.props;
 </script>
 
 <style is:global>
-  /* ライブラリはスクロールバーぶんを body の margin で埋めるが、
-     それだと本文の幅が変わって横へずれる。padding での補正は script 側で行う */
-  body.gscrollbar-fixer {
-    margin-right: 0;
-  }
-
-  /* 閉じるボタン。面で押さえず、記号とhoverの薄い面だけで示す。
-     既定の .glightbox-clean .gclose に勝たせるため、クラス 2 つ分の詳細度で書く */
-  body .glightbox-clean .gclose {
-    top: 10px;
-    right: 10px;
-    width: 44px;
-    height: 44px;
+  /*
+   * 画像の拡大表示。背景のスクロールは止めない。documentElement へ
+   * overflow: hidden を当てると iOS では読んでいた位置が潰れ、閉じたあとに
+   * 戻す動きが往復のジャンプとして見えるため。伝播は overscroll-behavior で
+   * 止め、位置は最初から動かさない
+   */
+  .lightbox {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
     background: transparent;
-    border-radius: 2px;
+    border: 0;
+    opacity: 0;
+    transition:
+      opacity var(--duration-feedback) ease-out,
+      transform var(--duration-feedback) ease-out,
+      display var(--duration-feedback) allow-discrete,
+      overlay var(--duration-feedback) allow-discrete;
+    transform: scale3d(0.97, 0.97, 1);
+  }
+
+  .lightbox[open] {
     opacity: 1;
+    transform: none;
   }
 
-  body .glightbox-clean .gclose svg {
-    width: 20px;
+  @starting-style {
+    .lightbox[open] {
+      opacity: 0;
+      transform: scale3d(0.94, 0.94, 1);
+    }
   }
 
-  body .glightbox-clean .gclose path {
-    fill: rgb(255 255 255 / 0.82);
-  }
-
-  body .glightbox-clean .gclose:hover,
-  body .glightbox-clean .gclose:focus-visible {
-    background: rgb(255 255 255 / 0.14);
-  }
-
-  body .glightbox-clean .gclose:hover path,
-  body .glightbox-clean .gclose:focus-visible path {
-    fill: #fff;
-  }
-
-  /* Lightbox（glightbox）の背景。既定は不透明の黒で重い。
-     media query と .glightbox-mobile の指定へ勝たせるため、両方の形で書く */
-  body .goverlay,
-  body.glightbox-mobile .goverlay {
-    /* 面で覆わず、背景を透かしたまま曇らせる。彩度を少し上げて濁りを防ぐ */
+  /* 面で覆わず、背景を透かしたまま曇らせる。彩度を少し上げて濁りを防ぐ */
+  .lightbox::backdrop {
     background: rgb(17 24 39 / 0.4);
     -webkit-backdrop-filter: blur(20px) saturate(1.3);
     backdrop-filter: blur(20px) saturate(1.3);
@@ -265,58 +213,122 @@ const { content: Content, status } = Astro.props;
 
   /* 透過を減らす設定では、ぼかしをやめて素直に暗くする */
   @media (prefers-reduced-transparency: reduce) {
-    body .goverlay,
-    body.glightbox-mobile .goverlay {
+    .lightbox::backdrop {
       background: rgb(17 24 39 / 0.88);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
   }
 
-  /* 既定の zoom（0.5s・0.3 倍からの拡大）は待たされるので、
-     短い距離を速く動かす自前のアニメーションに置き換える */
-  body .gproseZoom {
-    animation: prose-lightbox-in 0.14s cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  body .gproseZoomOut {
-    animation: prose-lightbox-out 0.12s ease-in;
-  }
-
-  @keyframes prose-lightbox-in {
-    from {
-      opacity: 0;
-      transform: scale3d(0.94, 0.94, 1);
-    }
-    to {
-      opacity: 1;
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox {
+      transition-duration: 0s;
       transform: none;
     }
   }
 
-  @keyframes prose-lightbox-out {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-      transform: scale3d(0.97, 0.97, 1);
-    }
+  /*
+   * 送りは scroll snap に任せる。スワイプも慣性もブラウザの実装のまま使え、
+   * 独自gestureを持たずに済む。縦方向は背後へ渡さない
+   */
+  .lightbox-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    /* 画像の外は押すと閉じる面なので、閉じる意味のカーソルを出す */
+    cursor: pointer;
+    cursor: zoom-out;
   }
 
-  /* 背景の明滅も画像に合わせる */
-  body .gfadeIn,
-  body .gfadeOut {
-    animation-duration: 0.14s;
+  .lightbox-track::-webkit-scrollbar {
+    display: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    body .gproseZoom,
-    body .gproseZoomOut,
-    body .gfadeIn,
-    body .gfadeOut {
-      animation: none;
-    }
+  .lightbox-slide {
+    display: grid;
+    flex: 0 0 100%;
+    place-items: center;
+    padding: 24px;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+
+  .lightbox-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: default;
+  }
+
+  /* 操作は記号と hover の薄い面だけで示す。面で押さえない */
+  .lightbox-control {
+    position: fixed;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: rgb(255 255 255 / 0.82);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-label);
+    cursor: pointer;
+    transition: background var(--duration-feedback) ease;
+  }
+
+  .lightbox-control:hover,
+  .lightbox-control:focus-visible {
+    color: #fff;
+    background: rgb(255 255 255 / 0.14);
+  }
+
+  .lightbox-control:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .lightbox-control:disabled:hover {
+    background: transparent;
+  }
+
+  .lightbox-close {
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
+  }
+
+  .lightbox-step {
+    inset-block-start: 50%;
+    translate: 0 -50%;
+  }
+
+  .lightbox-prev {
+    inset-inline-start: 10px;
+  }
+
+  .lightbox-next {
+    inset-inline-end: 10px;
+  }
+
+  .lightbox-counter {
+    position: fixed;
+    inset-block-end: 12px;
+    inset-inline: 0;
+    margin: 0;
+    color: rgb(255 255 255 / 0.72);
+    font-family: var(--font-machine);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+
+  /* 1 枚しかない記事では送りの UI を出さない */
+  .lightbox[data-single="true"] .lightbox-step,
+  .lightbox[data-single="true"] .lightbox-counter {
+    display: none;
   }
 
   a:focus-visible,
@@ -341,21 +353,29 @@ const { content: Content, status } = Astro.props;
   }
 
   /*
-   * 和文の折り返しを読みやすい位置に寄せる。既定では文字単位で改行されるため、
-   * 「スミソニ / アン」のように語の途中で切れる。
-   *
-   * 2 つを並べて、効く環境から順に段階的に良くなるようにしている。
-   * どちらも未対応のブラウザは既定の挙動に落ちるだけで、崩れはしない。
-   *   - word-break: auto-phrase … 文節単位で折り返す。Chromium 119+。
-   *     WebKit は Technology Preview のみで、iOS では現状まだ効かない
-   *   - text-wrap: pretty … 段落全体を見て行末の不揃いと孤立語を減らす。
-   *     WebKit は Safari 26 から。文節は見ないが、iOS ではこちらが受け皿になる
+   * 和文の折り返し。実験的な値には寄りかからず、どのブラウザでも同じ組みに
+   * なる指定を土台にする。
+   *   - line-break: strict … 小書き仮名や長音符を行頭に置かない厳しめの禁則
+   *   - overflow-wrap: break-word … 長い識別子や URL が measure をはみ出すのを防ぐ。
+   *     anywhere と違い、まず語の区切りで折る機会を残す
+   *   - text-wrap: pretty … 行末の不揃いと孤立語を減らす。Chromium と Safari 26 で効き、
+   *     未対応のブラウザは既定の折り返しに落ちるだけで崩れはしない
    */
   .prose p,
   .prose li,
-  .prose blockquote {
-    word-break: auto-phrase;
+  .prose blockquote,
+  .prose dd {
+    line-break: strict;
+    overflow-wrap: break-word;
     text-wrap: pretty;
+  }
+
+  /* 見出しは数行で収まるので、行の長さを揃えるほうが読みやすい */
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    line-break: strict;
+    text-wrap: balance;
   }
 
   .prose p {
@@ -415,6 +435,142 @@ const { content: Content, status } = Astro.props;
 
   .prose .flexible-marker-red {
     --marker-color: var(--color-marker-red);
+  }
+
+  /*
+   * 脚注。語ではなく主張に付く注で、読みを止めて確かめにいくもの。
+   * 本文の印は番号だけにし、末尾の一覧は番号を脇へ出して本文と読み分ける。
+   * 用語の注釈（吹き出し）とは役割が違うので、見た目も混ぜない
+   */
+  /*
+   * 飛び先を画面の中央へ置く。上端に貼り付くと前後の行が見えず、読み始める
+   * 場所が分からない。scroll-margin を画面の半分ぶん取ると、飛び先はその下、
+   * つまり中央に来る。固定のヘッダの下へ潜る問題も同時に消える。
+   * 文書の末尾付近ではこれ以上送れないため、中央まで上がらないことがある
+   */
+  .prose [data-footnote-ref],
+  .prose .footnotes li {
+    scroll-margin-top: 50vh;
+    /* 動くツールバーのぶんを除いた高さ。非対応なら上の行が残る */
+    scroll-margin-top: 50dvh;
+  }
+
+  /* 本文の参照も一覧と同じ [n] の形にする。数字だけでは注だと読み取れない */
+  .prose [data-footnote-ref]::before {
+    content: "[";
+  }
+
+  .prose [data-footnote-ref]::after {
+    content: "]";
+  }
+
+  .prose [data-footnote-ref] {
+    /* inline のままだと scroll-margin が効かない環境がある */
+    display: inline-block;
+    /*
+     * sup の line-height: 0 を継承すると、inline-block の高さが潰れて
+     * 背景が細い線にしか見えなくなる。ここで数字ぶんの高さを戻す
+     */
+    line-height: 1;
+    padding: 0.1em 0.3em;
+    color: var(--link);
+    font-family: var(--font-machine);
+    font-size: 0.85em;
+    text-decoration: none;
+    border-radius: var(--radius-label);
+  }
+
+  /*
+   * 一覧から戻ったとき、どこから来たのかを accent の面で示す。
+   * 番号だけでは小さすぎて目に入らないので、番号を含むブロックごと塗り、
+   * 番号はさらに濃くして戻り先の一点を指す。CSS で「行」は選べないため、
+   * 塗れる最小の単位は段落・項目・セルになる
+   */
+  /* 対象の行。本文のマーカー（==で囲む記法）と同じ濃度で塗る */
+  .prose .is-footnote-marked-block {
+    background: var(--color-marker-default);
+  }
+
+  /* 飛び先そのものは一段濃く、戻った一点を指す */
+  .prose [data-footnote-ref].is-footnote-marked {
+    color: var(--text-primary);
+    background: var(--color-accent);
+  }
+
+  .prose sup:has([data-footnote-ref]) {
+    /* 上付きで行の高さが動くと、段落の組みが崩れる */
+    line-height: 0;
+  }
+
+  .prose [data-footnote-ref]:hover,
+  .prose [data-footnote-ref]:focus-visible {
+    color: var(--link-hover);
+    text-decoration: underline;
+  }
+
+  .prose .footnotes {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  .prose .footnotes ol {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: footnote;
+  }
+
+  .prose .footnotes li {
+    position: relative;
+    counter-increment: footnote;
+    padding-inline-start: 2.2em;
+  }
+
+  /* 番号は本文の脇へ出す。行頭を揃えて一覧として読ませる */
+  .prose .footnotes li::before {
+    position: absolute;
+    inset-inline-start: 0;
+    color: var(--text-muted);
+    font-family: var(--font-machine);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    content: "[" counter(footnote) "]";
+  }
+
+  .prose .footnotes li p {
+    margin: 0;
+  }
+
+  .prose .footnotes li p + p {
+    margin-top: 6px;
+  }
+
+  /*
+   * 戻りlinkは記号だけ。色は控えめにするが、触れる大きさは確保する
+   * （hig の Touch target 最低 24px）
+   */
+  .prose .footnotes [data-footnote-backref] {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    min-height: 24px;
+    margin-inline-start: 0.2em;
+    color: var(--text-muted);
+    font-family: var(--font-machine);
+    font-size: 1.15em;
+    line-height: 1;
+    text-decoration: none;
+    vertical-align: -0.3em;
+  }
+
+  .prose .footnotes [data-footnote-backref]:hover,
+  .prose .footnotes [data-footnote-backref]:focus-visible {
+    color: var(--link-hover);
   }
 
   /*
@@ -942,11 +1098,11 @@ const { content: Content, status } = Astro.props;
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     /*
-     * 押すとライトボックスが開くことを示す。zoom-in のほうが意味は近いが、
-     * macOS の Chrome はこの値を描画せず矢印のまま出すため、どの環境でも
-     * 確実に見える pointer を使う。
+     * 押すと拡大表示が開くことを示す。zoom-in を描画しない環境では宣言ごと
+     * 捨てられ、前の行の pointer が残る
      */
     cursor: pointer;
+    cursor: zoom-in;
   }
 
   /* キャプション付きの画像。画像とキャプションの左端を揃える */
