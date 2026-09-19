@@ -1,4 +1,4 @@
-import { normalizeSearchText } from "~/utils/previewPost";
+import { normalizeSearchText } from "~/utils/search";
 
 const QUERY_KEY = "preview-sidebar:query";
 const FILTER_KEY = "preview-sidebar:filters";

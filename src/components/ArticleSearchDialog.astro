@@ -43,8 +43,19 @@ import { Icon } from "astro-icon/components";
       </button>
     </div>
 
-    <ol class="article-search-hits" data-article-search-hits></ol>
-    <p class="article-search-rest" data-article-search-rest hidden></p>
+    <div class="article-search-results" data-article-search-results hidden>
+      <div class="article-search-list">
+        <ol class="article-search-hits" data-article-search-hits></ol>
+        <p class="article-search-rest" data-article-search-rest hidden></p>
+      </div>
+      <div
+        class="article-search-preview"
+        aria-live="polite"
+        data-article-search-preview
+      >
+        <p class="preview-body" data-article-search-preview-body></p>
+      </div>
+    </div>
 
     <p class="article-search-hint">
       <span><kbd>↑</kbd><kbd>↓</kbd> 選ぶ</span>
@@ -68,14 +79,19 @@ import { Icon } from "astro-icon/components";
     --search-top: 12vh;
     --search-shift: 0px;
     --search-viewport: 100dvh;
+    /* 背の高い画面で一覧20件ぶん伸びないよう、画面とは別に上限を持つ */
+    --search-height: 600px;
 
     position: fixed;
     inset-block-start: calc(var(--search-shift) + var(--search-top));
     inset-inline: 0;
     display: flex;
     flex-direction: column;
-    width: min(820px, calc(100vw - 32px));
-    max-height: calc(var(--search-viewport) - var(--search-top) - 16px);
+    width: min(1040px, calc(100vw - 32px));
+    max-height: min(
+      calc(var(--search-viewport) - var(--search-top) - 16px),
+      var(--search-height)
+    );
     margin-inline: auto;
     overflow: hidden;
     padding: 0;
@@ -173,25 +189,84 @@ import { Icon } from "astro-icon/components";
    * ヒットの一覧。行の頭に細い線を引き、選んだ行だけ線と文字を濃くする。
    * 面（card）は作らない
    */
+  /*
+   * 一覧とプレビューの二段組。広幅では右に、選んだヒットの段落を丸ごと出す。
+   * 一覧の一行では前後が足りず、飛ぶ前にそこで合っているか判断できない
+   */
+  .article-search-results {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .article-search-results[hidden] {
+    display: none;
+  }
+
+  .article-search-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   .article-search-hits {
     flex: 1 1 auto;
     min-height: 0;
     margin: 0;
-    padding: 0 16px 12px;
+    /*
+     * 左右は 8px。行の面と罫線をここまで広げ、文字の頭は項目側の padding で
+     * 入力欄の 16px へ揃える。負マージンで外へ出すと、罫線だけ内側に残る
+     */
+    padding: 0 8px 12px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     list-style: none;
   }
 
-  .article-search-hits:empty {
+  /* 幅が足りないうちはプレビューを出さない。一覧の一行だけで選ぶ */
+  .article-search-preview {
     display: none;
+  }
+
+  @media (min-width: 900px) {
+    .article-search-results {
+      grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
+    }
+
+    .article-search-preview {
+      display: block;
+      min-height: 0;
+      padding: 2px 16px 12px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      border-inline-start: 1px solid var(--color-border);
+    }
+
+    .article-search-preview :global(.preview-body) {
+      margin: 0;
+      color: var(--color-text-sub);
+      font-size: var(--text-sm);
+      line-height: var(--leading-body);
+      line-break: strict;
+      overflow-wrap: break-word;
+      text-wrap: pretty;
+    }
+
+    .article-search-preview :global(.preview-body mark) {
+      padding: 0 0.15em;
+      color: var(--color-text);
+      font-weight: 600;
+      background: color-mix(in srgb, var(--color-accent) 62%, transparent);
+      border-radius: 1px;
+    }
   }
 
   /*
    * 一件は折り返して全文を見せる。行が高くなるぶん、区切りは余白と
-   * hover の面で作る。左の線は今いる行にだけ引き、通常は同じ幅の
-   * 透明な線を置いて文字の位置がずれないようにする
+   * 項目間の線で作る。選んでいる行は面と番号の色で示し、行の脇に線は引かない
    */
   /* 1件が2行になることがあるので、どこで切れるかを線で示す */
   .article-search-hits :global(li + li) {
@@ -202,8 +277,6 @@ import { Icon } from "astro-icon/components";
     display: grid;
     grid-template-columns: 2.5ch minmax(0, 1fr);
     gap: 12px;
-    width: 100%;
-    margin-inline: -8px;
     padding: 9px 8px;
     color: var(--color-text-muted);
     font-family: inherit;
@@ -212,29 +285,27 @@ import { Icon } from "astro-icon/components";
     text-align: start;
     background: none;
     border: 0;
-    border-inline-start: 1px solid transparent;
     border-radius: var(--radius-label);
     cursor: pointer;
     transition:
       color var(--duration-feedback) ease,
-      background-color var(--duration-feedback) ease,
-      border-color var(--duration-feedback) ease;
+      background-color var(--duration-feedback) ease;
   }
 
   .article-search-hits :global(button:hover),
   .article-search-hits :global(button:focus-visible) {
     background: var(--bg-hover);
-    outline: none;
   }
 
+  /* 面と一緒に消えないよう、キーボードの現在地は枠で示す */
   .article-search-hits :global(button:focus-visible) {
-    border-inline-start-color: var(--color-border-strong);
+    outline: 1px solid var(--color-border-strong);
+    outline-offset: -1px;
   }
 
-  /* 線だけでは行から浮いて見えるので、面と一緒に今いる行を示す */
   .article-search-hits :global(button[aria-current="true"]) {
+    color: var(--color-text);
     background: var(--bg-hover);
-    border-inline-start-color: var(--color-primary);
   }
 
   .article-search-hits :global(.hit-index) {
@@ -248,12 +319,15 @@ import { Icon } from "astro-icon/components";
     color: var(--color-primary);
   }
 
-  /* 前後の文脈は沈め、探している語だけを本文の濃さで立てる */
+  /*
+   * 一文をそのまま出し、行に収まらない分だけ省略する。前後の文脈は沈め、
+   * 探している語だけを本文の濃さで立てる
+   */
   .article-search-hits :global(.hit-text) {
     min-width: 0;
-    line-break: strict;
-    overflow-wrap: break-word;
-    text-wrap: pretty;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .article-search-hits :global(.hit-text mark) {
@@ -311,7 +385,7 @@ import { Icon } from "astro-icon/components";
     }
 
     .article-search-hits {
-      padding: 0 14px 10px;
+      padding: 0 6px 10px;
     }
 
     .article-search-rest {

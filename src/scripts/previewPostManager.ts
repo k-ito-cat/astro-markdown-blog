@@ -1,4 +1,4 @@
-import { normalizeSearchText } from "~/utils/previewPost";
+import { normalizeSearchText } from "~/utils/search";
 import { initNewTags } from "~/scripts/previewNewTags";
 import { initTagDelete } from "~/scripts/previewTagDelete";
 import {

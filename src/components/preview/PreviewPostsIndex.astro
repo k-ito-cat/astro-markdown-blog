@@ -20,11 +20,8 @@ import {
   WRITING_STATUS_ORDER,
 } from "~/constants/writingStatus";
 import { detectMemoState } from "~/utils/postMemo.js";
-import {
-  normalizeSearchText,
-  MEMO_STATE_LABELS,
-  type MemoState,
-} from "~/utils/previewPost";
+import { MEMO_STATE_LABELS, type MemoState } from "~/utils/previewPost";
+import { normalizeSearchText } from "~/utils/search";
 import { normalizePostSlug } from "~/utils/postSlug";
 import { isPreviewPinned } from "~/constants/previewPinned";
 

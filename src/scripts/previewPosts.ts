@@ -19,11 +19,11 @@ import {
   type WritingStatus,
 } from "~/constants/writingStatus";
 import {
-  normalizeSearchText,
   MEMO_STATE_LABELS,
   MEMO_STATE_ORDER,
   type MemoState,
 } from "~/utils/previewPost";
+import { normalizeSearchText } from "~/utils/search";
 import { initPreviewInlineEdit } from "~/scripts/previewInlineEdit";
 
 type GroupName = "priority" | "writing" | "publication" | "none";

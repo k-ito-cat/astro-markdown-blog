@@ -12,22 +12,25 @@
  * 掛けると文字数が変わり、塗る範囲が本文からずれる。
  */
 import { onPageCleanup, onPageEvent } from "~/scripts/pageLifecycle";
+import type { Occurrence } from "~/scripts/searchHighlight";
+import {
+  findOccurrences,
+  paintHighlight,
+  supportsHighlight,
+  toRange,
+} from "~/scripts/searchHighlight";
 
 const HIGHLIGHT_ALL = "article-search";
 const HIGHLIGHT_CURRENT = "article-search-current";
-
-/** 本文ではあるが読み上げや編集用で、読者が探す対象ではないもの */
-const SKIP = "script, style, .sr-only, .prose-memo-section";
 
 /** 一覧に並べる上限。これを超えた分は件数だけ伝える */
 const LIST_LIMIT = 20;
 
 /*
- * 一文として見せる、ヒットの前後の文字数。前を短く採るのは、行ごとに
- * ヒット語の位置が散らないようにするため。縦に目で追える一覧になる
+ * 文の切れ目。読点や小数点で切ると語の途中で切れるので、和文の終止符だけ見る。
+ * 改行も段落内の切れ目として扱う
  */
-const CONTEXT_BEFORE = 8;
-const CONTEXT_AFTER = 56;
+const SENTENCE_END = /[。！？!?\n]/u;
 
 /** 文脈を採るまとまり。行ではなくブロックで見る */
 const BLOCK =
@@ -36,14 +39,15 @@ const BLOCK =
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const supportsHighlight = () =>
-  typeof CSS !== "undefined" && "highlights" in CSS;
-
 type Hit = {
   range: Range;
   before: string;
   text: string;
   after: string;
+  /** プレビュー用。ヒットを含むブロック全体と、その中でのヒットの位置 */
+  context: string;
+  at: number;
+  length: number;
 };
 
 /** その text node が、ブロック全体の何文字目から始まるか */
@@ -62,10 +66,9 @@ const offsetInBlock = (block: Element, target: Text) => {
 /** 改行と連続した空白は1つに畳む */
 const flatten = (source: string) => source.replace(/\s+/gu, " ");
 
-const toHit = (node: Text, at: number, length: number): Hit => {
-  const range = document.createRange();
-  range.setStart(node, at);
-  range.setEnd(node, at + length);
+const toHit = (occurrence: Occurrence): Hit => {
+  const { node, at, length } = occurrence;
+  const range = toRange(occurrence);
 
   // 文脈はブロック全体から採る。強調や注釈でタグに切られた語もつながる
   const block = node.parentElement?.closest(BLOCK);
@@ -73,48 +76,36 @@ const toHit = (node: Text, at: number, length: number): Hit => {
   const start = block ? offsetInBlock(block, node) + at : at;
   const end = start + length;
 
-  const from = Math.max(0, start - CONTEXT_BEFORE);
-  const to = Math.min(source.length, end + CONTEXT_AFTER);
-
-  return {
-    range,
-    before: (from > 0 ? "…" : "") + flatten(source.slice(from, start)),
-    text: flatten(source.slice(start, end)),
-    after: flatten(source.slice(end, to)) + (to < source.length ? "…" : ""),
-  };
-};
-
-const collectHits = (root: HTMLElement, query: string) => {
-  const hits: Hit[] = [];
-  const needle = query.toLowerCase();
-  if (!needle) return hits;
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: (node) => {
-      const parent = node.parentElement;
-      if (!parent || parent.closest(SKIP)) return NodeFilter.FILTER_REJECT;
-      return node.nodeValue
-        ? NodeFilter.FILTER_ACCEPT
-        : NodeFilter.FILTER_REJECT;
-    },
-  });
-
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    const haystack = (node.nodeValue ?? "").toLowerCase();
-    let from = 0;
-
-    for (;;) {
-      const at = haystack.indexOf(needle, from);
-      if (at < 0) break;
-
-      hits.push(toHit(node, at, needle.length));
-      from = at + needle.length;
+  // ヒットを含む一文を、頭から丸ごと出す。行に収まらない分は CSS が省略する
+  let from = 0;
+  for (let i = start - 1; i >= 0; i -= 1) {
+    if (SENTENCE_END.test(source[i] ?? "")) {
+      from = i + 1;
+      break;
     }
   }
 
-  return hits;
+  let to = source.length;
+  for (let i = end; i < source.length; i += 1) {
+    if (SENTENCE_END.test(source[i] ?? "")) {
+      to = i + 1;
+      break;
+    }
+  }
+
+  return {
+    range,
+    before: flatten(source.slice(from, start)).trimStart(),
+    text: flatten(source.slice(start, end)),
+    after: flatten(source.slice(end, to)),
+    context: source,
+    at: start,
+    length,
+  };
 };
+
+const collectHits = (root: HTMLElement, query: string) =>
+  findOccurrences(root, query).map(toHit);
 
 /** ヒットが画面の中央に来るまで送る。sticky なヘッダーや目次に隠れないため */
 const scrollToHit = (hit: Hit) => {
@@ -138,36 +129,50 @@ export const initArticleSearch = (signal: AbortSignal) => {
   );
   const list = dialog?.querySelector<HTMLElement>("[data-article-search-hits]");
   const rest = dialog?.querySelector<HTMLElement>("[data-article-search-rest]");
+  const results = dialog?.querySelector<HTMLElement>(
+    "[data-article-search-results]",
+  );
+  const preview = dialog?.querySelector<HTMLElement>(
+    "[data-article-search-preview]",
+  );
+  const previewBody = dialog?.querySelector<HTMLElement>(
+    "[data-article-search-preview-body]",
+  );
   const close = dialog?.querySelector<HTMLButtonElement>(
     "[data-article-search-close]",
   );
-  if (!prose || !dialog || !input || !count || !list || !rest || !close) return;
+  if (
+    !prose ||
+    !dialog ||
+    !input ||
+    !count ||
+    !list ||
+    !rest ||
+    !close ||
+    !results ||
+    !preview ||
+    !previewBody
+  )
+    return;
 
   const entries = Array.from(
     document.querySelectorAll<HTMLElement>("[data-article-search-entry-group]"),
   );
 
   let hits: Hit[] = [];
-  /** 今いるヒット。まだどこへも送っていない間は -1 */
+  /**
+   * 選んでいるヒット。一覧の印、本文の濃い塗り、右のプレビューが同じものを指す。
+   * ヒットが無い間は -1
+   */
   let current = -1;
 
   const paint = () => {
-    if (!supportsHighlight()) return;
-
-    if (hits.length === 0) {
-      CSS.highlights.delete(HIGHLIGHT_ALL);
-      CSS.highlights.delete(HIGHLIGHT_CURRENT);
-      return;
-    }
-
-    CSS.highlights.set(
+    paintHighlight(
       HIGHLIGHT_ALL,
-      new Highlight(...hits.map((hit) => hit.range)),
+      hits.map((hit) => hit.range),
     );
-
     const hit = hits[current];
-    if (hit) CSS.highlights.set(HIGHLIGHT_CURRENT, new Highlight(hit.range));
-    else CSS.highlights.delete(HIGHLIGHT_CURRENT);
+    paintHighlight(HIGHLIGHT_CURRENT, hit ? [hit.range] : []);
   };
 
   /*
@@ -186,6 +191,29 @@ export const initArticleSearch = (signal: AbortSignal) => {
       if (reset) reset.hidden = query === "";
       entry.toggleAttribute("data-active", query !== "");
     });
+  };
+
+  /* 選んだヒットを含む段落を丸ごと出す。飛ぶ前に、そこで合っているか見る */
+  const renderPreview = () => {
+    const hit = hits[current];
+    if (!hit) {
+      previewBody.replaceChildren();
+      return;
+    }
+
+    const mark = document.createElement("mark");
+    mark.textContent = hit.context.slice(hit.at, hit.at + hit.length);
+    previewBody.replaceChildren(
+      hit.context.slice(0, hit.at),
+      mark,
+      hit.context.slice(hit.at + hit.length),
+    );
+
+    // 長い段落では、ヒットが見えるところまでプレビューの中だけを送る
+    preview.scrollTop = Math.max(
+      0,
+      mark.offsetTop - preview.clientHeight / 2 - preview.offsetTop,
+    );
   };
 
   const render = () => {
@@ -227,11 +255,14 @@ export const initArticleSearch = (signal: AbortSignal) => {
     const remainder = hits.length - LIST_LIMIT;
     rest.hidden = remainder <= 0;
     rest.textContent = remainder > 0 ? `他 ${remainder} 件` : "";
+
+    results.hidden = hits.length === 0;
+    renderPreview();
   };
 
   const search = () => {
     hits = collectHits(prose, input.value.trim());
-    current = -1;
+    current = hits.length > 0 ? 0 : -1;
     paint();
     render();
   };
@@ -241,10 +272,29 @@ export const initArticleSearch = (signal: AbortSignal) => {
     search();
   };
 
+  /*
+   * 選び直す。一覧の印、本文の濃い塗り、右のプレビューを同じヒットへ揃える。
+   * 一覧は建て直さない。建て直すと、キーボードで選んだボタンごと消えて
+   * フォーカスが本文へ落ちる
+   */
+  const select = (index: number) => {
+    if (hits.length === 0) return;
+    current = Math.min(Math.max(index, 0), hits.length - 1);
+
+    items().forEach((button) => {
+      if (Number(button.dataset.hitIndex) === current)
+        button.setAttribute("aria-current", "true");
+      else button.removeAttribute("aria-current");
+    });
+
+    paint();
+    renderPreview();
+  };
+
   /** 本文を送るのはここだけ。打っている最中は呼ばない */
   const goTo = (index: number) => {
     if (hits.length === 0) return;
-    current = (index + hits.length) % hits.length;
+    select(index);
     const hit = hits[current];
     if (!hit) return;
 
@@ -263,6 +313,7 @@ export const initArticleSearch = (signal: AbortSignal) => {
       input.focus();
       return;
     }
+    select(index);
     const buttons = items();
     buttons[Math.min(index, buttons.length - 1)]?.focus();
   };
@@ -333,7 +384,7 @@ export const initArticleSearch = (signal: AbortSignal) => {
 
       if (event.key !== "Enter" || button) return;
       event.preventDefault();
-      goTo(event.shiftKey ? current - 1 : current + 1);
+      goTo(current);
     },
     { signal },
   );

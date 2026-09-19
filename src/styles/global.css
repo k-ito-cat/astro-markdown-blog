@@ -287,6 +287,11 @@ body {
   background: color-mix(in srgb, var(--color-accent) 45%, transparent);
 }
 
+/* 索引で、絞り込みに当たった語。残った記録のどこが当たったかを示す */
+::highlight(post-search) {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
 ::highlight(article-search-current) {
   color: var(--color-text);
   background: var(--color-marker-default);

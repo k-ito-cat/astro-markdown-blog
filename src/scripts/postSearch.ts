@@ -1,9 +1,13 @@
 import { onPageEvent, observePage } from "~/scripts/pageLifecycle";
-const normalize = (value: string) =>
-  value.normalize("NFKC").toLocaleLowerCase("ja");
+import {
+  findOccurrences,
+  paintHighlight,
+  toRange,
+} from "~/scripts/searchHighlight";
+import { normalizeSearchText, toTerms } from "~/utils/search";
 
-const toTerms = (query: string) =>
-  normalize(query).split(/\s+/u).filter(Boolean);
+/** 残った記録のうち、当たった語を塗る */
+const HIGHLIGHT_HITS = "post-search";
 
 const REVEAL_CLASS = "is-search-revealed";
 
@@ -227,7 +231,7 @@ const updateView = (
   const terms = toTerms(query);
   let visible = 0;
   elements.items.forEach((item) => {
-    const searchText = normalize(item.dataset.searchText ?? "");
+    const searchText = normalizeSearchText(item.dataset.searchText ?? "");
     // 語の AND 検索と、選んだ年での期間絞り込みを重ねる
     const match =
       terms.every((term) => searchText.includes(term)) &&
@@ -304,6 +308,17 @@ const updateView = (
     else link.removeAttribute("aria-current");
   });
   markYearFocus(elements);
+  /*
+   * 残った記録の中で、当たった語を塗る。絞り込みの突き合わせは NFKC を掛けて
+   * いるが、NFKC は文字数を変えるのでその位置は使えない。ここは元のテキストを
+   * 小文字にして拾い直す。表記が違えば塗られないだけで、絞り込みには響かない
+   */
+  paintHighlight(
+    HIGHLIGHT_HITS,
+    elements.items
+      .filter((item) => !item.hidden)
+      .flatMap((item) => findOccurrences(item, query).map(toRange)),
+  );
   elements.count.textContent = `${hasCondition ? visible : elements.total}件の記録`;
   if (elements.empty) elements.empty.hidden = !(hasCondition && visible === 0);
   elements.clears.forEach((button) => {
@@ -453,7 +468,19 @@ export const initPostSearch = () => {
       centerYearSlot(elements, selectedYear, "smooth");
     });
   });
+  const focusSearch = () => {
+    elements.input.focus();
+    elements.input.select();
+  };
+
   onPageEvent(document, "keydown", (event) => {
+    // 索引でも Cmd / Ctrl+F はこのページの検索へ回す。記事ページと揃える
+    if (event.key === "f" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      focusSearch();
+      return;
+    }
+
     const target = event.target;
     const isEditing =
       target instanceof HTMLElement &&
@@ -466,7 +493,7 @@ export const initPostSearch = () => {
       !event.altKey
     ) {
       event.preventDefault();
-      elements.input.focus();
+      focusSearch();
     }
     if (
       event.key === "Escape" &&

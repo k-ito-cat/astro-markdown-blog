@@ -14,5 +14,3 @@ export const MEMO_STATE_ORDER: Record<MemoState, number> = {
   NO_MEMO: 3,
 };
 
-export const normalizeSearchText = (value: string) =>
-  value.normalize("NFKC").toLocaleLowerCase("ja");

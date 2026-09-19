@@ -1,3 +1,4 @@
+import { normalizeSearchText } from "~/utils/search";
 import { initNewTags } from "~/scripts/previewNewTags";
 import { initTagDelete } from "~/scripts/previewTagDelete";
 import {
@@ -26,9 +27,6 @@ const TEXT_FIELDS = [
 const LIST_FIELDS = ["categories", "tags"] as const;
 
 type Tone = "success" | "error";
-
-const normalizeSearchText = (value: string) =>
-  value.normalize("NFKC").toLocaleLowerCase("ja");
 
 const getMessage = (payload: unknown, fallback: string) => {
   if (
