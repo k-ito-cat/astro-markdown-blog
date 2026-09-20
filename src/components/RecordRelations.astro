@@ -6,7 +6,8 @@ type RelationGroup = {
 };
 type Props = {
   groups: RelationGroup[];
-  sameField?: RelationRecord[];
+  /** いま読んでいる記録のタイトル。時間軸の節点に置く */
+  currentTitle: string;
   older?: RelationRecord;
   newer?: RelationRecord;
   /** プレビューから呼ぶときはプレビュー側へ辿らせる */
@@ -14,7 +15,7 @@ type Props = {
 };
 const {
   groups,
-  sameField = [],
+  currentTitle,
   older,
   newer,
   basePath = "/blog",
@@ -23,7 +24,7 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
 ---
 
 {
-  (meaningfulGroups.length > 0 || sameField.length > 0 || older || newer) && (
+  (meaningfulGroups.length > 0 || older || newer) && (
     <nav class="record-relations" aria-label="記録同士の関係">
       {meaningfulGroups.map((group) => (
         <section>
@@ -37,33 +38,24 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
           </ul>
         </section>
       ))}
-      {sameField.length > 0 && (
-        <section>
-          <p class="relation-label">同じ分野の記事</p>
-          <ul>
-            {sameField.map((record) => (
-              <li>
-                <a href={`${basePath}/${record.slug}`}>→ {record.title}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {(older || newer) && (
-        <div class="sequence">
-          {older && (
-            <a href={`${basePath}/${older.slug}`}>
-              <small>前の記事</small>
-              <span>{older.title}</span>
-            </a>
-          )}
-          {newer && (
-            <a href={`${basePath}/${newer.slug}`}>
-              <small>次の記事</small>
-              <span>{newer.title}</span>
-            </a>
-          )}
-        </div>
+        <section class="sequence" aria-label="時間軸の前後">
+          <ol>
+            {newer && (
+              <li>
+                <a href={`${basePath}/${newer.slug}`}>{newer.title}</a>
+              </li>
+            )}
+            <li class="is-current">
+              <span>{currentTitle}</span>
+            </li>
+            {older && (
+              <li>
+                <a href={`${basePath}/${older.slug}`}>{older.title}</a>
+              </li>
+            )}
+          </ol>
+        </section>
       )}
     </nav>
   )
@@ -109,31 +101,66 @@ const meaningfulGroups = groups.filter((group) => group.records.length > 0);
     text-decoration: underline;
   }
 
+  /*
+   * 時間軸。上が新しく下が古い一本の線に、前後の記録と現在地を置く。
+   * 向きは並び順で示し、言葉は置かない。分岐も作らない。改訂履歴がすぐ上に
+   * 並ぶので、git のグラフに見える形にしない
+   */
   .sequence {
     display: grid;
-    gap: 1px;
-    background: var(--color-border);
-  }
-
-  .sequence a {
-    display: grid;
     gap: 4px;
-    padding: 12px 0;
+  }
+
+  .sequence ol {
+    position: relative;
+    margin: 0;
+    /* 軸と枝を置くための溝。これ以上詰めると節点が本文の外へ出る */
+    padding: 0 0 0 18px;
+    list-style: none;
+  }
+
+  /* 軸。最初と最後の節点のあいだだけに引く */
+  .sequence ol::before {
+    content: "";
+    position: absolute;
+    inset-block: 18px;
+    inset-inline-start: 3px;
+    width: 1px;
+    background: var(--color-border-strong);
+  }
+
+  .sequence li {
+    position: relative;
+    padding: 9px 0;
+    border-bottom: 0;
+  }
+
+  /* 軸から項目へ渡す枝 */
+  .sequence li::before {
+    content: "";
+    position: absolute;
+    inset-block-start: calc(50% - 1px);
+    inset-inline-start: -15px;
+    width: 12px;
+    height: 1px;
+    background: var(--color-border-strong);
+  }
+
+  /* 現在地の節点 */
+  .sequence .is-current::after {
+    content: "";
+    position: absolute;
+    inset-block-start: calc(50% - 5px);
+    inset-inline-start: -19px;
+    width: 9px;
+    height: 9px;
     background: var(--color-background);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px var(--color-primary);
   }
 
-  .sequence small {
+  .sequence .is-current span {
     color: var(--color-text-muted);
-  }
-  .sequence span {
-    color: var(--color-text);
-  }
-
-  @media (min-width: 640px) {
-    .sequence {
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      background: none;
-    }
+    font-size: var(--text-sm);
   }
 </style>

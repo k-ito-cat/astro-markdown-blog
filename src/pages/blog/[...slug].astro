@@ -30,7 +30,7 @@ if (!post) return Astro.redirect("/404");
 const { Content, headings } = await render(post);
 const isDraft = post.data.status === PUBLISHED_STATUS.DRAFT;
 const previewSlug = normalizePostSlug(post.id);
-const { groups, sameField, older, newer } = getPostRelations(
+const { groups, older, newer } = getPostRelations(
   post,
   await getCollection("posts"),
 );
@@ -71,6 +71,7 @@ const { groups, sameField, older, newer } = getPostRelations(
         !isDraft && (
           <Navigation
             headings={headings}
+            title={post.data.title}
             returnHref="/blog"
             returnLabel="一覧へ戻る"
             returnSourcePaths={["/", "/blog"]}
@@ -87,7 +88,7 @@ const { groups, sameField, older, newer } = getPostRelations(
       !isDraft && (
         <RecordRelations
           groups={groups}
-          sameField={sameField}
+          currentTitle={post.data.title}
           older={older}
           newer={newer}
         />
@@ -109,6 +110,7 @@ const { groups, sameField, older, newer } = getPostRelations(
     gap: 36px;
   }
 
+
   @media (min-width: 640px) {
     .article-main {
       padding: 36px 24px 96px;
@@ -116,9 +118,24 @@ const { groups, sameField, older, newer } = getPostRelations(
   }
 
   @media (min-width: 1024px) {
+    .article-main {
+      --trace-column: 220px;
+      --trace-gap: 48px;
+    }
+
     .article-grid.has-trace {
-      grid-template-columns: minmax(0, 1fr) 220px;
-      gap: 48px;
+      grid-template-columns: minmax(0, 1fr) var(--trace-column);
+      gap: var(--trace-gap);
+    }
+
+    /*
+     * 関係は grid の外にあるので、放っておくと目次の幅を勘定に入れずに
+     * main の中央へ置かれ、本文より右へずれる。本文の列と同じ幅へ詰める
+     */
+    .article-grid.has-trace ~ :global(.record-relations) {
+      max-width: calc(100% - var(--trace-column) - var(--trace-gap));
+      margin-inline-start: 0;
+      margin-inline-end: auto;
     }
   }
 </style>

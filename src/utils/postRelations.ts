@@ -4,10 +4,6 @@ import { normalizePostSlug } from "~/utils/postSlug";
 
 // 関連記事は「共通タグ2点 + 共通カテゴリ1点」で採点する。
 // カテゴリが1つ重なるだけ（=同じ分野というだけ）では関連として扱わない。
-const TAG_SCORE = 2;
-const CATEGORY_SCORE = 1;
-const MIN_RELATION_SCORE = 2;
-const RELATION_LIMIT = 3;
 
 export type LinkedRecord = { slug: string; title: string };
 
@@ -18,7 +14,6 @@ export type RelationGroup = {
 
 export type PostRelations = {
   groups: RelationGroup[];
-  sameField: LinkedRecord[];
   older?: LinkedRecord;
   newer?: LinkedRecord;
 };
@@ -71,28 +66,6 @@ export const getPostRelations = (
     },
   ];
 
-  const currentCategories = new Set<string>(post.data.categories);
-  const currentTags = new Set<string>(post.data.tags);
-  const sameField = timeline
-    .filter((entry) => entry.id !== post.id)
-    .map((entry) => ({
-      entry,
-      score:
-        entry.data.tags.filter((tag) => currentTags.has(tag)).length *
-          TAG_SCORE +
-        entry.data.categories.filter((category) =>
-          currentCategories.has(category),
-        ).length *
-          CATEGORY_SCORE,
-    }))
-    .filter(({ score }) => score >= MIN_RELATION_SCORE)
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.entry.data.publishedAt.getTime() - a.entry.data.publishedAt.getTime(),
-    )
-    .slice(0, RELATION_LIMIT)
-    .map(({ entry }) => toRecord(entry));
 
   const currentIndex = timeline.findIndex((entry) => entry.id === post.id);
   const newer = currentIndex > 0 ? timeline[currentIndex - 1] : undefined;
@@ -103,7 +76,6 @@ export const getPostRelations = (
 
   return {
     groups,
-    sameField,
     older: older && toRecord(older),
     newer: newer && toRecord(newer),
   };

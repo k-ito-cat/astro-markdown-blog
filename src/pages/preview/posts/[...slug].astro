@@ -162,6 +162,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             {headings.length > 0 && (
               <Navigation
                 headings={headings}
+                title={post.data.title}
                 returnHref="/preview/posts"
                 returnLabel="一覧へ戻る"
                 returnSourcePaths={["/preview/posts"]}
@@ -172,14 +173,14 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
 
           {relations && (
             <section class="preview-relations">
-              <p class="preview-relations-note">
-                関連情報
-                {relationsHidden &&
-                  "（下書きのため本番ページには表示されません）"}
-              </p>
+              {relationsHidden && (
+                <p class="preview-relations-note">
+                  下書きのため、本番ページには表示されません
+                </p>
+              )}
               <RecordRelations
                 groups={relations.groups}
-                sameField={relations.sameField}
+                currentTitle={post.data.title}
                 older={relations.older}
                 newer={relations.newer}
                 basePath="/preview/posts"
@@ -286,9 +287,22 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     min-width: 0;
   }
 
+  /*
+   * 関係は grid の外にあるので、放っておくと目次の幅を勘定に入れずに
+   * 中央へ置かれ、本文より右へずれる。本文の列と同じ幅・同じ左端へ詰める
+   */
+  .preview-relations {
+    max-width: var(--measure-prose);
+  }
+
+  .preview-relations > :global(.record-relations) {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+  }
+
   .preview-relations-note {
     max-width: var(--measure-prose);
-    margin: 48px auto 0;
+    margin: 48px 0 0;
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
@@ -466,10 +480,29 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   }
 
   @media (min-width: 1024px) {
+    .preview-detail {
+      --trace-column: 180px;
+      --trace-gap: 48px;
+    }
+
     .preview-article-grid.has-trace {
-      grid-template-columns: minmax(0, 1fr) 180px;
-      gap: 48px;
-      max-width: calc(var(--measure-prose) + 48px + 180px);
+      grid-template-columns: minmax(0, 1fr) var(--trace-column);
+      gap: var(--trace-gap);
+      max-width: calc(
+        var(--measure-prose) + var(--trace-gap) + var(--trace-column)
+      );
+    }
+
+    .preview-article-grid.has-trace ~ .preview-relations {
+      max-width: calc(
+        var(--measure-prose) + var(--trace-gap) + var(--trace-column)
+      );
+    }
+
+    .preview-article-grid.has-trace
+      ~ .preview-relations
+      > :global(.record-relations) {
+      max-width: calc(100% - var(--trace-column) - var(--trace-gap));
     }
   }
 </style>
