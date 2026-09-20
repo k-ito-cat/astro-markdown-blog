@@ -658,7 +658,6 @@ const filterGroups = [
     color: var(--color-text-sub);
     font-size: var(--text-sm);
     text-decoration: none;
-    border-bottom: 1px solid var(--color-border);
   }
 
   .fields a span:last-child {
@@ -950,7 +949,6 @@ const filterGroups = [
     padding: 4px 0;
     color: var(--color-text-muted);
     font-size: 12px;
-    border-bottom: 0;
   }
 
   .tags a:hover {
@@ -1104,8 +1102,19 @@ const filterGroups = [
     font-size: 11px;
   }
 
+  /*
+   * 一覧に触れているあいだだけ見せる。場所は溢れている間ずっと空けておき、
+   * 出入りで下の記録がずれないようにする
+   */
   .tags.is-collapsed.is-overflowing .tags-hint {
     display: inline-flex;
+    opacity: 0;
+    transition: opacity var(--duration-feedback) ease;
+  }
+
+  .tags.is-collapsed.is-overflowing:hover .tags-hint,
+  .tags.is-collapsed.is-overflowing:focus-within .tags-hint {
+    opacity: 1;
   }
 
   @media (hover: none), (pointer: coarse) {
