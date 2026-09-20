@@ -4,6 +4,8 @@ export type TimelineEntry = {
   title: string;
   isoDate: string;
   displayDate: string;
+  /** 年の断層線が年を持つので、日付groupはこちらを出す */
+  monthDay: string;
   year: string;
   month: string;
   categories: string[];
@@ -54,7 +56,7 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
                   showMonth ? `month-${entry.year}-${entry.month}` : undefined
                 }
               >
-                <time datetime={entry.isoDate}>{entry.displayDate}</time>
+                <time datetime={entry.isoDate}>{entry.monthDay}</time>
               </li>
             )}
             <li
@@ -291,7 +293,8 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
     opacity: 1;
     transition: opacity var(--duration-page) ease-out;
     line-break: strict;
-    text-wrap: balance;
+    text-wrap: pretty;
+    word-break: auto-phrase;
   }
 
   .tl-entry.is-awaiting-reveal .tl-title {

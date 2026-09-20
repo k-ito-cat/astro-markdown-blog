@@ -5,7 +5,11 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
-import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
+import {
+  formatJapaneseDate,
+  formatJapaneseMonthDay,
+  toIsoDate,
+} from "~/utils/formatDate";
 
 const works = [
   {
@@ -48,6 +52,7 @@ const entries: TimelineEntry[] = posts
       title: post.data.title,
       isoDate,
       displayDate: formatJapaneseDate(activityDate),
+      monthDay: formatJapaneseMonthDay(activityDate),
       year,
       month,
       categories: post.data.categories,

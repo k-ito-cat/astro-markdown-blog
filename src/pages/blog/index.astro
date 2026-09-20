@@ -7,7 +7,11 @@ import Timeline, { type TimelineEntry } from "~/components/Timeline.astro";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
 import leftReachingCat from "~/assets/left-reaching-cat.png";
-import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
+import {
+  formatJapaneseDate,
+  formatJapaneseMonthDay,
+  toIsoDate,
+} from "~/utils/formatDate";
 import { groupTagsByInitial } from "~/utils/tagOrder";
 
 const allPosts = await getCollection(
@@ -29,6 +33,7 @@ const entries: TimelineEntry[] = allPosts
       title: post.data.title,
       isoDate,
       displayDate: formatJapaneseDate(activityDate),
+      monthDay: formatJapaneseMonthDay(activityDate),
       year,
       month,
       categories: post.data.categories,
@@ -1188,16 +1193,15 @@ const filterGroups = [
   }
 
   .tags-sort {
-    /* 24×24px を割らない当たりを取る。枠は紙と3:1を満たす濃さで引く */
+    /* 24×24px を割らない当たりを取る */
     min-height: 24px;
-    padding: 4px 10px;
+    padding: 4px 0;
     color: var(--color-text-muted);
     background: transparent;
-    border: 1px solid var(--color-secondary);
-    border-radius: var(--radius-label);
+    border: 0;
     cursor: pointer;
     font-family: var(--font-machine);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
   }
 
@@ -1216,14 +1220,15 @@ const filterGroups = [
   .tags-sort:hover,
   .tags-sort:focus-visible {
     color: var(--color-interaction-text);
-    border-color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
-  /* 押されている間は面を持たせ、いま効いている並びだと分かるようにする */
+  /* 押されている間は色と下線で、いま効いている並びだと分かるようにする */
   .tags-sort[aria-pressed="true"] {
     color: var(--color-primary);
-    background: var(--bg-subtle);
-    border-color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .index-records {
@@ -1429,18 +1434,13 @@ const filterGroups = [
   :is(.filter-dock, .filter-sheet) .filter-sort {
     min-height: 24px;
     margin-right: auto;
-    padding: 4px 8px;
-    color: var(--color-text-muted);
-    background: transparent;
-    border: 1px solid var(--color-secondary);
-    border-radius: var(--radius-label);
     letter-spacing: 0.06em;
   }
 
   :is(.filter-dock, .filter-sheet) .filter-sort[aria-pressed="true"] {
     color: var(--color-primary);
-    background: var(--bg-subtle);
-    border-color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* 頭文字の見出しは、頭文字順のときだけ出す */
@@ -1515,7 +1515,7 @@ const filterGroups = [
     border-inline: 0;
     border-bottom: 0;
     /* 画面の端に貼り付くので、丸めるのは上の両端だけ */
-    border-radius: 8px 8px 0 0;
+    border-radius: 16px 16px 0 0;
     font-size: var(--text-sm);
 
     /*
