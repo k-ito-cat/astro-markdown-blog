@@ -209,6 +209,12 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           loading="eager"
         />
         <p class="draft-note">この記事は公開予定です。</p>
+        {returnHref && returnLabel && (
+          <a class="draft-return" href={returnHref}>
+            <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+            <span>{returnLabel}</span>
+          </a>
+        )}
       </div>
     )
   }
@@ -760,6 +766,30 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .article-structure[data-closing] .article-structure-body {
       animation: none;
     }
+  }
+
+  /* 本文がまだ無い記録には、目次も欄外traceも出ない。戻り口だけ残す */
+  .draft-return {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 12px;
+    text-decoration: none;
+  }
+
+  .draft-return :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .draft-return:hover,
+  .draft-return:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .draft-placeholder {
