@@ -21,15 +21,10 @@ type Props = {
 };
 
 const { entries, variant = "stream", yearLinks } = Astro.props;
-
-const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
-  counts[entry.year] = (counts[entry.year] ?? 0) + 1;
-  return counts;
-}, {});
 ---
 
 <div class="timeline-root" data-timeline-root>
-  <ol class:list={["timeline", { "is-index": variant === "index" }]}>
+  <ol class="timeline">
     {
       entries.map((entry, index) => {
         const previous = entries[index - 1];
@@ -44,15 +39,6 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
             {showYear && (
               <li class="tl-year" id={`year-${entry.year}`} data-year-group>
                 <span>{entry.year}</span>
-                {variant === "index" && (
-                  <span
-                    class="tl-year-count"
-                    data-year-count
-                    data-total={String(countsByYear[entry.year])}
-                  >
-                    {countsByYear[entry.year]}件
-                  </span>
-                )}
                 {yearLinks?.[entry.year] && (
                   <a class="tl-year-more" href={yearLinks[entry.year]}>
                     {entry.year}年をすべて見る →
@@ -79,6 +65,8 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
               )}
               data-year={entry.year}
               data-month={entry.month}
+              data-categories={JSON.stringify(entry.categories)}
+              data-tags={JSON.stringify(entry.tags)}
             >
               <div class="tl-row">
                 <a
@@ -172,15 +160,6 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
     opacity: 0.32;
   }
 
-  /* 断層線の右端に、その年の件数を置く */
-  .tl-year-count {
-    order: 2;
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-  }
-
   /* 断層線の右端に、その年の続きへの導線を置く */
   .tl-year-more {
     order: 2;
@@ -226,7 +205,7 @@ const countsByYear = entries.reduce<Record<string, number>>((counts, entry) => {
 
   /* WIP は「まだ固まっていない」= 破線 の語彙で揃える。
      記号（ノード）・言葉（WIPバッジの下線）・線（行の罫）の3層すべてを破線にする。
-     明度は落とさない（索引の過半数がWIPのため、落とすとページ全体が沈む） */
+     明度は落とさない（探すページの過半数がWIPのため、落とすとページ全体が沈む） */
   .tl-entry.is-wip .tl-node {
     border-style: dashed;
   }

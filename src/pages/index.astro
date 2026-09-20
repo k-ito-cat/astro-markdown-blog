@@ -30,7 +30,7 @@ const posts = await getCollection(
   ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
 );
 
-// 時系列順は年ごとの直近 ENTRIES_PER_YEAR 件まで。全件は索引ページが担う
+// 時系列順は年ごとの直近 ENTRIES_PER_YEAR 件まで。全件は探すページが担う
 const ENTRIES_PER_YEAR = 10;
 const countsByYear = new Map<string, number>();
 
@@ -64,7 +64,7 @@ const entries: TimelineEntry[] = posts
     return count <= ENTRIES_PER_YEAR;
   });
 
-// どの年からも、索引のその年へ送れるようにする
+// どの年からも、探すページのその年へ送れるようにする
 const yearLinks = Object.fromEntries(
   Array.from(countsByYear.keys()).map((year) => [year, `/blog?year=${year}`]),
 );
@@ -102,7 +102,7 @@ const monthsByYear = Array.from(
         <h1 id="record-flow-title" class="sr-only">技術理解の記録</h1>
         <Timeline entries={entries} yearLinks={yearLinks} />
         <a href="/blog" class="flow-more">
-          索引からすべての記録を見る
+          すべての記録を探す
           <Icon name="octicon:arrow-right-16" aria-hidden="true" />
         </a>
       </section>

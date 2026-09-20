@@ -7,7 +7,8 @@ type Props = {
   tags?: Tag[];
 };
 const { categories, tags = [] } = Astro.props;
-const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
+const toSearchHref = (term: string, kind: "categories" | "tags") =>
+  `/blog?q=${encodeURIComponent(term)}&kind=${kind}`;
 ---
 
 {
@@ -17,18 +18,26 @@ const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
         <ul class="category-list">
           {categories.map((category: Category) => (
             <li>
-              <a href={toSearchHref(category)} class="category-label">
+              <a
+                href={toSearchHref(category, "categories")}
+                class="category-label"
+              >
                 {category}
               </a>
             </li>
           ))}
         </ul>
       )}
+      {categories.length > 0 && tags.length > 0 && (
+        <span class="classification-sep" aria-hidden="true">
+          /
+        </span>
+      )}
       {tags.length > 0 && (
         <ul class="tag-list">
           {tags.map((tag: Tag) => (
             <li>
-              <a href={toSearchHref(tag)} class="tag-label">
+              <a href={toSearchHref(tag, "tags")} class="tag-label">
                 {tag}
               </a>
             </li>
@@ -40,11 +49,18 @@ const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
 }
 
 <style>
+  /* カテゴリとタグを一行に並べ、あいだを斜線で区切る */
   .classification {
     display: flex;
-    flex-direction: column;
-    /* 1段目にカテゴリ、2段目にタグ。タグ行を折り返しと誤読させないよう段の間隔を空ける */
-    gap: 10px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+
+  .classification-sep {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    opacity: 0.6;
   }
 
   .category-list,
@@ -68,19 +84,15 @@ const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
     padding: 2px 0;
     font-size: 12px;
     color: var(--text-secondary);
-    background: linear-gradient(
-      transparent 58%,
-      color-mix(in srgb, var(--color-accent) 58%, transparent) 58%
-    );
     border: 0;
     text-decoration: none;
     transition: color var(--duration-feedback) ease;
   }
 
   .category-label:hover {
-    color: var(--text-primary);
-    background: linear-gradient(transparent 58%, var(--color-accent) 58%);
-    text-decoration: none;
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .tag-label {
@@ -101,7 +113,8 @@ const toSearchHref = (term: string) => `/blog?q=${encodeURIComponent(term)}`;
   }
 
   .tag-label:hover {
-    color: var(--text-primary);
-    text-decoration: none;
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 </style>

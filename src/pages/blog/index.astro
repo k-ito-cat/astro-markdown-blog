@@ -8,6 +8,7 @@ import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { normalizePostSlug } from "~/utils/postSlug";
 import leftReachingCat from "~/assets/left-reaching-cat.png";
 import { formatJapaneseDate, toIsoDate } from "~/utils/formatDate";
+import { groupTagsByInitial } from "~/utils/tagOrder";
 
 const allPosts = await getCollection(
   "posts",
@@ -67,19 +68,27 @@ const axisYears = Array.from(
 
 const fieldCounts = countBy(allPosts.map((post) => post.data.categories));
 const tagCounts = countBy(allPosts.map((post) => post.data.tags));
+const tagGroups = groupTagsByInitial(tagCounts);
+const countOrder = new Map(tagCounts.map(([tag], index) => [tag, index]));
+const filterGroups = [
+  { label: "分野", kind: "categories", counts: fieldCounts, groups: null },
+  // タグだけは頭文字で束ねた並びも持ち、簡易検索の中でも切り替えられるようにする
+  { label: "タグ", kind: "tags", counts: tagCounts, groups: tagGroups },
+] as const;
 ---
 
-<BaseLayout title="索引">
+<BaseLayout title="探す">
   <main id="main-content" class="index-page">
     <header class="index-head">
       <div class="index-title-row">
-        <h1>索引</h1>
+        <h1>探す</h1>
         <span id="post-count" data-total={entries.length} aria-live="polite">
           {entries.length}件の記録
         </span>
       </div>
       <p>タイトルを検索、または分野やタグから絞り込めます。</p>
 
+      <h2 class="index-section-title" id="search-title">検索</h2>
       <div class="search-field">
         <div class="search-input-area">
           <Icon name="octicon:search-16" aria-hidden="true" />
@@ -93,8 +102,8 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
           />
           <button
             type="button"
-            data-search-clear
-            aria-label="検索条件を外す"
+            data-input-clear
+            aria-label="入力した語を消す"
             hidden
           >
             <Icon name="octicon:x-16" aria-hidden="true" />
@@ -103,17 +112,9 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
       </div>
     </header>
 
-    <nav class="years" id="years" aria-label="期間" data-years>
-      <a href="/blog" class="years-all" data-year-filter="all">全期間</a>
-      <span class="years-cat" aria-hidden="true">
-        <Image
-          src={leftReachingCat}
-          alt=""
-          widths={[112, 224]}
-          sizes="112px"
-          loading="eager"
-        />
-      </span>
+    <nav class="years" id="years" aria-labelledby="years-title" data-years>
+      <h2 class="index-section-title" id="years-title">期間</h2>
+      <span class="years-axis-rule" aria-hidden="true"></span>
       <div class="years-window" id="year-axis" data-year-window>
         <ul data-year-track>
           <li class="axis-pad" aria-hidden="true"></li>
@@ -139,13 +140,18 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
                   </a>
                 </li>
               ) : (
-                <li class="is-unsnapped">
-                  <span class="year-empty" aria-disabled="true">
+                <li>
+                  <a
+                    class="year-empty"
+                    href={`/blog?year=${year}`}
+                    draggable="false"
+                    data-year-filter={year}
+                  >
                     <>
                       <span class="year-label">{year}</span>
                       <span class="year-count">（0件）</span>
                     </>
-                  </span>
+                  </a>
                 </li>
               ),
             )
@@ -155,18 +161,31 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
       </div>
     </nav>
 
-    <nav class="fields" id="fields" aria-label="分野">
+    <h2 class="index-section-title" id="fields-title">
+      分野
+      <span class="fields-cat" aria-hidden="true">
+        <Image
+          src={leftReachingCat}
+          alt=""
+          widths={[112, 224]}
+          sizes="112px"
+          loading="eager"
+        />
+      </span>
+    </h2>
+    <nav class="fields" id="fields" aria-labelledby="fields-title">
       <ul>
         {
           fieldCounts.map(([field, count]) => (
             <li>
               <a
-                href={`/blog?q=${encodeURIComponent(field)}`}
+                href={`/blog?category=${encodeURIComponent(field)}`}
                 data-filter-term={field}
+                data-filter-kind="categories"
               >
                 <>
                   <span>{field}</span>
-                  <span>{count}</span>
+                  <span data-term-count>{count}</span>
                 </>
               </a>
             </li>
@@ -178,29 +197,11 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     <nav
       class="fields tags is-collapsed"
       id="tags"
-      aria-label="タグ"
+      aria-labelledby="tags-title"
       data-tag-nav
     >
-      <div class="tags-body">
-        <ul id="tag-list">
-          {
-            tagCounts.map(([tag, count]) => (
-              <li>
-                <a
-                  href={`/blog?q=${encodeURIComponent(tag)}`}
-                  data-filter-term={tag}
-                >
-                  <>
-                    <span>#{tag}</span>
-                    <span>{count}</span>
-                  </>
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
-      <div class="tags-foot">
+      <div class="tags-head">
+        <h2 class="index-section-title" id="tags-title">タグ</h2>
         <button
           type="button"
           class="tags-toggle"
@@ -211,22 +212,261 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
         >
           すべてのタグを表示
         </button>
+        <button
+          type="button"
+          class="tags-sort"
+          data-tag-sort
+          aria-pressed="false"
+          aria-controls="tag-list"
+          hidden
+        >
+          A→Z
+        </button>
+      </div>
+      <div class="tags-body">
+        {
+          /*
+           * DOM は頭文字順で持ち、既定の件数順は order で組み替える。
+           * 並びの切り替えで一覧を作り直さずに済み、JSが無ければ件数順のまま使える
+           */
+        }
+        <ul id="tag-list">
+          {
+            tagGroups.map(({ initial, tags }) => (
+              <>
+                <li class="tag-initial" aria-hidden="true">
+                  {initial}
+                </li>
+                {tags.map(([tag, count]) => (
+                  <li style={`--count-order:${countOrder.get(tag)}`}>
+                    <a
+                      href={`/blog?tag=${encodeURIComponent(tag)}`}
+                      data-filter-term={tag}
+                      data-filter-kind="tags"
+                    >
+                      <>
+                        <span>#{tag}</span>
+                        <span data-term-count>{count}</span>
+                      </>
+                    </a>
+                  </li>
+                ))}
+              </>
+            ))
+          }
+        </ul>
+      </div>
+      <div class="tags-foot">
+        {
+          /* 開いた一覧は狭い画面で長くなるので、末尾からも閉じられるようにする */
+        }
+        <button
+          type="button"
+          class="tags-toggle tags-collapse"
+          data-tag-collapse
+          aria-controls="tag-list"
+        >
+          タグを折りたたむ
+        </button>
         <span class="tags-hint">
-          <span class="tags-hint-mouse">Shift + スクロール</span>
-          <span class="tags-hint-touch">横スワイプ</span>
+          <span>Shift + スクロール</span>
           <span class="tags-hint-arrow" aria-hidden="true">→</span>
         </span>
       </div>
     </nav>
 
     <section class="index-records" aria-label="記録" data-record-list>
-      <p class="index-filter" data-search-label hidden></p>
+      <div class="filter-launch" data-filter-launch hidden>
+        <button
+          class="filter-dock-trigger"
+          type="button"
+          data-filter-dock-trigger
+          aria-haspopup="dialog"
+          aria-controls="filter-sheet"
+        >
+          <span>簡易検索</span>
+          <span data-filter-trigger-status></span>
+        </button>
+        <button
+          class="filter-launch-min"
+          type="button"
+          data-filter-launch-min
+          aria-label="簡易検索を最小化"
+        >
+          <Icon name="octicon:chevron-left-16" aria-hidden="true" />
+        </button>
+      </div>
+
+      <details class="filter-dock" data-filter-dock-desktop open hidden>
+        <summary>
+          <span class="filter-dock-label">簡易検索</span>
+          <span class="filter-status" data-filter-status aria-live="polite">
+            <span class="filter-status-term" data-filter-status-term></span>
+            <span class="filter-status-count" data-filter-status-count></span>
+            <span class="filter-status-meta" data-filter-status-meta></span>
+          </span>
+          <Icon name="octicon:chevron-down-16" aria-hidden="true" />
+        </summary>
+        <div class="filter-dock-body">
+          <div class="filter-dock-tools">
+            <button
+              type="button"
+              class="filter-sort"
+              data-filter-sort
+              aria-pressed="false"
+            >
+              A→Z
+            </button>
+            <button type="button" data-filter-reset>すべて解除</button>
+          </div>
+          <nav class="filter-options" aria-label="簡易検索の選択肢">
+            {
+              filterGroups.map(({ label, kind, counts, groups }) => (
+                <div class="filter-dock-row" data-filter-row={kind}>
+                  <span class="filter-dock-kind">{label}</span>
+                  <ul aria-label={`${label}を選ぶ`}>
+                    {(groups ?? []).map(({ initial, tags }) => (
+                      <>
+                        <li class="filter-initial" aria-hidden="true">
+                          {initial}
+                        </li>
+                        {tags.map(([term, count]) => (
+                          <li style={`--count-order:${countOrder.get(term)}`}>
+                            <a
+                              href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                              data-filter-term={term}
+                              data-filter-kind={kind}
+                            >
+                              <span>#{term}</span>
+                              <span data-term-count>{count}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </>
+                    ))}
+                    {!groups &&
+                      counts.map(([term, count]) => (
+                        <li>
+                          <a
+                            href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                            data-filter-term={term}
+                            data-filter-kind={kind}
+                          >
+                            <span>{term}</span>
+                            <span data-term-count>{count}</span>
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))
+            }
+          </nav>
+        </div>
+      </details>
+
+      <dialog
+        class="filter-sheet"
+        id="filter-sheet"
+        data-filter-sheet
+        aria-labelledby="filter-sheet-title"
+      >
+        <div class="filter-sheet-head">
+          <div>
+            <span class="filter-dock-label" id="filter-sheet-title"
+              >簡易検索</span
+            >
+            <p class="filter-status" data-filter-status aria-live="polite">
+              <span class="filter-status-term" data-filter-status-term></span>
+              <span class="filter-status-count" data-filter-status-count></span>
+              <span class="filter-status-meta" data-filter-status-meta></span>
+            </p>
+          </div>
+          <button
+            type="button"
+            class="filter-sheet-close"
+            data-filter-sheet-close
+            aria-label="簡易検索を閉じる"
+          >
+            <Icon name="octicon:x-16" aria-hidden="true" />
+          </button>
+        </div>
+        <div class="filter-sheet-body">
+          <div class="filter-dock-tools">
+            <button
+              type="button"
+              class="filter-sort"
+              data-filter-sort
+              aria-pressed="false"
+            >
+              A→Z
+            </button>
+            <button type="button" data-filter-reset>すべて解除</button>
+          </div>
+          <nav class="filter-options" aria-label="簡易検索の選択肢">
+            {
+              filterGroups.map(({ label, kind, counts, groups }) => (
+                <div class="filter-dock-row" data-filter-row={kind}>
+                  <span class="filter-dock-kind">{label}</span>
+                  <ul aria-label={`${label}を選ぶ`}>
+                    {(groups ?? []).map(({ initial, tags }) => (
+                      <>
+                        <li class="filter-initial" aria-hidden="true">
+                          {initial}
+                        </li>
+                        {tags.map(([term, count]) => (
+                          <li style={`--count-order:${countOrder.get(term)}`}>
+                            <a
+                              href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                              data-filter-term={term}
+                              data-filter-kind={kind}
+                            >
+                              <span>#{term}</span>
+                              <span data-term-count>{count}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </>
+                    ))}
+                    {!groups &&
+                      counts.map(([term, count]) => (
+                        <li>
+                          <a
+                            href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                            data-filter-term={term}
+                            data-filter-kind={kind}
+                          >
+                            <span>{term}</span>
+                            <span data-term-count>{count}</span>
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))
+            }
+          </nav>
+        </div>
+      </dialog>
+      <div class="index-filter-row">
+        <p class="index-filter" data-search-label hidden></p>
+        <button
+          type="button"
+          class="index-filter-reset"
+          data-filter-reset
+          hidden
+        >
+          すべて解除
+        </button>
+      </div>
       <p class="index-empty" data-search-empty hidden>
-        該当する記録はありません。<button type="button" data-search-clear
+        該当する記録はありません。<button type="button" data-filter-reset
           >条件を外す</button
         >
       </p>
-      <Timeline entries={entries} variant="index" />
+      <div class="index-records-main">
+        <Timeline entries={entries} variant="index" />
+      </div>
     </section>
   </main>
 </BaseLayout>
@@ -239,6 +479,23 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     padding: 32px 16px 80px;
   }
 
+  /*
+   * 区画の名前。読む文字ではなく面の見出しなので、機械のTypographyで小さく置き、
+   * 下に一本引いてどこからどこまでが同じ区画かを示す
+   */
+  .index-section-title {
+    /* 上は区画の切れ目、下は名前と中身の間。区画どうしはこの余白だけで分ける */
+    margin: 22px 0 10px;
+    padding-bottom: 5px;
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .index-section-title,
   .index-head,
   .fields,
   .years,
@@ -274,13 +531,18 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 
   /* 下線だけを横幅いっぱいに伸ばし、入力できる範囲は 360px のまま。
      余った線の上に猫を乗せる（入力不可領域） */
+  /* 名前の直下に来るこの線が、区画の区切りと入力欄の上辺を兼ねる */
+  .index-head .index-section-title {
+    margin-bottom: 0;
+    border-bottom: 0;
+  }
+
   .search-field {
     display: flex;
     align-items: flex-end;
     width: 100%;
-    margin-top: 20px;
     color: var(--color-text-muted);
-    border-bottom: 1px solid var(--color-border-strong);
+    border-top: 1px solid var(--color-border-strong);
   }
 
   .search-input-area {
@@ -294,7 +556,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   }
 
   .search-field:focus-within {
-    border-bottom-color: var(--color-secondary);
+    border-top-color: var(--color-secondary);
   }
 
   .search-field input {
@@ -330,6 +592,40 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     scroll-margin-top: 24px;
   }
 
+  /* 今の条件と、まとめて外す操作を同じ行に置く */
+  .index-filter-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .index-filter-row:has(.index-filter[hidden]) {
+    display: none;
+  }
+
+  .index-filter-reset {
+    flex: none;
+    padding: 4px 0;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-family: var(--font-machine);
+    font-size: 11px;
+  }
+
+  .index-filter-reset[hidden] {
+    display: none;
+  }
+
+  .index-filter-reset:hover,
+  .index-filter-reset:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   /* 絞り込み中の語を、年の断層線より上に見出しとして置く */
   .index-filter {
     margin: 0 0 12px;
@@ -341,7 +637,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   }
 
   .fields {
-    margin-top: 32px;
+    margin-top: 0;
   }
 
   .fields ul {
@@ -374,42 +670,62 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 
   /* 期間フィルタは年表の調子で。全期間 → 区切り → 年の軸、と並べる */
   .years {
-    /* 猫（1355:839）。軸線の下、ぶら下がる年次の側に置く */
-    --years-cat-width: 4.5rem;
-    --years-cat-height: calc(var(--years-cat-width) * 839 / 1355);
     position: relative;
-    /* 猫の高さ + 上の軸線から離すぶん */
-    min-height: calc(var(--years-cat-height) + 16px);
 
     /* 一度に見える枠の数。中央の枠の左右に 2 枠ずつ並ぶ */
     --axis-visible: 5;
     --axis-slot: calc(100% / var(--axis-visible));
 
-    margin-top: 32px;
+    margin-top: 0;
   }
 
-  /* 地面の罫線 */
-  .years::after {
+  /*
+   * 猫（1355:839）。地面の罫線は引かず、区画の罫線の終端を一段上げて台座にする。
+   * 罫線は台座の手前まで走り、段差を上がって猫の足元へ続く
+   */
+  #fields-title {
+    --cat-width: 4.5rem;
+    --pedestal-height: 27px;
+
+    position: relative;
+    /* 区画の間は他と同じだけ取る。猫はその余白の中に立つ */
+    margin-top: 22px;
+    border-bottom: 0;
+  }
+
+  /* 台座の手前まで走る罫線 */
+  #fields-title::before {
     content: "";
     position: absolute;
-    right: 0;
+    right: var(--cat-width);
     bottom: 0;
     left: 0;
     height: 1px;
     background: var(--color-border);
   }
 
-  /* 軸線の下、右の余白で地面に立たせる。左を向いた前足が年次の側へ伸びる */
-  .years-cat {
+  /* 段差の立ち上がりと、猫が乗る面 */
+  #fields-title::after {
+    content: "";
     position: absolute;
     right: 0;
     bottom: 0;
-    width: var(--years-cat-width);
-    height: var(--years-cat-height);
+    width: var(--cat-width);
+    height: var(--pedestal-height);
+    border-top: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
+  }
+
+  .fields-cat {
+    position: absolute;
+    right: 0;
+    bottom: var(--pedestal-height);
+    width: var(--cat-width);
+    height: calc(var(--cat-width) * 839 / 1355);
     pointer-events: none;
   }
 
-  .years-cat img {
+  .fields-cat img {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -417,9 +733,16 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     opacity: 0.8;
   }
 
+  /* 狭い画面では猫が年次とほぼ並ぶ高さに来るまで、区画の間を詰める */
+  @media (max-width: 639px) {
+    #fields-title {
+      margin-top: 0;
+    }
+  }
+
   @media (min-width: 640px) {
-    .years {
-      --years-cat-width: 6.5rem;
+    #fields-title {
+      --cat-width: 6.5rem;
     }
   }
 
@@ -431,9 +754,6 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   .years-window {
     position: relative;
     overflow-x: auto;
-    /* 軸線。窓の中へ置くと内容と一緒に流れるので、枠線として持たせる */
-    border-top: 1px solid
-      color-mix(in srgb, var(--color-primary) 32%, transparent);
     overscroll-behavior-inline: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
@@ -484,28 +804,24 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   }
 
   /* 軸の外に置く全期間。送らずに解除へ戻れる入口として常設する */
-  .years-all {
-    display: inline-block;
-    margin-bottom: 10px;
-    padding: 4px 0;
-    color: var(--color-primary);
-    font-family: var(--font-machine);
-    font-size: 11px;
-    text-decoration: none;
+  /*
+   * 軸線の行。この線が区画の区切りを兼ねるので見出しには罫線を引かず、
+   * 全期間への近道は線の先へ置く
+   */
+  .years .index-section-title {
+    /* 罫線の代わりに軸線が続くので、名前と線のあいだは空けない */
+    margin-bottom: 0;
+    border-bottom: 0;
   }
 
-  .years-all:hover,
-  .years-all:focus-visible {
-    color: var(--color-interaction-text);
-  }
-
-  .years-all.is-selected {
-    color: var(--color-text-muted);
-  }
-
-  /* 記録の無い年は目盛として置くだけ。送っても止まらない */
-  .years-window > ul > li.is-unsnapped {
-    scroll-snap-align: none;
+  /*
+   * 軸線。区画の名前の直下に置き、他の区画の見出し罫線と同じ役目を兼ねる。
+   * 全期間へは軸の先頭の枠から戻れるので、線の先に近道は置かない
+   */
+  .years-axis-rule {
+    display: block;
+    height: 1px;
+    background: color-mix(in srgb, var(--color-primary) 32%, transparent);
   }
 
   /*
@@ -586,6 +902,7 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   .years a.is-selected {
     color: var(--color-primary);
     font-weight: 700;
+    opacity: 1;
   }
 
   .years-window a.is-selected::before {
@@ -617,7 +934,9 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   }
 
   .tags {
-    margin-top: 24px;
+    margin-top: 0;
+    /* 末尾から閉じて戻るとき、Mobileのバーの下へ潜らせない */
+    scroll-margin-top: 68px;
   }
 
   .tags ul {
@@ -647,6 +966,47 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     position: relative;
   }
 
+  /* 既定は件数の多い順。DOMの頭文字順を order で組み替える */
+  #tag-list > li {
+    order: var(--count-order, 0);
+  }
+
+  .tag-initial {
+    display: none;
+  }
+
+  /*
+   * 頭文字順ではDOMの順のまま読ませる。見出しで行が増えて縦に伸びるので、
+   * 辞書の段組みと同じように段へ流し、見出しだけが段の末尾に残らないようにする
+   */
+  .tags.is-alpha #tag-list {
+    display: block;
+    columns: 12rem;
+    column-gap: 32px;
+  }
+
+  .tags.is-alpha #tag-list > li {
+    order: 0;
+    break-inside: avoid;
+  }
+
+  .tags.is-alpha .tag-initial {
+    display: block;
+    margin: 16px 0 4px;
+    padding-bottom: 5px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--color-border);
+    break-after: avoid;
+  }
+
+  .tags.is-alpha .tag-initial:first-child {
+    margin-top: 0;
+  }
+
   /* 折りたたみ時は3行の横並び。溢れた分は横スクロールで辿る */
   .tags.is-collapsed #tag-list {
     display: grid;
@@ -662,13 +1022,11 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     padding-right: 64px;
     padding-bottom: 8px;
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--color-primary) 28%, transparent)
-      transparent;
   }
 
   /* 明示スタイルにすると、Chrome / Safari の出したり消したりする挙動が外れて常時出る */
   .tags.is-collapsed #tag-list::-webkit-scrollbar {
-    height: 6px;
+    height: var(--scrollbar-size);
   }
 
   .tags.is-collapsed #tag-list::-webkit-scrollbar-track {
@@ -676,12 +1034,12 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   }
 
   .tags.is-collapsed #tag-list::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    background: var(--scrollbar-thumb);
     border-radius: 2px;
   }
 
   .tags.is-collapsed #tag-list::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--scrollbar-thumb-strong);
   }
 
   /* スクロールバーを消したぶん、右端の裾を消して横に続くことを示す */
@@ -714,11 +1072,29 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
   .tags-foot {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
+    margin-top: 8px;
   }
 
-  /* 横に溢れているときだけ出し、文言は入力機器に合わせて出し分ける */
+  /*
+   * 末尾の閉じる操作。上の操作までが遠くなる狭い画面で、開いているときだけ出す。
+   * 折りたたみ時は3行に収まっているので要らない
+   */
+  .tags-collapse {
+    display: none;
+  }
+
+  @media (max-width: 639px) {
+    .tags:not(.is-collapsed) .tags-collapse {
+      display: block;
+    }
+  }
+
+  /*
+   * 横に溢れているときだけ出す。指では裾のぼかしが送れることを示すので、
+   * 手がかりが要るのは横送りの手段が分かりにくいpointer操作のときだけ
+   */
   .tags-hint {
     display: none;
     align-items: baseline;
@@ -732,17 +1108,9 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     display: inline-flex;
   }
 
-  .tags-hint-touch {
-    display: none;
-  }
-
   @media (hover: none), (pointer: coarse) {
-    .tags-hint-mouse {
+    .tags.is-collapsed.is-overflowing .tags-hint {
       display: none;
-    }
-
-    .tags-hint-touch {
-      display: inline;
     }
   }
 
@@ -782,36 +1150,773 @@ const tagCounts = countBy(allPosts.map((post) => post.data.tags));
     }
   }
 
+  /* 一覧に効く操作は右上へ集める。開閉は文字の操作、並びは押す面として区別する */
+  /* 名前は左、一覧に効く操作は右。罫線は行ごと引いて他の区画と揃える */
+  .tags-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tags-head .index-section-title {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
   .tags-toggle {
-    margin-top: 10px;
     padding: 4px 0;
     color: var(--color-primary);
-    font-family: var(--font-machine);
-    font-size: 11px;
     background: transparent;
     border: 0;
     cursor: pointer;
+    font-family: var(--font-machine);
+    font-size: 11px;
+  }
+
+  .tags-sort {
+    /* 24×24px を割らない当たりを取る。枠は紙と3:1を満たす濃さで引く */
+    min-height: 24px;
+    padding: 4px 10px;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-label);
+    cursor: pointer;
+    font-family: var(--font-machine);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .tags-toggle[hidden],
+  .tags-sort[hidden] {
+    display: none;
   }
 
   .tags-toggle:hover,
   .tags-toggle:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .tags-sort:hover,
+  .tags-sort:focus-visible {
+    color: var(--color-interaction-text);
+    border-color: var(--color-primary);
+  }
+
+  /* 押されている間は面を持たせ、いま効いている並びだと分かるようにする */
+  .tags-sort[aria-pressed="true"] {
     color: var(--color-primary);
-    background: linear-gradient(
-      transparent 58%,
-      color-mix(in srgb, var(--color-accent) 58%, transparent) 58%
-    );
+    background: var(--bg-subtle);
+    border-color: var(--color-primary);
   }
 
   .index-records {
     margin-top: 44px;
+    scroll-margin-top: 68px;
   }
 
+  .index-records-main {
+    min-width: 0;
+  }
+
+  .index-records-main[hidden] {
+    display: none;
+  }
+
+  /*
+   * 簡易検索は読む面ではなく操作の面なので、指やpointerの操作に
+   * 文字の選択が割り込まないようにする
+   */
+  .filter-launch,
+  .filter-dock,
+  .filter-sheet {
+    user-select: none;
+  }
+
+  /* 呼び出しの面。開く操作と、場所を返す最小化を横に並べて持つ */
+  .filter-launch {
+    position: fixed;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: max(16px, env(safe-area-inset-left));
+    z-index: 30;
+    display: flex;
+    align-items: stretch;
+    max-width: calc(100% - 32px);
+  }
+
+  .filter-dock-trigger {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding: 9px 12px;
+    color: var(--color-text-sub);
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    /* 最小化と隣り合うので、外側だけ丸めて一つの面に見せる */
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .filter-launch-min {
+    display: grid;
+    flex: none;
+    place-items: center;
+    /* 印だけになっても押せる大きさを残す */
+    width: 32px;
+    min-height: 32px;
+    padding: 0;
+    color: var(--color-text-muted);
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    /* 二つでひとつの面。仕切りは引かず、押している側の面の色で示す */
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+  }
+
+  .filter-dock-trigger:is(:hover, :focus-visible, :active),
+  .filter-launch-min:is(:hover, :focus-visible, :active) {
+    background: var(--bg-subtle);
+  }
+
+  .filter-launch-min :global(svg) {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--duration-feedback) ease;
+  }
+
+  /* 最小化したら印だけ残す。開く向きを示すため、印は反対を向く */
+  .filter-launch[data-min] .filter-dock-trigger {
+    display: none;
+  }
+
+  .filter-launch[data-min] .filter-launch-min {
+    border-left: 1px solid var(--color-border-strong);
+    border-radius: 8px;
+  }
+
+  .filter-launch[data-min] .filter-launch-min :global(svg) {
+    transform: rotate(180deg);
+  }
+
+  /*
+   * Tablet では左端の edge navigation（48px、hover で展開）が同じ隅を占める。
+   * その幅ぶん逃がし、呼び出し操作が menu の裏へ入らないようにする
+   */
+  @media (min-width: 960px) {
+    .filter-launch {
+      left: calc(48px + max(16px, env(safe-area-inset-left)));
+    }
+  }
+
+  .filter-launch[hidden],
+  .filter-dock[hidden] {
+    display: none;
+  }
+
+  .filter-dock-trigger > span:first-child {
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .filter-dock-trigger > span:last-child {
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 面の名前。中の情報より小さく、骨格の色で置く */
+  .filter-dock-label {
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* 一覧の見出し。名前より弱く、項目より小さい */
+  .filter-dock-kind {
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  /* 面の名前の次に読む一行。今の絞り込みと件数なので、名前より一段大きく持つ */
+  /*
+   * 今の絞り込み。選んだ語を主役に置き、件数は結果の量として行の端へ、
+   * 種別と期間は語を説明する脇の情報として下の行へ落とす
+   */
+  .filter-status {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0 10px;
+    margin: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+
+  .filter-status-term {
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .filter-status-count {
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-status-meta {
+    grid-column: 1 / -1;
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .filter-dock button,
+  .filter-sheet button {
+    min-height: 24px;
+    padding: 0;
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* 補助操作。一覧と同じ高さで並ばないよう、罫線で区切って端へ寄せる */
+  .filter-dock-tools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* 並びの切り替えは上のタグ一覧と同じ体裁で、押す面だと分かるようにする */
+  :is(.filter-dock, .filter-sheet) .filter-sort {
+    min-height: 24px;
+    margin-right: auto;
+    padding: 4px 8px;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-label);
+    letter-spacing: 0.06em;
+  }
+
+  :is(.filter-dock, .filter-sheet) .filter-sort[aria-pressed="true"] {
+    color: var(--color-primary);
+    background: var(--bg-subtle);
+    border-color: var(--color-primary);
+  }
+
+  /* 頭文字の見出しは、頭文字順のときだけ出す */
+  .filter-initial {
+    display: none;
+  }
+
+  .filter-options [data-filter-row="tags"] li {
+    order: var(--count-order, 0);
+  }
+
+  .is-alpha .filter-options [data-filter-row="tags"] li {
+    order: 0;
+  }
+
+  .is-alpha .filter-options [data-filter-row="tags"] .filter-initial {
+    display: block;
+    margin: 10px 0 2px;
+    padding-bottom: 3px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--color-border);
+    break-after: avoid;
+  }
+
+  .is-alpha
+    .filter-options
+    [data-filter-row="tags"]
+    .filter-initial:first-child {
+    margin-top: 0;
+  }
+
+  /*
+   * sheetの一覧は複数列のgridなので、見出しが列の中に埋もれる。
+   * 頭文字順のあいだは段組みへ移し、見出しから下へ読めるようにする
+   */
+  .filter-sheet.is-alpha .filter-options [data-filter-row="tags"] ul {
+    display: block;
+    columns: 10rem;
+    column-gap: 24px;
+  }
+
+  /* 送るのは一覧だけ。名前・条件・解除は面の上に留める */
+  .filter-options {
+    min-height: 0;
+    /* 件数が scrollbar に接しないだけの逃げ */
+    padding-inline-end: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+  }
+
+  .filter-sheet {
+    position: fixed;
+    /* 画面の下端と左右へ密着させ、横幅は画面いっぱいに使う */
+    inset: auto 0 0;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: 70dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    color: var(--color-text-sub);
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    border-inline: 0;
+    border-bottom: 0;
+    /* 画面の端に貼り付くので、丸めるのは上の両端だけ */
+    border-radius: 8px 8px 0 0;
+    font-size: var(--text-sm);
+
+    /*
+     * 出入りは画面下から。top layer を出入りするため display と overlay も
+     * 併せて遷移させ、閉じる動きが途中で切れないようにする
+     */
+    opacity: 0;
+    transform: translateY(100%);
+    transition-property: opacity, transform, display, overlay;
+    transition-duration: var(--duration-state);
+    transition-timing-function: var(--ease-trace);
+    transition-behavior: allow-discrete;
+  }
+
+  .filter-sheet[open] {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    .filter-sheet[open] {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  .filter-sheet::backdrop {
+    background-color: transparent;
+    transition-property: background-color, display, overlay;
+    transition-duration: var(--duration-state);
+    transition-timing-function: var(--ease-trace);
+    transition-behavior: allow-discrete;
+  }
+
+  .filter-sheet[open]::backdrop {
+    background-color: color-mix(in srgb, var(--color-text) 22%, transparent);
+  }
+
+  @starting-style {
+    .filter-sheet[open]::backdrop {
+      background-color: transparent;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .filter-sheet {
+      transform: none;
+      transition-duration: 1ms;
+    }
+
+    .filter-sheet::backdrop {
+      transition-duration: 1ms;
+    }
+
+    @starting-style {
+      .filter-sheet[open] {
+        transform: none;
+      }
+    }
+  }
+
+  .filter-sheet-head {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .filter-sheet-head .filter-dock-label {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .filter-sheet-close {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+  }
+
+  /* button の文字サイズに引かれて潰れないよう、icon の寸法は自前で持つ */
+  .filter-sheet-close :global(svg) {
+    width: 16px;
+    height: 16px;
+  }
+
+  .filter-sheet-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 10px 16px 0;
+  }
+
+  .filter-sheet-body .filter-options {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .filter-dock-row {
+    min-width: 0;
+    padding: 12px 0 8px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* 解除操作の罫線がすぐ上にあるので、一覧の先頭では罫線を重ねない */
+  .filter-dock-row:first-child {
+    border-top: 0;
+  }
+
+  .filter-dock-kind {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .filter-options ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1px 16px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .filter-options a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .filter-options [data-term-count] {
+    flex: none;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-options .is-selected {
+    color: var(--color-primary);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  :is(.filter-dock, .filter-sheet, .filter-dock-trigger)
+    :is(a, button):is(:hover, :focus-visible),
+  .filter-dock-trigger:is(:hover, :focus-visible) {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .filter-dock {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .filter-dock {
+      /*
+       * panel の高さの上限と、見出し行の高さ。details の中身は browser 側の
+       * 箱に包まれるため、その箱を組めない環境では一覧の上限をこの2つから引く。
+       * 見出しは条件が長いと2行になるので、高い方を見込んでおく
+       */
+      --filter-dock-max: min(40rem, calc(100dvh - 96px));
+      --filter-dock-head: 78px;
+
+      position: fixed;
+      top: 48px;
+      right: max(12px, env(safe-area-inset-right));
+      z-index: 30;
+      width: clamp(16rem, 20vw, 20rem);
+      max-height: calc(100vh - 96px);
+      max-height: var(--filter-dock-max);
+      margin: 0;
+      overflow: hidden;
+      color: var(--color-text-sub);
+      background: var(--color-background);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 8px;
+      font-size: var(--text-sm);
+
+      /*
+       * 最小の段へは面そのものが縮んで印になる。auto の高さから縮めるため
+       * interpolate-size を使う。対応しない環境では今までどおり瞬時に切り替わる
+       */
+      interpolate-size: allow-keywords;
+      transition:
+        width var(--duration-feedback) var(--ease-trace),
+        height var(--duration-feedback) var(--ease-trace);
+    }
+
+    /*
+     * 表示は script が hidden を外して行う。display が none から戻る瞬間に
+     * animation が走るので、面の出入りの語彙どおり上から8px降りて薄く入る
+     */
+    .filter-dock:not([hidden]) {
+      display: block;
+      animation: filter-dock-in var(--duration-state) var(--ease-trace) both;
+    }
+
+    .filter-dock[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-dock > summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 4px 10px;
+      padding: 11px 12px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .filter-dock > summary .filter-status {
+      grid-column: 1;
+    }
+
+    .filter-dock > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .filter-dock[open] > summary {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .filter-dock > summary :global(svg) {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-muted);
+      transition: transform var(--duration-feedback) ease;
+    }
+
+    .filter-dock[open] > summary :global(svg) {
+      transform: rotate(180deg);
+    }
+
+    /*
+     * 最小の段。読むほうへ場所を返し、開く印だけを欄外に残す。
+     * 面は印の大きさまで縮む
+     */
+    .filter-dock[data-state="mark"] {
+      width: 34px;
+      height: 34px;
+    }
+
+    .filter-dock > summary {
+      position: relative;
+    }
+
+    .filter-dock[data-state="mark"] > summary {
+      grid-template-columns: auto;
+      padding: 8px;
+    }
+
+    /*
+     * 押した時点で中身は消す。縮んでいくあいだ文字が潰れながら見えると、
+     * 畳んだのではなく歪んだように映る。行も占めさせない
+     */
+    .filter-dock[data-state="mark"] .filter-dock-label,
+    .filter-dock[data-state="mark"] .filter-status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      visibility: hidden;
+    }
+
+    /* 横へ畳んだ印なので右を向く。開くと右から上へ回って一段目へ戻る */
+    .filter-dock[data-state="mark"] > summary :global(svg) {
+      grid-column: auto;
+      grid-row: auto;
+      transform: rotate(-90deg);
+    }
+
+    /*
+     * 見出しからの開閉は記事の目次・メニューと同じ動き。面が上から降りて薄く入り、
+     * 閉じるときは同じ分だけ戻る。<details> は open を外した瞬間に中身が消えるので、
+     * 閉じる側は script が data-closing を付けているあいだだけ見せる
+     */
+    .filter-dock[open]:not([data-closing]) .filter-dock-body {
+      animation: filter-dock-body-in var(--duration-feedback) ease both;
+    }
+
+    /*
+     * 閉じる側も keyframes で持つ。開く animation が残した値からは transition が
+     * 起きず、書いても一瞬で飛んでしまう
+     */
+    .filter-dock[data-closing] .filter-dock-body {
+      pointer-events: none;
+      animation: filter-dock-body-out var(--duration-feedback) var(--ease-trace)
+        both;
+    }
+
+    .filter-dock[data-closing] > summary :global(svg) {
+      transform: none;
+    }
+
+    .filter-dock-body {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      max-height: calc(100vh - 174px);
+      max-height: calc(var(--filter-dock-max) - var(--filter-dock-head));
+      padding: 10px 12px 0;
+    }
+
+    /* 中身の箱を組める環境では、見出しの実測に合わせて一覧が残りを埋める */
+    @supports selector(::details-content) {
+      .filter-dock[open]::details-content {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .filter-dock-body {
+        flex: 1;
+        max-height: none;
+      }
+    }
+
+    .filter-dock .filter-options {
+      padding-bottom: 14px;
+    }
+
+    .filter-dock .filter-options ul {
+      grid-template-columns: 1fr;
+    }
+
+    .index-records {
+      scroll-margin-top: 24px;
+    }
+  }
+
+  @keyframes filter-dock-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes filter-dock-body-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes filter-dock-body-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .filter-dock {
+      transition: none;
+    }
+
+    .filter-dock:not([hidden]) {
+      animation: none;
+    }
+
+    .filter-dock[open]:not([data-closing]) .filter-dock-body {
+      animation: none;
+    }
+
+    .filter-dock[data-closing] .filter-dock-body {
+      animation: none;
+    }
+  }
+
+  /*
+   * 記録が並ぶはずの場所なので、行が1本消えただけに見えない高さを取る。
+   * 上下の余白を同じにして、文と解除操作を面の中央へ置く
+   */
   .index-empty {
     margin: 28px 0;
-    padding: 24px 0;
+    padding: 104px 0;
     color: var(--color-text-sub);
+    text-align: center;
+    /* 下は記録が続かないので、面を閉じる罫線は引かない */
     border-top: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
   }
 
   @media (min-width: 640px) {
