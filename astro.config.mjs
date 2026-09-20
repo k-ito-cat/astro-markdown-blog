@@ -42,6 +42,16 @@ export default defineConfig({
   output: "static",
   // og:image を絶対URLで組み立てるために必須
   site: "https://k-ito-blog.netlify.app",
+  /*
+   * ClientRouter があると prefetch は既定で有効になるが、既定の戦略は hover。
+   * 指にはhoverが無く、押してからHTMLを取りに行くぶん遷移が始まるまで待たされる。
+   * 画面へ入った時点で取りに行かせ、押した時には手元にある状態にする。
+   * 低速回線とデータセーバーでは Astro 側が tap へ落とす
+   */
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: "viewport",
+  },
   image: {
     // Markdown 内の画像にも srcset / sizes を自動付与する
     layout: "constrained",
