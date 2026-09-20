@@ -57,6 +57,8 @@ import { Icon } from "astro-icon/components";
       </div>
     </div>
 
+    <p class="article-search-idle">記事の中を探す</p>
+
     <p class="article-search-hint">
       <span><kbd>↑</kbd><kbd>↓</kbd> 選ぶ</span>
       <span><kbd>Enter</kbd> 本文へ移る</span>
@@ -88,6 +90,11 @@ import { Icon } from "astro-icon/components";
     display: flex;
     flex-direction: column;
     width: min(1040px, calc(100vw - 32px));
+    /* 語を入れる前も面として立つ高さを持たせる。画面が低いときは上限が勝つ */
+    min-height: min(
+      240px,
+      calc(var(--search-viewport) - var(--search-top) - 16px)
+    );
     max-height: min(
       calc(var(--search-viewport) - var(--search-top) - 16px),
       var(--search-height)
@@ -117,6 +124,8 @@ import { Icon } from "astro-icon/components";
    * 状態では二本が近接して並び、区切るものが無いのに区切って見える
    */
   .article-search-panel {
+    /* 面の高さを受け取る。ここが伸びないと、下端に置く要素が中途で止まる */
+    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -277,6 +286,8 @@ import { Icon } from "astro-icon/components";
     display: grid;
     grid-template-columns: 2.5ch minmax(0, 1fr);
     gap: 12px;
+    /* 選んでいる面が行いっぱいに広がるよう、行の幅を取る */
+    width: 100%;
     padding: 9px 8px;
     color: var(--color-text-muted);
     font-family: inherit;
@@ -300,11 +311,14 @@ import { Icon } from "astro-icon/components";
     text-underline-offset: 3px;
   }
 
-  /* hig.md nav.current。色と太さと Line で示す */
+  /*
+   * 選んでいる候補。現在地（hig.md nav.current）ではなく候補の選択なので、
+   * Lineではなく薄い面で示す。色と太さは同じに保つ
+   */
   .article-search-hits :global(button[aria-current="true"]) {
     color: var(--color-primary);
     font-weight: 700;
-    box-shadow: inset 2px 0 0 var(--color-primary);
+    background: var(--bg-subtle);
   }
 
   .article-search-hits :global(.hit-index) {
@@ -350,8 +364,26 @@ import { Icon } from "astro-icon/components";
   }
 
   /* キーの案内。読むものではないので、線の下に薄く置くだけにする */
+  /* 語を入れる前の空き。何をする面かを一言だけ置く */
+  .article-search-idle {
+    display: grid;
+    flex: 1;
+    place-items: center;
+    margin: 0;
+    padding: 24px 16px;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* 結果が出たら引っ込む */
+  .article-search-results:not([hidden]) ~ .article-search-idle {
+    display: none;
+  }
+
+  /* コマンドの説明は面の下端に留める */
   .article-search-hint {
     flex: none;
+    margin-top: auto;
     display: flex;
     flex-wrap: wrap;
     gap: 4px 14px;

@@ -28,11 +28,6 @@ const toSearchHref = (term: string, kind: "categories" | "tags") =>
           ))}
         </ul>
       )}
-      {categories.length > 0 && tags.length > 0 && (
-        <span class="classification-sep" aria-hidden="true">
-          /
-        </span>
-      )}
       {tags.length > 0 && (
         <ul class="tag-list">
           {tags.map((tag: Tag) => (
@@ -49,18 +44,10 @@ const toSearchHref = (term: string, kind: "categories" | "tags") =>
 }
 
 <style>
-  /* カテゴリとタグを一行に並べ、あいだを斜線で区切る */
+  /* 分野とタグは種類が違うので、行を分けて重ねる */
   .classification {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 10px;
-  }
-
-  .classification-sep {
-    color: var(--color-text-muted);
-    font-size: 12px;
-    opacity: 0.6;
+    display: grid;
+    gap: 6px;
   }
 
   .category-list,
