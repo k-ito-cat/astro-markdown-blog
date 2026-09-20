@@ -292,20 +292,19 @@ import { Icon } from "astro-icon/components";
       background-color var(--duration-feedback) ease;
   }
 
-  .article-search-hits :global(button:hover),
-  .article-search-hits :global(button:focus-visible) {
-    background: var(--bg-hover);
+  /* hig.md hover.text。面は敷かず、色と underline で示す */
+  .article-search-hits :global(button:hover) .hit-text,
+  .article-search-hits :global(button:focus-visible) .hit-text {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
-  /* 面と一緒に消えないよう、キーボードの現在地は枠で示す */
-  .article-search-hits :global(button:focus-visible) {
-    outline: 1px solid var(--color-border-strong);
-    outline-offset: -1px;
-  }
-
+  /* hig.md nav.current。色と太さと Line で示す */
   .article-search-hits :global(button[aria-current="true"]) {
-    color: var(--color-text);
-    background: var(--bg-hover);
+    color: var(--color-primary);
+    font-weight: 700;
+    box-shadow: inset 2px 0 0 var(--color-primary);
   }
 
   .article-search-hits :global(.hit-index) {

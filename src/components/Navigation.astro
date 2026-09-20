@@ -8,6 +8,8 @@ type Heading = { depth: number; slug: string; text: string };
 type Section = Heading & { sectionIndex: number; subheadings: Heading[] };
 type Props = {
   headings: Heading[];
+  /** Xで共有する文面に使う */
+  title: string;
   returnHref?: string;
   returnLabel?: string;
   returnSourcePaths?: string[];
@@ -17,6 +19,7 @@ type Props = {
 
 const {
   headings,
+  title,
   returnHref = "/blog",
   returnLabel = "一覧へ戻る",
   returnSourcePaths = ["/", "/blog"],
@@ -24,6 +27,7 @@ const {
   previewHref,
 } = Astro.props;
 const returnPaths = JSON.stringify(returnSourcePaths);
+const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
 const outlineHeadings = headings.filter(
   (heading) =>
     heading.depth === HEADING_LEVEL.TWO ||
@@ -120,6 +124,10 @@ const firstSection = sections[0];
           <span>ページの上部へ戻る</span>
         </a>
         <CopyLinkButton path={copyPath} label="記事のリンクをコピー" />
+        <a href={xShareUrl} target="_blank" rel="noopener noreferrer">
+          <Icon name="x-logo" aria-hidden="true" />
+          <span>Xで共有</span>
+        </a>
         {previewHref && (
           <a href={previewHref}>
             <Icon name="octicon:eye-16" aria-hidden="true" />

@@ -175,6 +175,15 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
                       <span>プレビュー</span>
                     </a>
                   )}
+                  <a
+                    class="article-structure-action article-structure-action--share"
+                    href={xShareUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon name="x-logo" aria-hidden="true" />
+                    <span>Xで共有</span>
+                  </a>
                 </div>
               </div>
             )}
@@ -206,17 +215,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
   {showContent && <RevisionHistory revisions={revisions} />}
 
-  <footer class="article-footer">
-    <span>この記録を共有</span>
-    <a
-      href={xShareUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Xで共有"
-    >
-      <Icon name="x-logo" width={16} height={16} aria-hidden="true" />
-    </a>
-  </footer>
 </article>
 
 <style>
@@ -381,6 +379,37 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     min-block-size: 0;
   }
 
+  /*
+   * 開閉の動きはハンバーガーメニューと同じにする。面が上から降りて薄く入り、
+   * 閉じるときは同じ分だけ戻る。<details> は open を外した瞬間に中身が消えるので、
+   * 閉じる側は script が data-closing を付けているあいだだけ見せる
+   */
+  .article-structure[open]:not([data-closing]) .article-structure-body {
+    animation: article-structure-in var(--duration-feedback) ease both;
+  }
+
+  .article-structure[data-closing] .article-structure-body {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity var(--duration-feedback) ease,
+      transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  @keyframes article-structure-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
   .article-structure li.is-h3 {
     padding-left: 18px;
   }
@@ -491,11 +520,17 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     border-inline-start: 0;
   }
 
+  /* 共有は最後の行に一段で置く。プレビューの有無で列が変わらない */
+  .article-structure-actions-inner
+    > :global(.article-structure-action--share) {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--color-border);
+  }
+
   .article-structure-actions-inner > :global(.article-structure-action):hover,
   .article-structure-actions-inner
     > :global(.article-structure-action):focus-visible {
     color: var(--color-interaction-text);
-    background: var(--bg-subtle);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
@@ -506,8 +541,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
      * 割り込まないようにする。ここで取りたいのは操作の手応えだけで、
      * 読ませたい文章は本文の側にある。本文と見出しは従来どおり選択できる。
      */
-    .article-structure,
-    .article-footer {
+    .article-structure {
       -webkit-touch-callout: none;
       user-select: none;
     }
@@ -708,6 +742,14 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .article-structure-actions {
       transition: none;
     }
+
+    .article-structure[open]:not([data-closing]) .article-structure-body {
+      animation: none;
+    }
+
+    .article-structure[data-closing] .article-structure-body {
+      transition: none;
+    }
   }
 
   .draft-placeholder {
@@ -738,28 +780,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     text-align: center;
   }
 
-  .article-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    max-width: var(--measure-prose);
-    margin: 48px auto 0;
-    padding-top: 18px;
-    color: var(--color-text-muted);
-    font-size: var(--text-xs);
-    border-top: 1px solid var(--color-border);
-  }
-
-  .article-footer a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    color: var(--color-text-sub);
-    border: 1px solid var(--color-border);
-    text-decoration: none;
-  }
 </style>
 
 <style is:global>
@@ -784,6 +804,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     observePage,
     onPageLoad,
     onPageEvent,
+    onPageCleanup,
   } from "~/scripts/pageLifecycle";
 
   onPageLoad(() => {
@@ -810,7 +831,32 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           details.hasAttribute("data-stuck");
         let scrollCloseGuard = 0;
 
-        details.querySelector("summary")?.addEventListener("click", () => {
+        /*
+         * 閉じる動きを見せてから open を外す。ハンバーガーメニューと同じ作りで、
+         * 待つ時間も揃える。動きを減らす設定では待たずに閉じる
+         */
+        const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+        const closeDuration = 240;
+        let closeTimer = 0;
+        onPageCleanup(() => window.clearTimeout(closeTimer));
+
+        const finishClosing = () => {
+          window.clearTimeout(closeTimer);
+          details.open = false;
+          delete details.dataset.closing;
+        };
+
+        details.querySelector("summary")?.addEventListener("click", (event) => {
+          if (details.open && details.dataset.closing === undefined) {
+            event.preventDefault();
+            if (reducedMotion.matches) {
+              finishClosing();
+            } else {
+              details.dataset.closing = "";
+              closeTimer = window.setTimeout(finishClosing, closeDuration);
+            }
+          }
+
           const currentGuard = ++scrollCloseGuard;
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
