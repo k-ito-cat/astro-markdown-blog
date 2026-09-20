@@ -26,15 +26,11 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
     <script is:inline>
       (() => {
         const PAPERS = { white: "#ffffff", dim: "#efe8d9" };
+        // 既定は白い紙。まぶしさを抑えるのは読者が明示に押したときだけ
         let paper = "white";
         try {
           const saved = localStorage.getItem("paper");
-          paper =
-            saved in PAPERS
-              ? saved
-              : matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dim"
-                : "white";
+          if (saved in PAPERS) paper = saved;
         } catch {
           paper = "white";
         }
@@ -51,6 +47,16 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
           glossary = "on";
         }
         document.documentElement.dataset.glossary = glossary;
+
+        // スクロールの送り方。既定は滑らか。長い移動で酔う人は一瞬へ落とせる
+        let scroll = "smooth";
+        try {
+          scroll =
+            localStorage.getItem("scroll") === "instant" ? "instant" : "smooth";
+        } catch {
+          scroll = "smooth";
+        }
+        document.documentElement.dataset.scroll = scroll;
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />

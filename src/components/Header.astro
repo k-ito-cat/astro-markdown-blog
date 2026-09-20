@@ -13,7 +13,7 @@ const navItems = [
   },
   {
     href: "/blog",
-    label: "索引から引く",
+    label: "探す",
     icon: "octicon:list-unordered-16",
     current: pathname.startsWith("/blog"),
   },
@@ -49,28 +49,56 @@ const navItems = [
           </a>
         ))
       }
-      {
-        import.meta.env.DEV && (
-          <a href="/preview/posts" class="edge-link">
-            <Icon name="octicon:eye-16" aria-hidden="true" />
-            <span>プレビュー</span>
-          </a>
-        )
-      }
-      <button class="edge-link" type="button" data-paper-toggle>
-        <Icon name="octicon:file-16" aria-hidden="true" />
-        <span data-paper-label>まぶしさを抑える</span>
-      </button>
-      <button
-        class="edge-link"
-        type="button"
-        aria-pressed="true"
-        data-glossary-toggle
-      >
-        <Icon name="octicon:question-16" aria-hidden="true" />
-        <span data-glossary-label>用語の注釈を隠す</span>
-      </button>
     </nav>
+    <div class="edge-settings">
+      <span class="edge-settings-mark" aria-hidden="true">
+        <Icon name="octicon:gear-16" />
+      </span>
+      <div class="edge-toggles" role="group" aria-label="表示のカスタマイズ">
+        <button
+          class="edge-toggle"
+          type="button"
+          aria-pressed="false"
+          aria-label="まぶしさを抑える"
+          data-paper-toggle
+        >
+          <Icon name="octicon:light-bulb-16" aria-hidden="true" />
+          <span class="edge-tip" aria-hidden="true">
+            まぶしさを抑える
+            <span class="edge-tip-state edge-tip-state--on">減光中</span>
+            <span class="edge-tip-state edge-tip-state--off">標準</span>
+          </span>
+        </button>
+        <button
+          class="edge-toggle"
+          type="button"
+          aria-pressed="false"
+          aria-label="用語の注釈を隠す"
+          data-glossary-toggle
+        >
+          <Icon name="octicon:question-16" aria-hidden="true" />
+          <span class="edge-tip" aria-hidden="true">
+            用語の注釈を隠す
+            <span class="edge-tip-state edge-tip-state--on">非表示中</span>
+            <span class="edge-tip-state edge-tip-state--off">表示中</span>
+          </span>
+        </button>
+        <button
+          class="edge-toggle"
+          type="button"
+          aria-pressed="false"
+          aria-label="スクロールを一瞬に"
+          data-scroll-toggle
+        >
+          <Icon name="octicon:unfold-16" aria-hidden="true" />
+          <span class="edge-tip" aria-hidden="true">
+            スクロールを一瞬に
+            <span class="edge-tip-state edge-tip-state--on">一瞬</span>
+            <span class="edge-tip-state edge-tip-state--off">スムース</span>
+          </span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="mobile-bar" data-chrome-drag>
@@ -98,42 +126,58 @@ const navItems = [
         )
       }
       <details class="mobile-menu" data-mobile-menu>
-      <summary aria-label="サイト内ナビゲーション" data-mobile-menu-summary>
-        <span class="menu-bars" aria-hidden="true">
-          <span class="menu-bar"></span>
-          <span class="menu-bar"></span>
-          <span class="menu-bar"></span>
-        </span>
-      </summary>
-      <nav aria-label="モバイルナビゲーション" data-mobile-menu-panel>
-        {
-          navItems.map((item) => (
-            <a
-              href={item.href}
-              aria-current={item.current ? "page" : undefined}
-            >
-              <Icon name={item.icon} aria-hidden="true" />
-              <span>{item.label}</span>
-            </a>
-          ))
-        }
-        {
-          import.meta.env.DEV && (
-            <a href="/preview/posts">
-              <Icon name="octicon:eye-16" aria-hidden="true" />
-              <span>プレビュー</span>
-            </a>
-          )
-        }
-        <button type="button" data-paper-toggle>
-          <Icon name="octicon:file-16" aria-hidden="true" />
-          <span data-paper-label>まぶしさを抑える</span>
-        </button>
-        <button type="button" aria-pressed="true" data-glossary-toggle>
-          <Icon name="octicon:question-16" aria-hidden="true" />
-          <span data-glossary-label>用語の注釈を隠す</span>
-        </button>
-        </nav>
+        <summary aria-label="サイト内ナビゲーション" data-mobile-menu-summary>
+          <span class="menu-bars" aria-hidden="true">
+            <span class="menu-bar"></span>
+            <span class="menu-bar"></span>
+            <span class="menu-bar"></span>
+          </span>
+        </summary>
+        <div class="menu-panel" data-mobile-menu-panel>
+          <nav class="menu-group" aria-label="モバイルナビゲーション">
+            {
+              navItems.map((item) => (
+                <a
+                  href={item.href}
+                  aria-current={item.current ? "page" : undefined}
+                >
+                  <Icon name={item.icon} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </a>
+              ))
+            }
+          </nav>
+          <div
+            class="menu-group menu-settings"
+            role="group"
+            aria-label="表示のカスタマイズ"
+          >
+            <button type="button" aria-pressed="false" data-paper-toggle>
+              <Icon name="octicon:light-bulb-16" aria-hidden="true" />
+              <span>まぶしさを抑える</span>
+              <span class="menu-state" aria-hidden="true">
+                <span class="menu-state-on">減光中</span>
+                <span class="menu-state-off">標準</span>
+              </span>
+            </button>
+            <button type="button" aria-pressed="false" data-glossary-toggle>
+              <Icon name="octicon:question-16" aria-hidden="true" />
+              <span>用語の注釈を隠す</span>
+              <span class="menu-state" aria-hidden="true">
+                <span class="menu-state-on">非表示中</span>
+                <span class="menu-state-off">表示中</span>
+              </span>
+            </button>
+            <button type="button" aria-pressed="false" data-scroll-toggle>
+              <Icon name="octicon:unfold-16" aria-hidden="true" />
+              <span>スクロールを一瞬に</span>
+              <span class="menu-state" aria-hidden="true">
+                <span class="menu-state-on">一瞬</span>
+                <span class="menu-state-off">スムース</span>
+              </span>
+            </button>
+          </div>
+        </div>
       </details>
     </div>
   </div>
@@ -150,6 +194,51 @@ const navItems = [
   </button>
   <span class="menu-scrim" aria-hidden="true"></span>
 </header>
+
+{
+  /*
+   * プレビューへの入口。行き先でも読み方の設定でもない、書き手の道具なので
+   * ナビゲーションから出す。開発時しか出ないため、読者の画面には現れない
+   */
+  import.meta.env.DEV && (
+    <a class="preview-dock" href="/preview/posts" aria-label="プレビュー">
+      <Icon name="octicon:eye-16" aria-hidden="true" />
+    </a>
+  )
+}
+
+<style>
+  .preview-dock {
+    position: fixed;
+    z-index: 40;
+    /* 記事の「一覧へ戻る」は左下にいるので、こちらは右下へ置く */
+    inset-block-end: 16px;
+    inset-inline-end: 16px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--color-primary);
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 50%;
+    box-shadow: 0 6px 18px rgb(31 41 55 / 12%);
+    transition:
+      color var(--duration-feedback) ease,
+      border-color var(--duration-feedback) ease;
+  }
+
+  .preview-dock:hover,
+  .preview-dock:focus-visible {
+    color: var(--color-secondary);
+    border-color: var(--color-primary);
+  }
+
+  .preview-dock svg {
+    width: 18px;
+    height: 18px;
+  }
+</style>
 
 <style>
   .site-header {
@@ -540,12 +629,11 @@ const navItems = [
     rotate: -45deg;
   }
 
-  .mobile-menu nav {
+  .mobile-menu .menu-panel {
     position: absolute;
     inset: 52px 0 auto;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 20px;
+    gap: 10px;
     padding: 20px 16px 24px;
     opacity: 1;
     background: var(--color-background);
@@ -555,17 +643,17 @@ const navItems = [
       transform var(--duration-feedback) var(--ease-trace);
   }
 
-  .mobile-menu[open]:not([data-closing]) nav {
+  .mobile-menu[open]:not([data-closing]) .menu-panel {
     animation: mobile-menu-surface-in var(--duration-feedback) ease both;
   }
 
-  .mobile-menu[data-closing] nav {
+  .mobile-menu[data-closing] .menu-panel {
     pointer-events: none;
     opacity: 0;
     transform: translateY(-8px);
   }
 
-  .mobile-menu nav::before {
+  .mobile-menu .menu-panel::before {
     content: "";
     position: absolute;
     top: 0;
@@ -580,7 +668,7 @@ const navItems = [
       both;
   }
 
-  .mobile-menu nav::after {
+  .mobile-menu .menu-panel::after {
     content: "";
     position: absolute;
     right: 0;
@@ -622,24 +710,29 @@ const navItems = [
     inset: 0;
     pointer-events: none;
     background: rgb(0 0 0 / 40%);
-    transform: scaleY(0);
-    transform-origin: top;
-    transition: transform var(--duration-state) var(--ease-trace);
+    opacity: 0;
+    transition: opacity var(--duration-state) ease;
   }
 
+  /*
+   * 覆いはメニューより遅れて出す。同時に暗くすると、開く動きより先に画面が
+   * 沈んで見える。閉じるときは遅らせない（遅延を持つのは開く側の指定だけ）
+   */
   .site-header:has(.mobile-menu[open]:not([data-closing])) .menu-scrim {
     pointer-events: auto;
-    transform: scaleY(1);
+    opacity: 1;
+    transition-delay: 100ms;
   }
 
-  .mobile-menu nav :is(a, button) {
+  .mobile-menu .menu-panel :is(a, button) {
     position: relative;
     background: none;
     border: 0;
     cursor: pointer;
     text-align: start;
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
+    /* 3列目は状態の印。印を持たない項目では幅 0 に畳まれる */
+    grid-template-columns: 18px minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
     min-height: 52px;
@@ -649,22 +742,92 @@ const navItems = [
     text-decoration: none;
   }
 
-  .mobile-menu nav :is(a, button):last-child:nth-child(odd) {
+  /*
+   * 設定は一列に積み、アイコンと説明だけを置く。ラベルは「何をする設定か」で
+   * 固定し、効いているかどうかはマスの面が持つ（aria-pressed と同じもの）。
+   * Accent は状態表示に必要なコントラストを持たないので、面は primary の混色、
+   * 枠は primary にして 3:1 を確保する
+   */
+  /*
+   * 設定は一列に積む。`.menu-group` と同じ重みだと後勝ちで2列に戻るため、
+   * 器まで含めて書いて詳細度で上回る。行の高さも同じ理由で器から書く
+   */
+  .mobile-menu .menu-panel .menu-settings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    /* 群の境目は PC の欄外と同じく罫線一本で示す。見出しの文字は置かない */
+    margin-block-start: 6px;
+    padding-block-start: 10px;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .mobile-menu .menu-panel .menu-settings button {
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+
+  /*
+   * hig.md button.toggle-state。色を primary へ上げ、Line で示す。
+   * 線の引き方はホームの現在地（.mobile-home[aria-current]::after）と同じ
+   */
+  .mobile-menu .menu-panel .menu-settings button[aria-pressed="true"] > span {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  .mobile-menu .menu-panel .menu-settings button[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: 4px;
+    left: 8px;
+    height: 2px;
+    background: var(--color-secondary);
+  }
+
+  /*
+   * いまどちらかを行の右端に置く。読み上げ名は説明の文字が持ち、状態は
+   * aria-pressed が持つので、ここは見た目だけの補い
+   */
+  .mobile-menu .menu-panel .menu-settings .menu-state {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: 400;
+  }
+
+  .menu-state-on,
+  .menu-state-off {
+    display: none;
+  }
+
+  [aria-pressed="true"] .menu-state-on,
+  [aria-pressed="false"] .menu-state-off {
+    display: inline;
+  }
+
+  /* 群ごとに2列で組む。行き先と読み方の設定は、押した結果の種類が違う */
+  .menu-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 20px;
+  }
+
+  .menu-group :is(a, button):last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 
-  .mobile-menu nav :is(a, button) svg {
+  .mobile-menu .menu-panel :is(a, button) svg {
     color: var(--color-secondary);
   }
 
-  .mobile-menu nav :is(a, button):hover,
-  .mobile-menu nav :is(a, button):focus-visible {
+  .mobile-menu .menu-panel :is(a, button):hover,
+  .mobile-menu .menu-panel :is(a, button):focus-visible {
     color: var(--color-interaction-text);
   }
 
-  .mobile-menu nav a[aria-current="page"] {
+  .mobile-menu .menu-panel a[aria-current="page"] {
     color: var(--color-primary);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   @keyframes mobile-menu-surface-in {
@@ -750,6 +913,137 @@ const navItems = [
       margin-top: 18px;
     }
 
+    /*
+     * 表示のカスタマイズ。行き先ではないので nav から出し、線で段を分ける。
+     * 畳んでいるあいだは歯車だけを罫線の下に置き、開いたらマスへ入れ替える。
+     * どちらも同じ場所で切り替わるので、レールの幅が変わっても位置が動かない
+     */
+    .edge-settings {
+      position: relative;
+      margin-top: 14px;
+      padding: 14px 16px 0;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .edge-settings-mark {
+      display: grid;
+      place-items: center;
+      width: 16px;
+      height: 36px;
+      color: var(--color-text-sub);
+      transition: opacity var(--duration-feedback) ease;
+    }
+
+    .edge-settings-mark svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /*
+     * マスは畳んでいるあいだも DOM に残す。display で消すと Tab が届かず、
+     * focus-within で開く経路そのものが無くなる
+     */
+    .edge-toggles {
+      position: absolute;
+      inset-block-start: 14px;
+      inset-inline-start: 16px;
+      display: grid;
+      /* マスで内側いっぱいを埋める。残り幅を折半し、正方形のまま大きくする */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      width: 164px;
+      opacity: 0;
+      /* 畳んでいるあいだは押せない。歯車の位置に透明なマスが重なるため */
+      pointer-events: none;
+      transition: opacity var(--duration-feedback) ease;
+    }
+
+    .desktop-edge:hover .edge-settings-mark,
+    .desktop-edge:focus-within .edge-settings-mark {
+      opacity: 0;
+    }
+
+    .desktop-edge:hover .edge-toggles,
+    .desktop-edge:focus-within .edge-toggles {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .edge-toggle {
+      display: grid;
+      place-items: center;
+      height: 48px;
+      padding: 0;
+      color: var(--color-text-sub);
+      background: none;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      cursor: pointer;
+      transition:
+        color var(--duration-feedback) ease,
+        background-color var(--duration-feedback) ease,
+        border-color var(--duration-feedback) ease;
+    }
+
+    .edge-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .edge-toggle:hover,
+    .edge-toggle:focus-visible {
+      color: var(--color-primary);
+      border-color: var(--color-border-strong);
+    }
+
+    /*
+     * 効いている状態。面ではなく Line で示すのは他と同じで、マスの場合は
+     * 枠そのものを太くする。components.md の「current を Primary の Line で
+     * 示す」に合わせて色は primary。box-sizing は border-box なので、
+     * 太らせてもマスの大きさは変わらない
+     */
+    .edge-toggle[aria-pressed="true"] {
+      color: var(--color-primary);
+      border-width: 2px;
+      border-color: var(--color-primary);
+    }
+
+    /*
+     * 説明。レールは overflow: hidden なので外へは出せない。マスの下、
+     * レールの内側へ置く。読み上げ名は aria-label が持つので aria-hidden
+     */
+    .edge-tip {
+      position: absolute;
+      inset-block-start: calc(100% + 6px);
+      inset-inline: 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      line-height: 1.5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--duration-feedback) ease;
+    }
+
+    .edge-toggle:hover .edge-tip,
+    .edge-toggle:focus-visible .edge-tip {
+      opacity: 1;
+    }
+
+    /*
+     * いまどちらかを説明の中で言う。読み上げ名は aria-label が固定で持ち、
+     * 状態は aria-pressed が持つので、ここは見た目だけの補いになる
+     */
+    .edge-tip-state {
+      display: none;
+      margin-block-start: 5px;
+      color: var(--color-primary);
+    }
+
+    .edge-toggle[aria-pressed="true"] .edge-tip-state--on,
+    .edge-toggle[aria-pressed="false"] .edge-tip-state--off {
+      display: block;
+    }
+
     .edge-link {
       position: relative;
       background: none;
@@ -757,7 +1051,8 @@ const navItems = [
       cursor: pointer;
       text-align: start;
       display: grid;
-      grid-template-columns: 16px 1fr;
+      /* 3列目は状態の印。印を持たない項目では幅 0 に畳まれる */
+      grid-template-columns: 16px 1fr auto;
       align-items: center;
       gap: 14px;
       min-height: 44px;
@@ -805,9 +1100,9 @@ const navItems = [
     .chrome-handle,
     .chrome-grabber,
     .menu-bar,
-    .mobile-menu nav,
-    .mobile-menu nav::before,
-    .mobile-menu nav::after,
+    .mobile-menu .menu-panel,
+    .mobile-menu .menu-panel::before,
+    .mobile-menu .menu-panel::after,
     .menu-scrim {
       animation: none !important;
       transition: none !important;
@@ -1090,29 +1385,23 @@ const navItems = [
      * インラインスクリプトが決めており、ここでは選び直しと保存だけを担う。
      * label は押した結果を先に言う
      */
-    const paperActions = {
-      white: "明るさを戻す",
-      dim: "まぶしさを抑える",
-    };
     const themeColor = document.querySelector("[data-theme-color]");
     const paperToggles = document.querySelectorAll<HTMLElement>(
       "[data-paper-toggle]",
     );
-    const paperLabels =
-      document.querySelectorAll<HTMLElement>("[data-paper-label]");
 
-    const nextPaper = () => (root.dataset.paper === "dim" ? "white" : "dim");
-
-    const syncPaperLabels = () => {
-      const label = paperActions[nextPaper()];
-      paperLabels.forEach((node) => {
-        node.textContent = label;
+    const syncPaper = () => {
+      paperToggles.forEach((toggle) => {
+        toggle.setAttribute(
+          "aria-pressed",
+          String(root.dataset.paper === "dim"),
+        );
       });
     };
 
     paperToggles.forEach((toggle) => {
       toggle.addEventListener("click", () => {
-        const paper = nextPaper();
+        const paper = root.dataset.paper === "dim" ? "white" : "dim";
         root.dataset.paper = paper;
         themeColor?.setAttribute(
           "content",
@@ -1123,46 +1412,28 @@ const navItems = [
         } catch {
           // 保存できない環境では、その場の選択だけ効かせる
         }
-        syncPaperLabels();
+        syncPaper();
       });
     });
 
-    syncPaperLabels();
+    syncPaper();
 
-    /*
-     * 単語モード。本文の用語に付く注釈の出し入れだけを切り替える。
-     * 初期値は head のインラインスクリプトが決めており、ここでは
-     * 選び直しと保存を担う。label は押した結果を先に言う
-     */
-    const glossaryActions = {
-      on: "用語の注釈を隠す",
-      off: "用語の注釈を出す",
-    };
     const glossaryToggles = document.querySelectorAll<HTMLElement>(
       "[data-glossary-toggle]",
     );
-    const glossaryLabels = document.querySelectorAll<HTMLElement>(
-      "[data-glossary-label]",
-    );
-
-    const nextGlossary = () => (root.dataset.glossary === "on" ? "off" : "on");
 
     const syncGlossary = () => {
-      const label = glossaryActions[nextGlossary()];
-      glossaryLabels.forEach((node) => {
-        node.textContent = label;
-      });
       glossaryToggles.forEach((toggle) => {
         toggle.setAttribute(
           "aria-pressed",
-          String(root.dataset.glossary === "on"),
+          String(root.dataset.glossary === "off"),
         );
       });
     };
 
     glossaryToggles.forEach((toggle) => {
       toggle.addEventListener("click", () => {
-        const glossary = nextGlossary();
+        const glossary = root.dataset.glossary === "on" ? "off" : "on";
         root.dataset.glossary = glossary;
         try {
           localStorage.setItem("glossary", glossary);
@@ -1174,5 +1445,33 @@ const navItems = [
     });
 
     syncGlossary();
+
+    const scrollToggles = document.querySelectorAll<HTMLElement>(
+      "[data-scroll-toggle]",
+    );
+
+    const syncScroll = () => {
+      scrollToggles.forEach((toggle) => {
+        toggle.setAttribute(
+          "aria-pressed",
+          String(root.dataset.scroll === "instant"),
+        );
+      });
+    };
+
+    scrollToggles.forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const scroll = root.dataset.scroll === "instant" ? "smooth" : "instant";
+        root.dataset.scroll = scroll;
+        try {
+          localStorage.setItem("scroll", scroll);
+        } catch {
+          // 保存できない環境では、その場の選択だけ効かせる
+        }
+        syncScroll();
+      });
+    });
+
+    syncScroll();
   });
 </script>

@@ -224,13 +224,22 @@ html {
   background: var(--color-background);
 
   /*
-   * page の scrollbar。構造を示す Line として扱い、面を持たせず細い線だけ残す。
-   * 紙を替えても関係が保てるよう、色は primary からの混色で持つ。
+   * scrollbar は構造を示す Line として扱い、面を持たせず細い線だけ残す。
+   * 骨格の色ではなく紙の上のグレーで持ち、page も内側の一覧も同じ濃さ・太さに揃える
+   * （scrollbar-color は継承するが scrollbar-width は継承しないので、
+   * 内側の scroll 領域には thin を個別に書く）。
    * scrollbar-width を省くと macOS の overlay scrollbar が色指定を無視するため、
    * 太さと色は必ず対で書く。track は macOS で透明のままになるので、
    * つまみ側だけで見えるようにする。WebKit の点滅を避けるため transition は掛けない
    */
-  --scrollbar-thumb: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --scrollbar-thumb: color-mix(
+    in srgb,
+    var(--color-text-muted) 45%,
+    transparent
+  );
+  --scrollbar-thumb-strong: var(--color-text-muted);
+  /* scrollbar-color 未対応の環境だけが使う代替の太さ。thin 相当へ寄せる */
+  --scrollbar-size: 3px;
 
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -239,14 +248,14 @@ html {
 /* 高コントラストを求める設定では、薄い線ではなく確実に見える濃さにする */
 @media (prefers-contrast: more) {
   html {
-    --scrollbar-thumb: var(--color-primary);
+    --scrollbar-thumb: var(--color-text-muted);
   }
 }
 
 /* scrollbar-color 未対応の環境（Safari 26.2 未満）向け */
 @supports not (scrollbar-color: auto) {
   html::-webkit-scrollbar {
-    width: 10px;
+    width: var(--scrollbar-size);
   }
 
   html::-webkit-scrollbar-track {
@@ -287,9 +296,12 @@ body {
   background: color-mix(in srgb, var(--color-accent) 45%, transparent);
 }
 
-/* 索引で、絞り込みに当たった語。残った記録のどこが当たったかを示す */
-::highlight(post-search) {
-  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+/*
+ * 読者が選んだ送り方。脚注のように記事一本ぶんを一気に送る移動は、
+ * 滑らかだと目が回る。OS の「動きを減らす」まで行かない人のための逃げ道
+ */
+:root[data-scroll="instant"] {
+  scroll-behavior: auto;
 }
 
 ::highlight(article-search-current) {

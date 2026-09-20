@@ -45,6 +45,8 @@ document.addEventListener("astro:before-swap", (event) => {
     document.documentElement.dataset.paper;
   event.newDocument.documentElement.dataset.glossary =
     document.documentElement.dataset.glossary;
+  event.newDocument.documentElement.dataset.scroll =
+    document.documentElement.dataset.scroll;
 });
 
 document.addEventListener("astro:page-load", () => {
