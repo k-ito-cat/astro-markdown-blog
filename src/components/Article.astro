@@ -214,7 +214,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   {showContent && <RevisionHistory revisions={revisions} />}
-
 </article>
 
 <style>
@@ -388,13 +387,26 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     animation: article-structure-in var(--duration-feedback) ease both;
   }
 
+  /*
+   * 閉じる側も keyframes で持つ。開く animation が残した値からは transition が
+   * 起きず、文字だけ先に消えてから面が閉じるように見えてしまう
+   */
   .article-structure[data-closing] .article-structure-body {
     pointer-events: none;
-    opacity: 0;
-    transform: translateY(-8px);
-    transition:
-      opacity var(--duration-feedback) ease,
-      transform var(--duration-feedback) var(--ease-trace);
+    animation: article-structure-out var(--duration-feedback) var(--ease-trace)
+      both;
+  }
+
+  @keyframes article-structure-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
   }
 
   @keyframes article-structure-in {
@@ -408,7 +420,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
       transform: translateY(0);
     }
   }
-
 
   .article-structure li.is-h3 {
     padding-left: 18px;
@@ -521,8 +532,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   /* 共有は最後の行に一段で置く。プレビューの有無で列が変わらない */
-  .article-structure-actions-inner
-    > :global(.article-structure-action--share) {
+  .article-structure-actions-inner > :global(.article-structure-action--share) {
     grid-column: 1 / -1;
     border-top: 1px solid var(--color-border);
   }
@@ -748,7 +758,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     }
 
     .article-structure[data-closing] .article-structure-body {
-      transition: none;
+      animation: none;
     }
   }
 
@@ -779,7 +789,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     line-height: 1.9;
     text-align: center;
   }
-
 </style>
 
 <style is:global>
@@ -836,7 +845,8 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
          * 待つ時間も揃える。動きを減らす設定では待たずに閉じる
          */
         const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-        const closeDuration = 240;
+        // CSS の --duration-feedback と対で持つ。動きが終わった時点で閉じる
+        const closeDuration = 160;
         let closeTimer = 0;
         onPageCleanup(() => window.clearTimeout(closeTimer));
 
