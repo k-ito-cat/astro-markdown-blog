@@ -96,7 +96,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
           <summary>
             <span>
               <span>目次</span>
-              <small>{tocHeadings.length}項目</small>
             </span>
             <Icon name="octicon:chevron-down-16" aria-hidden="true" />
           </summary>
@@ -237,13 +236,15 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     min-width: 0;
   }
 
+  /*
+   * 本文との区切りは線を引かず余白で示す。本文のh2が全幅の線を持つので、
+   * ここにも線を置くと縦に線が続いて見える
+   */
   .article-header {
     display: grid;
     gap: 15px;
     max-width: var(--measure-prose);
-    margin: 0 auto 30px;
-    padding-bottom: 24px;
-    border-bottom: 2px solid var(--color-primary);
+    margin: 0 auto 32px;
   }
 
   .article-title {
@@ -254,7 +255,9 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     line-height: 1.35;
     letter-spacing: -0.025em;
     line-break: strict;
-    text-wrap: balance;
+    /* balance は行を揃えるぶん右へ余白を残す。和文では幅を使い切るほうが読める */
+    text-wrap: pretty;
+    word-break: auto-phrase;
   }
 
   /*
@@ -351,16 +354,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     display: flex;
     align-items: baseline;
     min-width: 0;
-  }
-
-  .article-structure summary small {
-    margin-left: 8px;
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 400;
-    transition:
-      opacity var(--duration-feedback) ease,
-      transform var(--duration-feedback) var(--ease-trace);
   }
 
   .article-structure summary::-webkit-details-marker {
@@ -595,10 +588,6 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .article-structure[data-stuck] summary {
       color: var(--color-text-sub);
       font-weight: 600;
-    }
-
-    .article-structure[data-stuck] summary small {
-      margin-left: 6px;
     }
 
     .article-structure[data-stuck] summary :global(svg) {

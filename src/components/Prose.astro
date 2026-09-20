@@ -360,6 +360,11 @@ const { content: Content, status } = Astro.props;
    *     anywhere と違い、まず語の区切りで折る機会を残す
    *   - text-wrap: pretty … 行末の不揃いと孤立語を減らす。Chromium と Safari 26 で効き、
    *     未対応のブラウザは既定の折り返しに落ちるだけで崩れはしない
+   *   - word-break: auto-phrase … 文節の途中で折らない。未対応は normal に落ちる
+   */
+  /*
+   * 本文は文字単位で折り返す。長い段落では文節を保つより幅を使い切るほうが
+   * 行末が揃い、右の余白が残らない。文節で折るのは見出しだけに留める
    */
   .prose p,
   .prose li,
@@ -370,12 +375,16 @@ const { content: Content, status } = Astro.props;
     text-wrap: pretty;
   }
 
-  /* 見出しは数行で収まるので、行の長さを揃えるほうが読みやすい */
+  /*
+   * 見出しも本文と同じ折り返しにする。balance は行の長さを揃えるために
+   * 幅を使い切らず、和文では右に余白が残りやすい
+   */
   .prose h2,
   .prose h3,
   .prose h4 {
     line-break: strict;
-    text-wrap: balance;
+    text-wrap: pretty;
+    word-break: auto-phrase;
   }
 
   .prose p {
