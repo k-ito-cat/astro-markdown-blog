@@ -99,6 +99,8 @@ export const TAGS = [
   // Web基盤
   "ブラウザ",
   "Chrome",
+  "PWA",
+  "Picture-in-Picture",
   "HTTP",
   "HTTP/2",
   "HTTP/3",
