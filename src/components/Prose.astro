@@ -837,11 +837,14 @@ const { content: Content, status } = Astro.props;
   }
 
   /* 行見出しは横に送っても左端へ残す。
-     border-collapse では固定セルの罫線が消えるため、影で引き直す */
+     border-collapse では固定セルの罫線が消えるため、影で引き直す。
+     器へ収めるときブラウザは先頭列から潰すため、2文字の見出しでも折り返る。
+     下限だけ持たせて、長い見出しは従来どおり折り返させる */
   .prose th[scope="row"] {
     position: sticky;
     left: 0;
     z-index: 1;
+    min-width: 6em;
     box-shadow: inset -1px 0 var(--border);
   }
 
