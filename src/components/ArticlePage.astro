@@ -32,72 +32,73 @@ const { groups, older, newer } = getPostRelations(
 );
 ---
 
-  <main id="main-content" class="article-main">
-    <div
-      class:list={[
-        "article-grid",
-        { "has-trace": asPublished && headings.length > 0 },
-      ]}
-    >
-      <Article
-        title={post.data.title}
-        publishedAt={post.data.publishedAt}
-        updatedAt={post.data.updatedAt}
-        categories={post.data.categories}
-        tags={post.data.tags}
-        githubUrl={post.data.githubUrl}
-        content={Content}
-        headings={headings}
-        status={post.data.status}
-        revisions={post.data.revisions}
-        forceRenderContent={showsDraftBody}
-        returnHref="/blog"
-        returnLabel="一覧へ戻る"
-        returnSourcePaths={["/", "/blog"]}
-        copyPath={Astro.url.pathname}
-      />
-      {
-        asPublished && (
-          <Navigation
-            headings={headings}
-            title={post.data.title}
-            returnHref="/blog"
-            returnLabel="一覧へ戻る"
-            returnSourcePaths={["/", "/blog"]}
-            copyPath={Astro.url.pathname}
-          />
-        )
-      }
-    </div>
-
+<main id="main-content" class="article-main">
+  <div
+    class:list={[
+      "article-grid",
+      { "has-trace": asPublished && headings.length > 0 },
+    ]}
+  >
+    <Article
+      title={post.data.title}
+      publishedAt={post.data.publishedAt}
+      updatedAt={post.data.updatedAt}
+      categories={post.data.categories}
+      tags={post.data.tags}
+      recordType={post.data.recordType}
+      githubUrl={post.data.githubUrl}
+      content={Content}
+      headings={headings}
+      status={post.data.status}
+      revisions={post.data.revisions}
+      forceRenderContent={showsDraftBody}
+      returnHref="/"
+      returnLabel="一覧へ戻る"
+      returnSourcePaths={["/", "/blog"]}
+      copyPath={Astro.url.pathname}
+    />
     {
       asPublished && (
-        <RecordRelations
-          groups={groups}
-          currentTitle={post.data.title}
-          older={older}
-          newer={newer}
+        <Navigation
+          headings={headings}
+          title={post.data.title}
+          returnHref="/"
+          returnLabel="一覧へ戻る"
+          returnSourcePaths={["/", "/blog"]}
+          copyPath={Astro.url.pathname}
         />
       )
     }
+  </div>
 
-    {
-      /*
-       * 読み終えた合図として、ページの末尾に来たときだけ下から出す。
-       * 本文の途中では出さないので、脚注を行き来しても顔を出さない
-       */
-    }
-    {
-      asPublished && (
-        <>
-          <a class="reading-return" href="/blog" data-reading-return-dock>
-            <Icon name="octicon:arrow-left-16" aria-hidden="true" />
-            <span>一覧へ戻る</span>
-          </a>
-        </>
-      )
-    }
-  </main>
+  {
+    asPublished && (
+      <RecordRelations
+        groups={groups}
+        currentTitle={post.data.title}
+        older={older}
+        newer={newer}
+      />
+    )
+  }
+
+  {
+    /*
+     * 読み終えた合図として、ページの末尾に来たときだけ下から出す。
+     * 本文の途中では出さないので、脚注を行き来しても顔を出さない
+     */
+  }
+  {
+    asPublished && (
+      <>
+        <a class="reading-return" href="/" data-reading-return-dock>
+          <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+          <span>一覧へ戻る</span>
+        </a>
+      </>
+    )
+  }
+</main>
 <style>
   /*
    * 読み終えた合図。ページの末尾に来たときだけ、画面の下から現れる。

@@ -13,6 +13,11 @@ import {
   toIsoDate,
 } from "~/utils/formatDate";
 import { groupTagsByInitial } from "~/utils/tagOrder";
+import {
+  RECORD_TYPE,
+  RECORD_TYPE_LABELS,
+  RECORD_TYPE_ORDER,
+} from "~/constants/recordType";
 
 const allPosts = await getCollection(
   "posts",
@@ -38,6 +43,7 @@ const entries: TimelineEntry[] = allPosts
       month,
       categories: post.data.categories,
       tags: post.data.tags,
+      recordType: post.data.recordType,
       activity: isRevision ? "改訂" : "新規",
       isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
       revisionCount: post.data.revisions?.length ?? (isRevision ? 1 : 0),
@@ -72,10 +78,34 @@ const axisYears = Array.from(
 );
 
 const fieldCounts = countBy(allPosts.map((post) => post.data.categories));
+const recordTypeCounts = Object.values(RECORD_TYPE)
+  .sort((a, b) => RECORD_TYPE_ORDER[a] - RECORD_TYPE_ORDER[b])
+  .map(
+    (value) =>
+      [
+        RECORD_TYPE_LABELS[value],
+        allPosts.filter((post) => post.data.recordType === value).length,
+      ] as const,
+  );
 const tagCounts = countBy(allPosts.map((post) => post.data.tags));
 const tagGroups = groupTagsByInitial(tagCounts);
 const countOrder = new Map(tagCounts.map(([tag], index) => [tag, index]));
+/** 絞り込みの軸ごとに、直接開くためのURL queryを持つ */
+const FILTER_QUERY_KEYS = {
+  recordTypes: "type",
+  categories: "category",
+  tags: "tag",
+} as const;
+const toFilterHref = (kind: keyof typeof FILTER_QUERY_KEYS, term: string) =>
+  `/blog?${FILTER_QUERY_KEYS[kind]}=${encodeURIComponent(term)}`;
+
 const filterGroups = [
+  {
+    label: "記事の型",
+    kind: "recordTypes",
+    counts: recordTypeCounts,
+    groups: null,
+  },
   { label: "分野", kind: "categories", counts: fieldCounts, groups: null },
   // タグだけは頭文字で束ねた並びも持ち、簡易検索の中でも切り替えられるようにする
   { label: "タグ", kind: "tags", counts: tagCounts, groups: tagGroups },
@@ -91,9 +121,8 @@ const filterGroups = [
           {entries.length}件の記録
         </span>
       </div>
-      <p>タイトルを検索、または分野やタグから絞り込めます。</p>
+      <p>タイトルを検索、または記事の型・分野・タグから絞り込めます。</p>
 
-      <h2 class="index-section-title" id="search-title">検索</h2>
       <div class="search-field">
         <div class="search-input-area">
           <Icon name="octicon:search-16" aria-hidden="true" />
@@ -166,8 +195,8 @@ const filterGroups = [
       </div>
     </nav>
 
-    <h2 class="index-section-title" id="fields-title">
-      分野
+    <h2 class="index-section-title" id="record-types-title">
+      記事の型
       <span class="fields-cat" aria-hidden="true">
         <Image
           src={leftReachingCat}
@@ -178,6 +207,28 @@ const filterGroups = [
         />
       </span>
     </h2>
+    <nav class="fields" id="record-types" aria-labelledby="record-types-title">
+      <ul>
+        {
+          recordTypeCounts.map(([label, count]) => (
+            <li>
+              <a
+                href={`/blog?type=${encodeURIComponent(label)}`}
+                data-filter-term={label}
+                data-filter-kind="recordTypes"
+              >
+                <>
+                  <span>{label}</span>
+                  <span data-term-count>{count}</span>
+                </>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <h2 class="index-section-title" id="fields-title">分野</h2>
     <nav class="fields" id="fields" aria-labelledby="fields-title">
       <ul>
         {
@@ -338,7 +389,7 @@ const filterGroups = [
                         {tags.map(([term, count]) => (
                           <li style={`--count-order:${countOrder.get(term)}`}>
                             <a
-                              href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                              href={toFilterHref(kind, term)}
                               data-filter-term={term}
                               data-filter-kind={kind}
                             >
@@ -353,7 +404,7 @@ const filterGroups = [
                       counts.map(([term, count]) => (
                         <li>
                           <a
-                            href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                            href={toFilterHref(kind, term)}
                             data-filter-term={term}
                             data-filter-kind={kind}
                           >
@@ -422,7 +473,7 @@ const filterGroups = [
                         {tags.map(([term, count]) => (
                           <li style={`--count-order:${countOrder.get(term)}`}>
                             <a
-                              href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                              href={toFilterHref(kind, term)}
                               data-filter-term={term}
                               data-filter-kind={kind}
                             >
@@ -437,7 +488,7 @@ const filterGroups = [
                       counts.map(([term, count]) => (
                         <li>
                           <a
-                            href={`/blog?${kind === "tags" ? "tag" : "category"}=${encodeURIComponent(term)}`}
+                            href={toFilterHref(kind, term)}
                             data-filter-term={term}
                             data-filter-kind={kind}
                           >
@@ -537,17 +588,22 @@ const filterGroups = [
   /* 下線だけを横幅いっぱいに伸ばし、入力できる範囲は 360px のまま。
      余った線の上に猫を乗せる（入力不可領域） */
   /* 名前の直下に来るこの線が、区画の区切りと入力欄の上辺を兼ねる */
-  .index-head .index-section-title {
-    margin-bottom: 0;
-    border-bottom: 0;
-  }
-
+  /*
+   * 検索は区画ではなく入力そのもの。見出しと区画の罫線を持たず、
+   * 枠が入力の範囲を示す。
+   *
+   * 上下の余白は区画の間（22px）より広く取る。ここだけ「眺めて選ぶ」ではなく
+   * 「打って絞る」道具で、周りとは文脈が違うことを間隔で示す
+   */
   .search-field {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     width: 100%;
+    margin-block: 32px;
     color: var(--color-text-muted);
-    border-top: 1px solid var(--color-border-strong);
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-label);
   }
 
   .search-input-area {
@@ -556,12 +612,12 @@ const filterGroups = [
     align-items: center;
     gap: 8px;
     min-width: 0;
-    min-height: 42px;
-    padding: 0 2px;
+    min-height: 40px;
+    padding: 0 10px;
   }
 
   .search-field:focus-within {
-    border-top-color: var(--color-secondary);
+    border-color: var(--color-secondary);
   }
 
   .search-field input {
@@ -687,7 +743,7 @@ const filterGroups = [
    * 猫（1355:839）。地面の罫線は引かず、区画の罫線の終端を一段上げて台座にする。
    * 罫線は台座の手前まで走り、段差を上がって猫の足元へ続く
    */
-  #fields-title {
+  #record-types-title {
     --cat-width: 4.5rem;
     --pedestal-height: 27px;
 
@@ -698,7 +754,7 @@ const filterGroups = [
   }
 
   /* 台座の手前まで走る罫線 */
-  #fields-title::before {
+  #record-types-title::before {
     content: "";
     position: absolute;
     right: var(--cat-width);
@@ -709,7 +765,7 @@ const filterGroups = [
   }
 
   /* 段差の立ち上がりと、猫が乗る面 */
-  #fields-title::after {
+  #record-types-title::after {
     content: "";
     position: absolute;
     right: 0;
@@ -739,13 +795,13 @@ const filterGroups = [
 
   /* 狭い画面では猫が年次とほぼ並ぶ高さに来るまで、区画の間を詰める */
   @media (max-width: 639px) {
-    #fields-title {
+    #record-types-title {
       margin-top: 0;
     }
   }
 
   @media (min-width: 640px) {
-    #fields-title {
+    #record-types-title {
       --cat-width: 6.5rem;
     }
   }
@@ -761,8 +817,8 @@ const filterGroups = [
     overscroll-behavior-inline: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
-    /* 上は軸線ぶん、下は地面の罫線と年次が近づきすぎないぶん */
-    padding: 9px 0 20px;
+    /* 上は軸線ぶん。下は次の区画の余白が受けるので持たない */
+    padding: 9px 0 0;
     /* マウスでも掴んで送れる。触れる前から掴めることを形で示す */
     cursor: grab;
     /*
@@ -771,6 +827,17 @@ const filterGroups = [
      */
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  /*
+   * 狭い画面では次の区画の見出しが余白を持たない（猫を年次と並ぶ高さに保つため）。
+   * 区画の間隔は軸の下が受け持ち、幅は他の区画と揃える。
+   * メディアクエリは詳細度を上げないので、基本の padding より後ろへ置く
+   */
+  @media (max-width: 639px) {
+    .years-window {
+      padding-bottom: 22px;
+    }
   }
 
   .years-window[data-dragging] {
@@ -1931,6 +1998,11 @@ const filterGroups = [
   @media (min-width: 640px) {
     .index-page {
       padding: 48px 24px 96px;
+    }
+
+    /* 画面が広がるぶん、文脈の切れ目も page の padding と同じ比率で広げる */
+    .search-field {
+      margin-block: 44px;
     }
   }
 </style>

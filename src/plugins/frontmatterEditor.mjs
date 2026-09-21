@@ -23,13 +23,15 @@ class RequestError extends Error {
 }
 
 const loadFieldSpecs = async (server) => {
-  const [categories, tags, priority, published, writing] = await Promise.all([
-    server.ssrLoadModule("/src/constants/categories.ts"),
-    readTags(server.config.root),
-    server.ssrLoadModule("/src/constants/postPriority.ts"),
-    server.ssrLoadModule("/src/constants/publishedStatus.ts"),
-    server.ssrLoadModule("/src/constants/writingStatus.ts"),
-  ]);
+  const [categories, tags, priority, published, writing, recordType] =
+    await Promise.all([
+      server.ssrLoadModule("/src/constants/categories.ts"),
+      readTags(server.config.root),
+      server.ssrLoadModule("/src/constants/postPriority.ts"),
+      server.ssrLoadModule("/src/constants/publishedStatus.ts"),
+      server.ssrLoadModule("/src/constants/writingStatus.ts"),
+      server.ssrLoadModule("/src/constants/recordType.ts"),
+    ]);
 
   return {
     title: { kind: "text", required: true },
@@ -53,6 +55,11 @@ const loadFieldSpecs = async (server) => {
       kind: "choice",
       required: true,
       options: Object.values(writing.WRITING_STATUS),
+    },
+    recordType: {
+      kind: "choice",
+      required: true,
+      options: Object.values(recordType.RECORD_TYPE),
     },
     priority: {
       kind: "choice",

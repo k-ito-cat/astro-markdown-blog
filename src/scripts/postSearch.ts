@@ -8,10 +8,12 @@ import { filterTagSort } from "~/scripts/tagSortMode";
 
 const REVEAL_CLASS = "is-search-revealed";
 
-type FilterKind = "categories" | "tags";
+type FilterKind = "categories" | "tags" | "recordTypes";
+
+const FILTER_KINDS = ["categories", "tags", "recordTypes"] as const;
 
 const isFilterKind = (value: string | null | undefined): value is FilterKind =>
-  value === "categories" || value === "tags";
+  FILTER_KINDS.includes(value as FilterKind);
 
 // scrollend が無い環境で、送りが止まったとみなすまでの待ち
 const SCROLL_SETTLE_MS = 150;
@@ -282,6 +284,7 @@ type Selection = {
   year: string;
   category: string;
   tag: string;
+  recordType: string;
 };
 
 const hasTerm = (item: HTMLElement, kind: FilterKind, term: string) => {
@@ -296,7 +299,7 @@ const updateView = (
   elements: NonNullable<ReturnType<typeof getElements>>,
   selection: Selection,
 ) => {
-  const { query, year, category, tag } = selection;
+  const { query, year, category, tag, recordType } = selection;
   // 分野・タグ・タイトルをまとめた検索テキストに対する AND 検索
   const terms = toTerms(query);
   let visible = 0;
@@ -310,6 +313,7 @@ const updateView = (
       terms.every((term) => searchText.includes(term)) &&
       hasTerm(item, "categories", category) &&
       hasTerm(item, "tags", tag) &&
+      hasTerm(item, "recordTypes", recordType) &&
       (!year || item.dataset.year === year);
     const wasHidden = item.hidden;
     item.hidden = !match;
@@ -354,9 +358,11 @@ const updateView = (
     year.classList.toggle("is-first-visible", year === firstVisibleYear);
   });
 
-  const hasCondition = terms.length > 0 || Boolean(year || category || tag);
+  const hasCondition =
+    terms.length > 0 || Boolean(year || category || tag || recordType);
   // 一覧と同じ表記で見せる。タグは # を付け、自由入力は鉤括弧でくくる
   const conditions = [
+    recordType,
     category,
     tag && `#${tag}`,
     query.trim() && `「${query.trim()}」`,
@@ -370,13 +376,14 @@ const updateView = (
    * 分野・タグの件数は、選ばれている期間の中の数へ入れ替える。検索語では動かさない。
    * 語で絞ると分野の一覧そのものが答えと重なり、数える意味が無くなる
    */
-  const countsByKind = {
+  const countsByKind: Record<FilterKind, Map<string, number>> = {
     categories: new Map<string, number>(),
     tags: new Map<string, number>(),
+    recordTypes: new Map<string, number>(),
   };
   elements.items.forEach((item) => {
     if (year && item.dataset.year !== year) return;
-    for (const kind of ["categories", "tags"] as const) {
+    for (const kind of FILTER_KINDS) {
       const terms: string[] = JSON.parse(item.dataset[kind] ?? "[]");
       terms.forEach((term) => {
         const counts = countsByKind[kind];
@@ -388,16 +395,20 @@ const updateView = (
     const count = link.querySelector<HTMLElement>("[data-term-count]");
     const term = link.dataset.filterTerm;
     const kind = link.dataset.filterKind;
-    if (!count || !term || (kind !== "categories" && kind !== "tags")) return;
+    if (!count || !term || !isFilterKind(kind)) return;
     count.textContent = String(countsByKind[kind].get(term) ?? 0);
   });
 
-  // 選択中の年・分野・タグは一覧側でも色を変える
+  // 選択中の年・分野・タグ・型は一覧側でも色を変える
+  const selectedByKind: Record<FilterKind, string> = {
+    categories: category,
+    tags: tag,
+    recordTypes: recordType,
+  };
   elements.terms.forEach((link) => {
     const kind = link.dataset.filterKind;
     const selected =
-      link.dataset.filterTerm ===
-      (kind === "tags" ? tag : kind === "categories" ? category : "");
+      isFilterKind(kind) && link.dataset.filterTerm === selectedByKind[kind];
     link.classList.toggle("is-selected", selected);
     if (selected) link.setAttribute("aria-current", "true");
     else link.removeAttribute("aria-current");
@@ -448,6 +459,7 @@ export const initPostSearch = () => {
   const params = new URL(window.location.href).searchParams;
   let selectedCategory = params.get("category") ?? "";
   let selectedTag = params.get("tag") ?? "";
+  let selectedRecordType = params.get("type") ?? "";
   // 時系列順ページの年次導線から ?year= で渡された期間
   let selectedYear = params.get("year") ?? "";
 
@@ -469,6 +481,8 @@ export const initPostSearch = () => {
     selectedCategory = selectedCategory || legacyQuery;
   else if (knownLegacy && legacyKind === "tags")
     selectedTag = selectedTag || legacyQuery;
+  else if (knownLegacy && legacyKind === "recordTypes")
+    selectedRecordType = selectedRecordType || legacyQuery;
   else if (legacyQuery) elements.input.value = legacyQuery;
 
   let hasIndexQuery = false;
@@ -479,6 +493,7 @@ export const initPostSearch = () => {
     const query = elements.input.value.trim();
     if (selectedCategory) search.set("category", selectedCategory);
     if (selectedTag) search.set("tag", selectedTag);
+    if (selectedRecordType) search.set("type", selectedRecordType);
     if (query) search.set("q", query);
     if (selectedYear) search.set("year", selectedYear);
     const rest = search.toString();
@@ -495,9 +510,12 @@ export const initPostSearch = () => {
       year: selectedYear,
       category: selectedCategory,
       tag: selectedTag,
+      recordType: selectedRecordType,
     });
-    // 簡易検索は分野・タグで絞っているときの入口。自由入力だけでは出さない
-    hasIndexQuery = Boolean(selectedCategory || selectedTag);
+    // 簡易検索は分野・タグ・型で絞っているときの入口。自由入力だけでは出さない
+    hasIndexQuery = Boolean(
+      selectedCategory || selectedTag || selectedRecordType,
+    );
     updateDock();
     syncUrl();
   };
@@ -667,12 +685,13 @@ export const initPostSearch = () => {
   onPageCleanup(filterTagSort.onChange(renderSort));
   renderSort(filterTagSort.isAlpha());
 
-  // 分野・タグ・自由入力・期間をまとめて外す
+  // 分野・タグ・型・自由入力・期間をまとめて外す
   const resetAll = () => {
     elements.input.value = "";
     selectedYear = "";
     selectedCategory = "";
     selectedTag = "";
+    selectedRecordType = "";
     apply();
     centerYearSlot(elements, selectedYear, "smooth");
   };
@@ -807,7 +826,18 @@ export const initPostSearch = () => {
       elements.input.focus();
     }),
   );
-  // 探すページ内の分野・タグは、遷移せず検索語として検索窓へ入れる
+  /*
+   * bottom sheet は選んでも閉じない。軸が4つあり、続けて選びたいことのほうが
+   * 多いため、閉じる判断は読者へ預ける。一覧の先頭へ送るのは閉じたあと
+   */
+  let sheetScrollPending = false;
+  elements.filterSheet?.addEventListener("close", () => {
+    if (!sheetScrollPending) return;
+
+    sheetScrollPending = false;
+    if (elements.list) scrollToRecords(elements.list);
+  });
+  // 探すページ内の型・分野・タグは、遷移せず検索語として検索窓へ入れる
   elements.terms.forEach((link) => {
     link.addEventListener("click", (event) => {
       const term = link.dataset.filterTerm;
@@ -825,20 +855,26 @@ export const initPostSearch = () => {
         link.closest("[data-filter-dock-desktop]"),
       );
       const fromSheet = Boolean(link.closest("[data-filter-sheet]"));
-      // 同じ項目をもう一度押したらその条件だけ外す。もう一方の条件は残す
-      const selected =
+      // 同じ項目をもう一度押したらその条件だけ外す。他の条件は残す
+      const current =
         kind === "categories"
-          ? selectedCategory === term
-          : selectedTag === term;
-      if (kind === "categories") selectedCategory = selected ? "" : term;
-      else selectedTag = selected ? "" : term;
+          ? selectedCategory
+          : kind === "tags"
+            ? selectedTag
+            : selectedRecordType;
+      const selected = current === term;
+      const next = selected ? "" : term;
+      if (kind === "categories") selectedCategory = next;
+      else if (kind === "tags") selectedTag = next;
+      else selectedRecordType = next;
       if (!fromDesktopDock && !fromSheet && desktopFilter.matches) {
         if (elements.desktopDock) elements.desktopDock.open = true;
       }
       apply();
-      if (fromSheet && elements.filterSheet?.open) elements.filterSheet.close();
       // 送るのは絞り込んだときだけ。解除は記録が戻る側なので、読んでいた位置を動かさない
-      if (!selected && elements.list) scrollToRecords(elements.list);
+      if (selected) return;
+      if (fromSheet) sheetScrollPending = true;
+      else if (elements.list) scrollToRecords(elements.list);
     });
   });
   elements.yearFilters.forEach((link) => {

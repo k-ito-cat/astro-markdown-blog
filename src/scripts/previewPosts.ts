@@ -23,6 +23,11 @@ import {
   MEMO_STATE_ORDER,
   type MemoState,
 } from "~/utils/previewPost";
+import {
+  RECORD_TYPE,
+  RECORD_TYPE_ORDER,
+  type RecordType,
+} from "~/constants/recordType";
 import { normalizeSearchText } from "~/utils/search";
 import { initPreviewInlineEdit } from "~/scripts/previewInlineEdit";
 
@@ -32,6 +37,7 @@ type SortColumn =
   | "priority"
   | "writing"
   | "publication"
+  | "recordType"
   | "memo"
   | "updated";
 type SortDirection = "asc" | "desc";
@@ -65,6 +71,7 @@ type PreviewRow = {
   priority: PostPriority;
   writing: WritingStatus;
   publication: PublishedStatus;
+  recordType: RecordType;
   memo: MemoState;
   categories: string[];
   tags: string[];
@@ -85,6 +92,7 @@ const SORT_COLUMNS = [
   "priority",
   "writing",
   "publication",
+  "recordType",
   "memo",
   "updated",
 ] as const;
@@ -93,6 +101,7 @@ const DEFAULT_SORT_DIRECTION: Record<SortColumn, SortDirection> = {
   priority: "asc",
   writing: "asc",
   publication: "asc",
+  recordType: "asc",
   memo: "asc",
   updated: "desc",
 };
@@ -145,6 +154,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
   const priority = element.dataset.priority as PostPriority;
   const writing = element.dataset.writing as WritingStatus;
   const publication = element.dataset.publication as PublishedStatus;
+  const recordType = element.dataset.recordType as RecordType;
   const memo = element.dataset.memo as MemoState;
   const updated = Date.parse(element.dataset.updated ?? "");
 
@@ -156,6 +166,9 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
   }
   if (!Object.values(PUBLISHED_STATUS).includes(publication)) {
     throw new Error(`Unknown publication status: ${publication}`);
+  }
+  if (!Object.values(RECORD_TYPE).includes(recordType)) {
+    throw new Error(`Unknown record type: ${recordType}`);
   }
   if (!MEMO_STATES.includes(memo)) {
     throw new Error(`Unknown memo state: ${memo}`);
@@ -172,6 +185,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
     priority,
     writing,
     publication,
+    recordType,
     memo,
     categories: parseStringArray(
       element.dataset.categories ?? "[]",
@@ -366,6 +380,9 @@ const compareColumn = (a: PreviewRow, b: PreviewRow, column: SortColumn) => {
       PUBLISHED_STATUS_ORDER[b.publication]
     );
   }
+  if (column === "recordType") {
+    return RECORD_TYPE_ORDER[a.recordType] - RECORD_TYPE_ORDER[b.recordType];
+  }
   if (column === "memo") {
     return MEMO_STATE_ORDER[a.memo] - MEMO_STATE_ORDER[b.memo];
   }
@@ -453,7 +470,7 @@ const getFilterLabel = (key: FilterKey, value: string) => {
   }
   if (key === "memo") return `メモ: ${MEMO_STATE_LABELS[value as MemoState]}`;
   if (key === "tag") return `タグ: ${value}`;
-  return `カテゴリ: ${value}`;
+  return `分野: ${value}`;
 };
 
 const initializePreviewPosts = (root: HTMLElement) => {

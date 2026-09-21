@@ -73,6 +73,16 @@
     var(--color-background)
   );
 
+  /*
+   * 記録の型。骨格 (primary) / interaction (secondary) / 痕跡 (accent) の3色とは
+   * 別の役割なので、既存の色を流用せず独立した色相を持つ。面と線は紙との混色で作る
+   */
+  --color-record-research: #3f5f8f;
+  --color-record-practice: #6e6a12;
+  --color-record-verification: #3a7349;
+  --color-record-thought: #6b4f9e;
+  --color-record-impression: #a8447a;
+
   --font-human: "Zen Kaku Gothic New", system-ui, -apple-system, sans-serif;
   --font-machine: "IBM Plex Mono", ui-monospace, monospace;
   --text-xs: 0.75rem;
@@ -172,6 +182,10 @@
  */
 :root[data-paper="dim"] {
   --color-background: #efe8d9;
+  /* この紙の上で 4.5:1 を割る型の色だけ濃度を下げる。藍と紫は据え置き */
+  --color-record-practice: #66620f;
+  --color-record-verification: #356b44;
+  --color-record-impression: #94366a;
   --color-surface: #efe8d9;
   --color-accent: #aecd9e;
   --color-text-muted: #606b67;

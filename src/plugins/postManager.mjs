@@ -70,13 +70,15 @@ const readPosts = async (root) => {
 };
 
 const loadOptions = async (server) => {
-  const [categories, tags, published, writing, priority] = await Promise.all([
-    server.ssrLoadModule("/src/constants/categories.ts"),
-    readTags(server.config.root),
-    server.ssrLoadModule("/src/constants/publishedStatus.ts"),
-    server.ssrLoadModule("/src/constants/writingStatus.ts"),
-    server.ssrLoadModule("/src/constants/postPriority.ts"),
-  ]);
+  const [categories, tags, published, writing, priority, recordType] =
+    await Promise.all([
+      server.ssrLoadModule("/src/constants/categories.ts"),
+      readTags(server.config.root),
+      server.ssrLoadModule("/src/constants/publishedStatus.ts"),
+      server.ssrLoadModule("/src/constants/writingStatus.ts"),
+      server.ssrLoadModule("/src/constants/postPriority.ts"),
+      server.ssrLoadModule("/src/constants/recordType.ts"),
+    ]);
   return {
     categories: categories.CATEGORIES,
     maxCategories: categories.MAX_CATEGORIES_PER_POST,
@@ -84,6 +86,7 @@ const loadOptions = async (server) => {
     status: Object.values(published.PUBLISHED_STATUS),
     writingStatus: Object.values(writing.WRITING_STATUS),
     priority: Object.values(priority.POST_PRIORITY),
+    recordType: Object.values(recordType.RECORD_TYPE),
   };
 };
 
@@ -212,7 +215,7 @@ const createPost = async (
   validateChoices(categories, options.categories, {
     min: 1,
     max: options.maxCategories,
-    label: "カテゴリ",
+    label: "分野",
   });
   validateChoices(selectedTags, allowedTags, {
     min: 1,
@@ -246,6 +249,7 @@ const createPost = async (
       githubUrl: { kind: "text", label: "GitHub URL" },
       status: { kind: "choice", label: "公開状態" },
       writingStatus: { kind: "choice", label: "執筆状態" },
+      recordType: { kind: "choice", label: "記事の型" },
       priority: { kind: "choice", label: "優先度" },
     })) {
       const value = fields[key];

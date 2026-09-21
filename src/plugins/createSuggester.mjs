@@ -185,7 +185,7 @@ const runClaude = (prompt) =>
 const buildPrompt = ({ title, body, instruction, options }) => {
   const lines = [
     `下書きのタイトル: ${title}`,
-    `選べるカテゴリ（1〜${options.maxCategories}件）: ${options.categories.join(", ")}`,
+    `選べる分野（1〜${options.maxCategories}件）: ${options.categories.join(", ")}`,
     `選べるタグ（3〜${MAX_TAG_CANDIDATES}件）: ${options.tags.join(", ")}`,
   ];
   if (instruction !== "") lines.push(`著者からの追加指示: ${instruction}`);

@@ -2,12 +2,13 @@ const ENDPOINT = "/__frontmatter";
 const POPOVER_GAP = 4;
 const VIEWPORT_MARGIN = 8;
 
-type ChoiceField = "priority" | "writingStatus" | "status";
+type ChoiceField = "priority" | "writingStatus" | "status" | "recordType";
 
 const CHOICE_DATASET_KEYS: Record<ChoiceField, string> = {
   priority: "priority",
   writingStatus: "writing",
   status: "publication",
+  recordType: "recordType",
 };
 
 const isChoiceField = (value: string): value is ChoiceField =>
@@ -249,7 +250,7 @@ const initializeRow = (row: HTMLTableRowElement, maxCategories: number) => {
       if (value.length === 0) {
         input.checked = true;
         syncCategoryLimit();
-        setStatus("カテゴリは1件以上必要です", true);
+        setStatus("分野は1件以上必要です", true);
         return;
       }
       syncCategoryLimit();

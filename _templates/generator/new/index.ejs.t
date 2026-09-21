@@ -14,9 +14,11 @@ categories: []
 tags: []
 # status: draft | private | published
 # writingStatus: writing | planned | todo | on_hold | done
+# recordType: research(調査) | practice(実践) | verification(検証) | thought(思考) | impression(感想)
 # priority: high | medium | low | none
 status: "private"
 writingStatus: "todo"
+recordType: "research"
 priority: "none"
 # relations:
 #   prerequisites: []

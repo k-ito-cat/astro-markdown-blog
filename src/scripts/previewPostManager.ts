@@ -290,7 +290,7 @@ const initializeCreate = (dialog: HTMLDialogElement) => {
     const added = newTags.values();
     const tags = [...valuesOf("tags"), ...added];
     if (categories.length === 0) {
-      setStatus("カテゴリを 1 件以上選んでください", true);
+      setStatus("分野を 1 件以上選んでください", true);
       return;
     }
     if (tags.length === 0) {

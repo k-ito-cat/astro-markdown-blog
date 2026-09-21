@@ -1,4 +1,10 @@
 ---
+import RecordType from "./RecordType.astro";
+import {
+  RECORD_TYPE_LABELS,
+  type RecordType as RecordTypeValue,
+} from "~/constants/recordType";
+
 export type TimelineEntry = {
   slug: string;
   title: string;
@@ -10,6 +16,7 @@ export type TimelineEntry = {
   month: string;
   categories: string[];
   tags: string[];
+  recordType: RecordTypeValue;
   activity: "新規" | "改訂";
   isWip: boolean;
   revisionCount: number;
@@ -69,6 +76,9 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
               data-month={entry.month}
               data-categories={JSON.stringify(entry.categories)}
               data-tags={JSON.stringify(entry.tags)}
+              data-record-types={JSON.stringify([
+                RECORD_TYPE_LABELS[entry.recordType],
+              ])}
             >
               <div class="tl-row">
                 <a
@@ -88,6 +98,7 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
                       {entry.activity}
                     </span>
                     {entry.isWip && <span class="tl-wip">WIP</span>}
+                    <RecordType recordType={entry.recordType} />
                   </span>
                   <span class="tl-title">{entry.title}</span>
                   {entry.categories.length > 0 && (
@@ -116,6 +127,10 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
       <div class="timeline-mist-space" aria-hidden="true" />
     )
   }
+  {
+    /* 送っている間だけ出る現在地のTrace。断層線が流れても年を見失わないための補助 */
+  }
+  <p class="tl-year-cue" data-year-cue aria-hidden="true"></p>
   <div class="timeline-mist" data-timeline-mist aria-hidden="true"></div>
 </div>
 
@@ -256,6 +271,11 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
     min-height: 18px;
   }
 
+  /* 型は行の右端へ送り、新規 / 改訂 / WIP と読み分けられるようにする */
+  .tl-meta :global(.record-type) {
+    margin-inline-start: auto;
+  }
+
   .tl-activity,
   .tl-wip,
   .tl-verification {
@@ -317,6 +337,70 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
   .tl-date-group[hidden],
   .tl-year[hidden] {
     display: none;
+  }
+
+  /*
+   * 年の道しるべ。年をまたいだときに出し、送りが止まったら引く。
+   * 枠や線は持たず、紙をぼかした面の上に文字だけを置く。
+   *
+   * 面は白へ固定せず紙の色で持つ。2枚目の紙でも面と紙の関係が保たれる。
+   * 縁はmaskで散らし、矩形の輪郭を残さない。時間軸の裾にかかるmistと同じ扱いで、
+   * 面ではなく霧として置く。maskもblurも効かない環境では矩形になるが読める
+   */
+  .tl-year-cue {
+    position: fixed;
+    top: 64px;
+    /* 横位置は時間軸の中央。JS が測れないうちは画面中央へ置く */
+    left: var(--cue-left, 50%);
+    z-index: 25;
+    margin: 0;
+    /* 霧が文字の外側まで広がるよう、左右は文字の倍ほど取る */
+    padding: 8px 32px 9px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: var(--text-sm);
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+    background: color-mix(in srgb, var(--color-background) 68%, transparent);
+    -webkit-backdrop-filter: blur(22px);
+    backdrop-filter: blur(22px);
+    -webkit-mask-image: radial-gradient(
+      ellipse closest-side,
+      #000 46%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse closest-side,
+      #000 46%,
+      transparent 100%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -6px);
+    transition:
+      opacity var(--duration-feedback) ease-out,
+      transform var(--duration-feedback) var(--ease-trace),
+      visibility var(--duration-feedback);
+    visibility: hidden;
+  }
+
+  .tl-year-cue.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    visibility: visible;
+  }
+
+  /* 狭い画面は上端をモバイルバー（52px）が占めるので、その下へ出す */
+  @media (min-width: 960px) {
+    .tl-year-cue {
+      top: 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tl-year-cue {
+      transition: none;
+    }
   }
 
   .timeline-mist-space {
@@ -414,9 +498,111 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
 </style>
 
 <script>
-  import { observePage, onPageLoad } from "~/scripts/pageLifecycle";
+  import {
+    observePage,
+    onPageCleanup,
+    onPageEvent,
+    onPageLoad,
+  } from "~/scripts/pageLifecycle";
+
+  /*
+   * 年の道しるべ。断層線が画面外へ流れても、いま読んでいるのが何年の記録かを
+   * 送っている間だけ示す。
+   *
+   * 出すきっかけは年が変わったこと、引くきっかけは送りが止まったこと。
+   * 同じ年を読み続けている間は出したままにし、止まって読むときは邪魔しない。
+   *
+   * 読み込み時点の年は覚えない。Home は最初から最新年の中にいるので、覚えると
+   * 次の年まで下りるまで一度も出なくなる。送り始めた時点で今の年を示す
+   */
+  const initYearCue = () => {
+    const cue = document.querySelector<HTMLElement>("[data-year-cue]");
+    if (!cue) return;
+
+    const groups = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-year-group]"),
+    );
+    if (groups.length === 0) return;
+
+    /*
+     * 横位置は画面ではなく時間軸の中央に合わせる。Home は左に月のTraceが並ぶぶん
+     * 時間軸が右へ寄るので、画面中央だと記録の列から外れる
+     */
+    const root = cue.closest<HTMLElement>("[data-timeline-root]");
+
+    /*
+     * 判定の境目は道しるべ自身が立つ高さ。断層線がそこを通り過ぎた年を示すので、
+     * 断層線が見えている間は出ず、見えなくなった瞬間に入れ替わる
+     */
+    const cueTop = () => (window.innerWidth >= 960 ? 24 : 64);
+    // 送りが止まったと見なすまでの待ち。指を離してからの惰性より少し長く取る
+    const SETTLE_DELAY = 700;
+
+    let shownYear = "";
+    let settleTimer = 0;
+    let updateQueued = false;
+    onPageCleanup(() => window.clearTimeout(settleTimer));
+
+    const currentYear = () => {
+      const edge = cueTop();
+      let year = "";
+      groups.forEach((group) => {
+        // 絞り込みで隠れている年は現在地にならない
+        if (group.hidden) return;
+        if (group.getBoundingClientRect().bottom <= edge) {
+          year = group.id.replace("year-", "");
+        }
+      });
+      return year;
+    };
+
+    const hide = () => {
+      cue.classList.remove("is-visible");
+    };
+
+    const syncPosition = () => {
+      if (!root) return;
+
+      const rect = root.getBoundingClientRect();
+      cue.style.setProperty("--cue-left", `${rect.left + rect.width / 2}px`);
+    };
+
+    const sync = () => {
+      updateQueued = false;
+      syncPosition();
+      const year = currentYear();
+      // 断層線そのものが見えている間は、道しるべを重ねない
+      if (year === "") {
+        shownYear = "";
+        hide();
+        return;
+      }
+      if (year !== shownYear) {
+        shownYear = year;
+        cue.textContent = year;
+        cue.classList.add("is-visible");
+      }
+
+      // 出ている間は、送りが途切れるたびに引くまでの時間を計り直す
+      if (cue.classList.contains("is-visible")) {
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(hide, SETTLE_DELAY);
+      }
+    };
+
+    const queue = () => {
+      if (updateQueued) return;
+      updateQueued = true;
+      requestAnimationFrame(sync);
+    };
+
+    onPageEvent(window, "scroll", queue, { passive: true });
+    onPageEvent(window, "resize", queue);
+  };
 
   onPageLoad(() => {
+    initYearCue();
+
     const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
     const entries = Array.from(
       document.querySelectorAll<HTMLElement>("[data-record-entry]"),

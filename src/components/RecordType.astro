@@ -1,0 +1,57 @@
+---
+import { RECORD_TYPE_LABELS, type RecordType } from "~/constants/recordType";
+
+type Props = {
+  recordType: RecordType;
+};
+
+const { recordType } = Astro.props;
+---
+
+<span class="record-type" data-record-type={recordType}>
+  {RECORD_TYPE_LABELS[recordType]}
+</span>
+
+<style>
+  /*
+   * 型ごとの色は data 属性から引く。marker は紙との混色で持つので、
+   * 紙を替えても marker と紙の関係が保たれる
+   */
+  .record-type {
+    --ink: var(--color-text-sub);
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(
+      transparent 52%,
+      color-mix(in srgb, var(--ink) 34%, var(--color-background)) 52%
+    );
+    color: var(--color-text);
+    /*
+     * 既定は時間軸の 新規 / 改訂 / WIP に揃えた 11px。日付と並ぶ記事冒頭だけ、
+     * 置いた側から大きさを渡す
+     */
+    font-size: var(--record-type-size, 11px);
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  [data-record-type="research"] {
+    --ink: var(--color-record-research);
+  }
+
+  [data-record-type="practice"] {
+    --ink: var(--color-record-practice);
+  }
+
+  [data-record-type="verification"] {
+    --ink: var(--color-record-verification);
+  }
+
+  [data-record-type="thought"] {
+    --ink: var(--color-record-thought);
+  }
+
+  [data-record-type="impression"] {
+    --ink: var(--color-record-impression);
+  }
+</style>

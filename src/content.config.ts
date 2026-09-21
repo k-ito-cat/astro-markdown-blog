@@ -5,6 +5,7 @@ import { TAGS } from "~/constants/tags";
 import { POST_PRIORITY } from "~/constants/postPriority";
 import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
 import { WRITING_STATUS } from "~/constants/writingStatus";
+import { RECORD_TYPE } from "~/constants/recordType";
 
 const posts = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/posts" }),
@@ -30,6 +31,13 @@ const posts = defineCollection({
       WRITING_STATUS.TODO,
       WRITING_STATUS.ON_HOLD,
       WRITING_STATUS.DONE,
+    ]),
+    recordType: z.enum([
+      RECORD_TYPE.RESEARCH,
+      RECORD_TYPE.PRACTICE,
+      RECORD_TYPE.VERIFICATION,
+      RECORD_TYPE.THOUGHT,
+      RECORD_TYPE.IMPRESSION,
     ]),
     priority: z.enum([
       POST_PRIORITY.HIGH,

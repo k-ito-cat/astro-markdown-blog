@@ -11,6 +11,7 @@ import Categories from "./Categories.astro";
 import Meta from "./Meta.astro";
 import GithubCard from "./GithubCard.astro";
 import RevisionHistory from "./RevisionHistory.astro";
+import RecordType from "./RecordType.astro";
 import type { Category } from "~/constants/categories";
 import type { Tag } from "~/constants/tags";
 import {
@@ -18,6 +19,7 @@ import {
   type PublishedStatus,
 } from "~/constants/publishedStatus";
 import { HEADING_LEVEL } from "~/constants/headingLevel";
+import type { RecordType as RecordTypeValue } from "~/constants/recordType";
 
 type Props = {
   title: string;
@@ -25,6 +27,7 @@ type Props = {
   updatedAt: Date;
   categories: Category[];
   tags: Tag[];
+  recordType: RecordTypeValue;
   githubUrl?: string;
   content: AstroComponentFactory;
   headings?: { depth: number; slug: string; text: string }[];
@@ -44,6 +47,7 @@ const {
   updatedAt,
   categories,
   tags,
+  recordType,
   githubUrl,
   content,
   headings = [],
@@ -80,7 +84,10 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 <article class="article">
   <header class="article-header">
     <h1 class="article-title">{title}</h1>
-    <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
+    <div class="article-record-line">
+      <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
+      <RecordType recordType={recordType} />
+    </div>
     <Categories categories={categories} tags={tags} />
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
@@ -229,6 +236,18 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     gap: 15px;
     max-width: var(--measure-prose);
     margin: 0 auto 32px;
+  }
+
+  /*
+   * 記録日・最終改訂は左、型は行の右端。日付と型を同じ高さで読ませる。
+   * 型は日付の値と並ぶので、ラベル（11px）ではなく値と同じ大きさにする
+   */
+  .article-record-line {
+    --record-type-size: var(--text-sm);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
   }
 
   .article-title {

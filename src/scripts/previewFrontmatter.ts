@@ -23,6 +23,7 @@ const TEXT_FIELDS = [
   "githubUrl",
   "status",
   "writingStatus",
+  "recordType",
   "priority",
 ] as const;
 

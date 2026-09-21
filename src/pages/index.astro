@@ -57,6 +57,7 @@ const entries: TimelineEntry[] = posts
       month,
       categories: post.data.categories,
       tags: post.data.tags,
+      recordType: post.data.recordType,
       activity: isRevision ? "改訂" : "新規",
       isWip: post.data.status === PUBLISHED_STATUS.DRAFT,
       revisionCount: post.data.revisions?.length ?? (isRevision ? 1 : 0),
