@@ -5,6 +5,22 @@ import {
 } from "~/scripts/pageLifecycle";
 const FEEDBACK_MS = 1600;
 
+/**
+ * ペインは summary、Escape、ペイン外の押下、他ペインの表示と四方から閉じられる。
+ * 中身が閉じてよいかを知っているのはペイン側なので、判断だけを預かって全経路で参照する。
+ */
+const closeGuards = new WeakMap<HTMLDetailsElement, () => boolean>();
+
+export const setPaneCloseGuard = (
+  pane: HTMLDetailsElement,
+  guard: () => boolean,
+) => {
+  closeGuards.set(pane, guard);
+};
+
+const canClosePane = (pane: HTMLDetailsElement) =>
+  closeGuards.get(pane)?.() ?? true;
+
 const setState = (button: HTMLElement, state: "copied" | "failed") => {
   button.dataset.copyState = state;
   window.setTimeout(() => delete button.dataset.copyState, FEEDBACK_MS);
@@ -104,6 +120,15 @@ const initPanes = (root: ParentNode) => {
     pane.addEventListener("toggle", () => {
       if (!pane.open) return;
 
+      // 開いた側を引っ込める。閉じられないペインの上に重ねるより、開かない方が迷わない
+      const blocked = panes.some(
+        (other) => other !== pane && other.open && !canClosePane(other),
+      );
+      if (blocked) {
+        pane.open = false;
+        return;
+      }
+
       panes.forEach((other) => {
         if (other !== pane) other.open = false;
       });
@@ -118,6 +143,8 @@ const initPanes = (root: ParentNode) => {
       if (mobileActions) mobileActions.open = false;
       return;
     }
+
+    if (!canClosePane(opened)) return;
 
     opened.open = false;
   });
@@ -137,6 +164,7 @@ const initPanes = (root: ParentNode) => {
 
     const target = event.target as Node | null;
     if (target && opened.contains(target)) return;
+    if (!canClosePane(opened)) return;
 
     opened.open = false;
   });

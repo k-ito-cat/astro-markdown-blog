@@ -1,0 +1,60 @@
+---
+import { getCollection, getEntry } from "astro:content";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import ArticlePage from "~/components/ArticlePage.astro";
+import { normalizePostSlug, resolvePostEntrySlug } from "~/utils/postSlug";
+
+/*
+ * 画面幅を確かめるための素の記事ページ。iframe に入れて読む。
+ * 本番と同じ ArticlePage を読むので、見えているものは本番と同じ。
+ * 非公開記事も対象にするため status で絞らない。開発時にだけ存在する。
+ *
+ * 下書きの本文を出す指定は末尾の /content で持つ。静的ルートでは
+ * Astro.url.searchParams が届かないため、query では切り替えられない。
+ */
+export async function getStaticPaths() {
+  // getStaticPaths は独立したスコープで走るため、外の定数を参照できない
+  const suffix = "/content";
+
+  if (!import.meta.env.DEV) {
+    return [];
+  }
+
+  const posts = await getCollection("posts");
+  return posts.flatMap((post) => {
+    const slug = normalizePostSlug(post.id);
+    return [
+      { params: { slug }, props: { entrySlug: post.id, showsBody: false } },
+      {
+        params: { slug: `${slug}${suffix}` },
+        props: { entrySlug: post.id, showsBody: true },
+      },
+    ];
+  });
+}
+
+if (!import.meta.env.DEV) {
+  return Astro.redirect("/404");
+}
+
+const slugParam = Array.isArray(Astro.params.slug)
+  ? Astro.params.slug.join("/")
+  : (Astro.params.slug ?? "");
+const BODY_SUFFIX = "/content";
+const showsBody = Astro.props.showsBody ?? slugParam.endsWith(BODY_SUFFIX);
+const postSlug = showsBody
+  ? slugParam.slice(0, -BODY_SUFFIX.length)
+  : slugParam;
+const entrySlug =
+  Astro.props.entrySlug ?? (postSlug ? resolvePostEntrySlug(postSlug) : "");
+const post = entrySlug ? await getEntry("posts", entrySlug) : null;
+if (!post) return Astro.redirect("/404");
+---
+
+<BaseLayout
+  title={`記録｜${post.data.title}`}
+  ogTitle={post.data.title}
+  ogImage={post.data.thumbnail}
+>
+  <ArticlePage post={post} showsDraftBody={showsBody} />
+</BaseLayout>

@@ -3,6 +3,7 @@ import {
   onPageCleanup,
   pageSignal,
 } from "~/scripts/pageLifecycle";
+import { hasUnsavedFrontmatter } from "~/scripts/previewFrontmatter";
 import {
   blockText,
   deleteBlock,
@@ -1434,7 +1435,11 @@ const initializeEditor = (host: HTMLElement) => {
   // 保存後の再読み込みはこちらが起こしたものなので、引き止めの対象から外す
   const shouldHold = () =>
     !document.documentElement.hasAttribute(RELOADING_ATTRIBUTE) &&
-    (dirty.size > 0 || isDirtyEditor() || busy);
+    (dirty.size > 0 ||
+      isDirtyEditor() ||
+      busy ||
+      // ペインを閉じずに離れると同じように消えるため、フロントマターも引き止める
+      hasUnsavedFrontmatter());
 
   // 保存前に再読み込みが走ると保留中の変更が消えるため、明示的に引き止める
   onPageEvent(window, "beforeunload", (event) => {

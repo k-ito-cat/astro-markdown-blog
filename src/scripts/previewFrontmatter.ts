@@ -1,6 +1,8 @@
 import { normalizeSearchText } from "~/utils/search";
+import { onPageEvent } from "~/scripts/pageLifecycle";
 import { initNewTags } from "~/scripts/previewNewTags";
 import { initTagDelete } from "~/scripts/previewTagDelete";
+import { setPaneCloseGuard } from "~/scripts/previewSyntaxHelp";
 import {
   clearSuggestions,
   collectSuggestionBoxes,
@@ -174,6 +176,25 @@ const initializeSuggest = ({
   button.addEventListener("click", () => void run());
 };
 
+/**
+ * ページを離れるときの引き止めは本文側が持っている。
+ * フロントマターの未保存も同じ扱いにするため、判断だけを渡せるようにする。
+ */
+const editors = new Map<HTMLElement, () => boolean>();
+
+export const hasUnsavedFrontmatter = () => {
+  let unsaved = false;
+  editors.forEach((isDirty, element) => {
+    // 遷移で捨てられた編集器は数えない
+    if (!element.isConnected) {
+      editors.delete(element);
+      return;
+    }
+    if (isDirty()) unsaved = true;
+  });
+  return unsaved;
+};
+
 const initializeEditor = (root: HTMLElement) => {
   const form = root.querySelector("[data-fm-form]");
   const status = root.querySelector("[data-fm-status]");
@@ -251,7 +272,7 @@ const initializeEditor = (root: HTMLElement) => {
         "保存しました。slug は英小文字・数字・ハイフンで入力してください",
         "error",
       );
-      return;
+      return false;
     }
 
     setStatus("slug を変更中…");
@@ -270,7 +291,7 @@ const initializeEditor = (root: HTMLElement) => {
         getMessage(payload, `slug の変更に失敗しました (${response.status})`),
         "error",
       );
-      return;
+      return false;
     }
 
     const references =
@@ -290,6 +311,7 @@ const initializeEditor = (root: HTMLElement) => {
     setStatus("保存しました。新しい URL へ移ります…");
     history.replaceState(null, "", nextPath);
     location.replace(nextPath);
+    return true;
   };
 
   const newTags = initNewTags(root, (message) => setStatus(message ?? ""));
@@ -311,8 +333,18 @@ const initializeEditor = (root: HTMLElement) => {
     return { id: entryId, data, newTags: added };
   };
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  /**
+   * 未保存かどうかは、保存で送る形そのままで見る。
+   * AI への指示欄やタグの絞り込みは送らないので、触っても未保存にはならない。
+   */
+  const snapshot = () =>
+    JSON.stringify([buildPayload().data, slugInput?.value.trim() ?? ""]);
+
+  let saved = "";
+  const isDirty = () => snapshot() !== saved;
+
+  /** 保存できたかを返す。閉じてよいかの判断がこれに乗る */
+  const save = async () => {
     submitButton.disabled = true;
     setStatus("保存中…");
 
@@ -332,15 +364,15 @@ const initializeEditor = (root: HTMLElement) => {
           getMessage(payload, `保存に失敗しました (${response.status})`),
           "error",
         );
-        return;
+        return false;
       }
 
       const changed = getChangedFields(payload);
+      saved = snapshot();
       const nextSlug = slugInput?.value.trim() ?? "";
       if (slugInput && nextSlug !== slug) {
         // ファイル名の変更は保存の後。旧 id でフロントマターを書いてから移す
-        await renameSlug(nextSlug);
-        return;
+        return await renameSlug(nextSlug);
       }
 
       setStatus(
@@ -349,14 +381,21 @@ const initializeEditor = (root: HTMLElement) => {
           : `保存しました: ${changed.join(", ")}`,
         "success",
       );
+      return true;
     } catch (error) {
       setStatus(
         `保存に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
         "error",
       );
+      return false;
     } finally {
       submitButton.disabled = false;
     }
+  };
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void save();
   });
 
   form.addEventListener("change", () => {
@@ -384,8 +423,70 @@ const initializeEditor = (root: HTMLElement) => {
     setStatus("");
   });
 
+  const details = root.querySelector<HTMLDetailsElement>("[data-preview-pane]");
+  const summary = details?.querySelector("summary");
+
+  /**
+   * 閉じようとしたときの判断。未保存なら問い、保存できたときだけ閉じる。
+   * 保存は非同期なので、いったん閉じるのを止めてから改めて閉じにいく。
+   * 戻ってくる頃には保存済みなので、その一回で問い直されることはない。
+   */
+  const requestClose = () => {
+    if (!isDirty()) return true;
+    if (
+      !window.confirm(
+        "フロントマターに未保存の変更があります。保存して閉じますか？",
+      )
+    ) {
+      return false;
+    }
+
+    void save().then((ok) => {
+      if (ok && details) details.open = false;
+    });
+    return false;
+  };
+
+  if (details) setPaneCloseGuard(details, requestClose);
+
+  summary?.addEventListener("click", (event) => {
+    if (!details?.open) return;
+    if (requestClose()) return;
+
+    event.preventDefault();
+  });
+
+  /**
+   * Cmd/Ctrl+S は本文の保存に割り当てられている。
+   * ペインが開いている間は編集対象がフロントマターなので、本文へ届く前に引き取る。
+   */
+  onPageEvent(
+    document,
+    "keydown",
+    (event) => {
+      if (
+        event.key.toLocaleLowerCase() !== "s" ||
+        (!event.metaKey && !event.ctrlKey) ||
+        event.altKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+      if (!details?.open) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (submitButton.disabled) return;
+
+      void save();
+    },
+    { capture: true },
+  );
+
   syncCategoryLimit();
   applyTagFilter();
+  saved = snapshot();
+  editors.set(root, isDirty);
 };
 
 export const initPreviewFrontmatter = () => {

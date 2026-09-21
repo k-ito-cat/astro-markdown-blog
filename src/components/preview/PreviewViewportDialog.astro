@@ -1,0 +1,271 @@
+---
+import { Icon } from "astro-icon/components";
+
+/*
+ * 画面幅の確認。中身は /preview/frame の素の記事ページを iframe で読む。
+ * media query はビューポートで切り替わるので、幅を変えるだけでは本物にならない。
+ * 自前のビューポートを持てるのは iframe だけなので、この形を採る。
+ */
+type Props = {
+  slug: string;
+  isDraft: boolean;
+};
+
+const { slug, isDraft } = Astro.props;
+
+/* 幅は実装の breakpoint に合わせる。1024 で欄外 trace が出る */
+const WIDTHS = [
+  { value: "390", label: "390" },
+  { value: "768", label: "768" },
+  { value: "1024", label: "1024" },
+  { value: "1280", label: "1280" },
+  { value: "", label: "実幅" },
+] as const;
+---
+
+<preview-viewport data-frame-src={`/preview/frame/${slug}`}>
+  <button
+    type="button"
+    class="viewport-open"
+    aria-label="画面幅を確かめる"
+    title="画面幅を確かめる"
+    data-viewport-open
+  >
+    <Icon name="octicon:device-mobile-16" aria-hidden="true" />
+    <span>画面幅</span>
+  </button>
+
+  <dialog class="viewport-dialog" aria-label="画面幅を確かめる" data-viewport-dialog>
+    <div class="viewport-panel">
+      <div class="viewport-bar">
+        <div class="viewport-widths" role="group" aria-label="幅">
+          {
+            WIDTHS.map((width) => (
+              <button
+                type="button"
+                class="viewport-width"
+                aria-pressed="false"
+                data-viewport-width={width.value}
+              >
+                {width.label}
+              </button>
+            ))
+          }
+        </div>
+        {
+          isDraft && (
+            <button
+              type="button"
+              class="viewport-body"
+              aria-pressed="false"
+              data-viewport-body
+            >
+              下書きの本文を出す
+            </button>
+          )
+        }
+        <button
+          type="button"
+          class="viewport-close"
+          aria-label="閉じる"
+          data-viewport-close
+        >
+          <Icon name="octicon:x-16" aria-hidden="true" />
+        </button>
+      </div>
+
+      <p class="viewport-caution">
+        本番ページのモック表示です。保存した内容を読みます。実機では挙動や細かな表示が異なることがあるため、簡易確認に使ってください。
+      </p>
+
+      <div class="viewport-stage">
+        {/* src は最初に開いたときだけ入れる。開くまで読み込ませない */}
+        <iframe
+          class="viewport-frame"
+          title="画面幅の確認"
+          loading="lazy"
+          data-viewport-frame></iframe>
+      </div>
+    </div>
+  </dialog>
+</preview-viewport>
+
+<style>
+  preview-viewport {
+    display: contents;
+  }
+
+  /* 面と寸法は編集バーの道具に合わせる（PreviewBodyEditor 側で指定） */
+  .viewport-open {
+    color: var(--text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .viewport-dialog {
+    --stage-top: 8vh;
+
+    position: fixed;
+    inset-block-start: var(--stage-top);
+    inset-inline: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(1360px, calc(100vw - 32px));
+    /*
+     * 高さは中身ではなく画面で決める。auto だと記事の載る台が潰れて、
+     * 幅だけ狭い細長い帯になる
+     */
+    height: min(calc(100dvh - var(--stage-top) - 16px), 900px);
+    margin-inline: auto;
+    overflow: hidden;
+    padding: 0;
+    color: var(--color-text);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: 0 18px 48px rgb(31 41 55 / 18%);
+  }
+
+  .viewport-dialog:not([open]) {
+    display: none;
+  }
+
+  .viewport-dialog::backdrop {
+    background: rgb(17 24 39 / 18%);
+  }
+
+  .viewport-panel {
+    /* 送る領域は記事だけにする。ここで高さを受け取り、余りを stage へ渡す */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .viewport-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .viewport-widths {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-inline-end: auto;
+  }
+
+  .viewport-width {
+    min-height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-machine);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .viewport-width:hover,
+  .viewport-width:focus-visible {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  /* 選んでいる幅は色と枠で示す（hig.md button.toggle-state） */
+  .viewport-width[aria-pressed="true"] {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .viewport-body {
+    min-height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-label);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .viewport-body:hover,
+  .viewport-body:focus-visible {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .viewport-body[aria-pressed="true"] {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  /* 何を見ているのかと、何は確かめられないのかを面の中に置く */
+  .viewport-caution {
+    flex: none;
+    margin: 0;
+    padding: 8px 16px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .viewport-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .viewport-close:hover,
+  .viewport-close:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  .viewport-close svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* 記事の紙と、それを載せている台を見分けられるようにする */
+  .viewport-stage {
+    flex: 1;
+    display: flex;
+    /* 台より広い幅を選んだら、縮めずに送る。縮めると選んだ幅で見ていない */
+    justify-content: safe center;
+    min-height: 0;
+    overflow-x: auto;
+    padding: 16px;
+    background: var(--bg-subtle);
+  }
+
+  .viewport-frame {
+    flex: none;
+    width: var(--frame-width, 100%);
+    height: 100%;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+  }
+</style>
+
+<script>
+  import { initPreviewViewport } from "~/scripts/previewViewport";
+  import { onPageLoad } from "~/scripts/pageLifecycle";
+
+  onPageLoad(() => {
+    initPreviewViewport();
+  });
+</script>

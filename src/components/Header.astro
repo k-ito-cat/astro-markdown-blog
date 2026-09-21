@@ -1,9 +1,58 @@
 ---
 import { Icon } from "astro-icon/components";
+import { getEntry } from "astro:content";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import { resolvePostEntrySlug } from "~/utils/postSlug";
 
 const pathname = Astro.url.pathname;
+// 末尾のスラッシュは有無どちらも来る。判定の前に一度だけ均す
+const path = pathname.replace(/\/+$/, "") || "/";
 // 記事内検索は記事ページにしか無いので、入口も記事ページのメニューだけへ置く
-const isArticle = /^\/blog\/[^/]/.test(pathname);
+const isArticle = /^\/blog\/[^/]/.test(path);
+/*
+ * 記事とプレビューは同じ slug で引ける（どちらも normalizePostSlug 由来）ので、
+ * 今いる URL から相手側の行き先を作れる。props を通す必要はない
+ */
+const articleSlug = isArticle ? path.slice("/blog/".length) : "";
+const previewSlug = /^\/preview\/posts\/[^/]/.test(path)
+  ? path.slice("/preview/posts/".length)
+  : "";
+const isPreviewArea = path === "/preview/posts" || previewSlug !== "";
+// 画面幅を見るための素の記事。iframe の中なので書き手の道具は出さない
+const isFrame = path.startsWith("/preview/frame");
+
+/*
+ * 本番ページは非公開記事を生成しないので、行き先がある記事のときだけ出す。
+ * 理由はプレビュー側のツールバーが「本番ページなし」として説明している
+ */
+/*
+ * 非公開記事と存在しない slug は本番ページを持たない＝今いるのは 404。
+ * 記事ページのつもりで導線を出さないよう、実体を引いてから決める
+ */
+const articlePost =
+  import.meta.env.DEV && articleSlug
+    ? await getEntry("posts", resolvePostEntrySlug(articleSlug))
+    : undefined;
+const previewHref =
+  articlePost && articlePost.data.status !== PUBLISHED_STATUS.PRIVATE
+    ? `/preview/posts/${articleSlug}`
+    : "";
+
+const previewPost =
+  import.meta.env.DEV && previewSlug
+    ? await getEntry("posts", resolvePostEntrySlug(previewSlug))
+    : undefined;
+const publicHref =
+  previewPost && previewPost.data.status !== PUBLISHED_STATUS.PRIVATE
+    ? `/blog/${previewSlug}`
+    : "";
+
+// プレビューの中ではプレビューへ送らない。下段はいつでも「一覧へ」と読める場所にする
+const indexHref = isPreviewArea ? "/blog" : "/preview/posts";
+const indexLabel = isPreviewArea ? "記事一覧" : "プレビュー一覧";
+const indexIcon = isPreviewArea
+  ? "octicon:list-unordered-16"
+  : "octicon:eye-16";
 const navItems = [
   {
     href: "/",
@@ -200,10 +249,49 @@ const navItems = [
    * プレビューへの入口。行き先でも読み方の設定でもない、書き手の道具なので
    * ナビゲーションから出す。開発時しか出ないため、読者の画面には現れない
    */
-  import.meta.env.DEV && (
-    <a class="preview-dock" href="/preview/posts" aria-label="プレビュー">
-      <Icon name="octicon:eye-16" aria-hidden="true" />
-    </a>
+  import.meta.env.DEV && !isFrame && (
+    <div class="preview-dock">
+      {previewHref && (
+        <a
+          class="preview-dock-link"
+          href={previewHref}
+          aria-label="この記事のプレビュー"
+          data-tip="この記事のプレビュー"
+        >
+          <Icon name="octicon:pencil-16" aria-hidden="true" />
+        </a>
+      )}
+      {previewSlug &&
+        (publicHref ? (
+          <a
+            class="preview-dock-link"
+            href={publicHref}
+            aria-label="この記事の本番ページ"
+            data-tip="この記事の本番ページ"
+          >
+            <Icon name="octicon:globe-16" aria-hidden="true" />
+          </a>
+        ) : (
+          /* 非公開記事は本番ページが無い。消さずに非活性で理由を示す */
+          <span
+            class="preview-dock-link is-disabled"
+            role="link"
+            aria-disabled="true"
+            aria-label="本番ページなし"
+            data-tip="本番ページなし"
+          >
+            <Icon name="octicon:globe-16" aria-hidden="true" />
+          </span>
+        ))}
+      <a
+        class="preview-dock-link"
+        href={indexHref}
+        aria-label={indexLabel}
+        data-tip={indexLabel}
+      >
+        <Icon name={indexIcon} aria-hidden="true" />
+      </a>
+    </div>
   )
 }
 
@@ -214,6 +302,13 @@ const navItems = [
     /* 記事の「一覧へ戻る」は左下にいるので、こちらは右下へ置く */
     inset-block-end: 16px;
     inset-inline-end: 16px;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+  }
+
+  .preview-dock-link {
+    position: relative;
     display: grid;
     place-items: center;
     width: 44px;
@@ -228,13 +323,59 @@ const navItems = [
       border-color var(--duration-feedback) ease;
   }
 
-  .preview-dock:hover,
-  .preview-dock:focus-visible {
+  .preview-dock-link:not(.is-disabled):hover,
+  .preview-dock-link:not(.is-disabled):focus-visible {
     color: var(--color-secondary);
     border-color: var(--color-primary);
   }
 
-  .preview-dock svg {
+  /* 押せないことは色の濃さで示す。形は同じままにして並びを崩さない */
+  .preview-dock-link.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /*
+   * icon だけでは行き先が読めないので名前を添える。
+   * dock は画面の右端にいるため、左へ出して画面外へはみ出させない
+   */
+  .preview-dock-link::after {
+    content: attr(data-tip);
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(100% + 8px);
+    z-index: 1;
+    padding: 4px 8px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    background: var(--color-background);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-label);
+    box-shadow: 0 6px 18px rgb(31 41 55 / 12%);
+    transform: translateY(-50%);
+    transition:
+      opacity var(--duration-feedback) ease,
+      visibility var(--duration-feedback);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .preview-dock-link:hover::after,
+  .preview-dock-link:focus-visible::after {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-dock-link::after {
+      transition: none;
+    }
+  }
+
+  .preview-dock-link svg {
     width: 18px;
     height: 18px;
   }

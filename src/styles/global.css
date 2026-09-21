@@ -149,9 +149,17 @@
   --warning: var(--color-warning);
   --warning-bg: var(--color-surface);
   --warning-text: var(--color-text);
+  /* 役割は design/tokens.md「破壊操作（danger）」が正本 */
   --danger: var(--color-danger);
-  --danger-bg: var(--color-surface);
-  --danger-text: var(--color-text);
+  --danger-border: var(--color-danger);
+  --danger-surface: var(--color-danger);
+  --danger-on-surface: var(--color-background);
+  --danger-tint: color-mix(
+    in srgb,
+    var(--color-danger) 11%,
+    var(--color-background)
+  );
+  --danger-text: var(--color-danger);
 }
 
 /*
@@ -193,7 +201,6 @@
   --color-warning-bg: var(--warning-bg);
   --color-warning-text: var(--warning-text);
   --color-danger: var(--danger);
-  --color-danger-bg: var(--danger-bg);
   --color-danger-text: var(--danger-text);
   --color-accent-warm: var(--accent-warm);
   --background-color-*: initial;

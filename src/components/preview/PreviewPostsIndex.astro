@@ -2073,9 +2073,13 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   .create-status[data-tone="error"] {
-    color: var(--danger);
+    color: var(--danger-text);
   }
 
+  /*
+   * 行の削除も不可逆。design/hig.md `button.destructive` に従い、
+   * 現れている間は面を透明のまま文字と枠を danger にする
+   */
   .preview-row-delete {
     display: inline-flex;
     min-width: 24px;
@@ -2083,10 +2087,10 @@ const publishedMemoFilterParams = new URLSearchParams({
     align-items: center;
     justify-content: center;
     padding: 2px;
-    border: 0;
+    border: 1px solid var(--danger-border);
     border-radius: var(--radius-label);
     background: transparent;
-    color: var(--text-muted);
+    color: var(--danger);
     opacity: 0;
     pointer-events: none;
     cursor: pointer;
@@ -2102,7 +2106,17 @@ const publishedMemoFilterParams = new URLSearchParams({
 
   .preview-row-delete:hover,
   .preview-row-delete:focus-visible {
-    color: var(--danger);
+    background: var(--danger-tint);
+  }
+
+  /* 押している最中だけ面を濃くする。色は変えない */
+  .preview-row-delete:active {
+    background: color-mix(in srgb, var(--danger) 22%, var(--color-background));
+  }
+
+  .preview-row-delete:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .preview-post-row:hover .preview-copy-link,
@@ -2215,7 +2229,8 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   preview-posts {
-    --tint-danger: color-mix(in oklab, var(--danger) 13%, var(--bg-base));
+    /* 薄い赤は共通の役割 token を使う（design/tokens.md 破壊操作） */
+    --tint-danger: var(--danger-tint);
     --tint-warning: color-mix(in oklab, var(--warning) 13%, var(--bg-base));
     --tint-active: color-mix(in oklab, var(--link) 13%, var(--bg-base));
     --tint-done: color-mix(in oklab, var(--accent-warm) 55%, var(--bg-base));

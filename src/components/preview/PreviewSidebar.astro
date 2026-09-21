@@ -98,36 +98,48 @@ const FILTERS = [
 </script>
 
 <preview-sidebar class="preview-sidebar" data-current={currentId}>
-  <div class="preview-sidebar-bar">
-    <p class="preview-sidebar-heading">
-      記事<span
-        class="preview-sidebar-count"
-        data-sidebar-count
-        aria-live="polite"></span>
-    </p>
-    <button
-      type="button"
-      class="preview-sidebar-toggle"
-      aria-controls="preview-sidebar-body"
-      data-sidebar-toggle
-    >
-      <Icon name="octicon:sidebar-collapse-16" class="preview-sidebar-close" />
-      <Icon name="octicon:sidebar-expand-16" class="preview-sidebar-open" />
-    </button>
-  </div>
+  <button
+    type="button"
+    class="preview-sidebar-filter-open"
+    aria-label="記事一覧"
+    title="記事一覧"
+    data-sidebar-filter-open
+  >
+    <Icon name="octicon:search-16" aria-hidden="true" />
+    <span>記事</span>
+    <span class="preview-sidebar-count" data-sidebar-count aria-live="polite"
+    ></span>
+  </button>
 
-  <div id="preview-sidebar-body" class="preview-sidebar-body">
-    <div class="preview-sidebar-inner">
-      <div class="preview-sidebar-search">
+  {/*
+    一覧そのものを面へ入れる。絞り込みは下の一覧へ直接効くので、
+    記事内検索と同じく「語を入れる欄 ＋ その結果」の二段で足りる
+  */}
+  <dialog
+    class="sidebar-filter-dialog"
+    aria-label="記事一覧"
+    data-sidebar-filter-dialog
+  >
+    <div class="sidebar-filter-panel">
+      <div class="sidebar-filter-field">
         <Icon name="octicon:search-16" aria-hidden="true" />
+        <label class="sr-only" for="preview-sidebar-search">記事を絞り込む</label>
         <input
+          id="preview-sidebar-search"
           type="search"
           class="preview-sidebar-input"
           placeholder="絞り込む"
           autocomplete="off"
-          aria-label="記事を絞り込む"
           data-sidebar-search
         />
+        <button
+          type="button"
+          class="sidebar-filter-close"
+          aria-label="閉じる"
+          data-sidebar-filter-close
+        >
+          <Icon name="octicon:x-16" aria-hidden="true" />
+        </button>
       </div>
 
       <div class="preview-sidebar-filters">
@@ -195,40 +207,110 @@ const FILTERS = [
         </ul>
       </nav>
     </div>
-  </div>
+  </dialog>
 </preview-sidebar>
 
 <style>
+  /* 列ではなくなったので、入口ボタンの置き場所としてだけ振る舞う */
   .preview-sidebar {
-    display: block;
-    align-self: start;
-    min-width: 0;
+    display: contents;
   }
 
-  /* 面ではなくTypographyとLineで階層を作る（design/DESIGN.md 固有ルール5） */
-  .preview-sidebar-bar {
-    display: flex;
+  /* 一覧への入口。記事内検索の虫眼鏡と同じ扱いにする */
+  .preview-sidebar-filter-open {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--color-border);
+    gap: 6px;
+    /* 面と寸法は編集バーの道具に合わせる（PreviewBodyEditor 側で指定） */
+    color: var(--text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+    transition: color var(--duration-feedback) var(--ease-trace);
   }
 
-  .preview-sidebar-heading {
-    margin: 0;
+  .preview-sidebar-filter-open:hover,
+  .preview-sidebar-filter-open:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
+  /* 絞り込み中は入口の色で示す（hig.md button.toggle-state） */
+  .preview-sidebar-filter-open[data-active] {
     color: var(--color-primary);
-    font-size: var(--text-sm);
-    font-weight: 700;
-    letter-spacing: 0.04em;
   }
 
-  .preview-sidebar-toggle {
+  .preview-sidebar-filter-open svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /*
+   * 記事内検索のダイアログと同じ立ち方にする。結果を持たないぶん丈は低く、
+   * 背後の一覧が絞られるのが見えるよう backdrop は薄く敷く
+   */
+  .sidebar-filter-dialog {
+    --list-top: 12vh;
+
+    position: fixed;
+    inset-block-start: var(--list-top);
+    inset-inline: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(520px, calc(100vw - 32px));
+    /* 語を入れる前も面として立ち、背の高い画面で伸び切らない高さにする */
+    min-height: min(260px, calc(100dvh - var(--list-top) - 16px));
+    max-height: min(calc(100dvh - var(--list-top) - 16px), 620px);
+    margin-inline: auto;
+    overflow: hidden;
+    padding: 0;
+    color: var(--color-text);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: 0 18px 48px rgb(31 41 55 / 18%);
+  }
+
+  .sidebar-filter-dialog:not([open]) {
+    display: none;
+  }
+
+  .sidebar-filter-dialog::backdrop {
+    background: rgb(17 24 39 / 18%);
+  }
+
+  .sidebar-filter-panel {
+    /* 送る領域は一覧だけにする。ここで高さを受け取り、余りを一覧へ渡す */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 14px 16px 16px;
+  }
+
+  .sidebar-filter-field {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--text-muted);
+    transition: border-color var(--duration-feedback) var(--ease-trace);
+  }
+
+  .sidebar-filter-field:focus-within {
+    border-bottom-color: var(--color-secondary);
+    color: var(--color-interaction-text);
+  }
+
+  .sidebar-filter-field > svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .sidebar-filter-close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Touch target の下限（design/hig.md Interaction） */
     min-width: 24px;
     min-height: 24px;
     padding: 0;
@@ -239,73 +321,14 @@ const FILTERS = [
     transition: color var(--duration-feedback) var(--ease-trace);
   }
 
-  .preview-sidebar-toggle:hover,
-  .preview-sidebar-toggle:focus-visible {
+  .sidebar-filter-close:hover,
+  .sidebar-filter-close:focus-visible {
     color: var(--color-interaction-text);
   }
 
-  .preview-sidebar-toggle svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  .preview-sidebar-open {
-    display: none;
-  }
-
-  /* 閉じたときは操作だけ残し、発見不能にしない（design/layouts.md Navigation）。
-     記事を動かさないため、列幅は変えずこの領域の中だけで畳む */
-  .preview-sidebar-body {
-    display: grid;
-    grid-template-rows: 1fr;
-    min-height: 0;
-    transition: grid-template-rows var(--duration-state) var(--ease-trace);
-  }
-
-  .preview-sidebar-inner {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-body {
-    grid-template-rows: 0fr;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .preview-sidebar-body {
-      transition: none;
-    }
-  }
-
-  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-close {
-    display: none;
-  }
-
-  :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-open {
-    display: inline-block;
-  }
-
-  .preview-sidebar-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--color-border);
-    color: var(--text-muted);
-    transition: border-color var(--duration-feedback) var(--ease-trace);
-  }
-
-  .preview-sidebar-search:focus-within {
-    border-bottom-color: var(--color-secondary);
-    color: var(--color-interaction-text);
-  }
-
-  .preview-sidebar-search svg {
+  .sidebar-filter-close svg {
     width: 14px;
     height: 14px;
-    flex: 0 0 auto;
   }
 
   .preview-sidebar-input {
@@ -328,7 +351,7 @@ const FILTERS = [
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 10px;
   }
 
   .preview-sidebar-select {
@@ -388,6 +411,8 @@ const FILTERS = [
   }
 
   .preview-sidebar-list {
+    flex: 1;
+    min-height: 0;
     margin-top: 6px;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -483,30 +508,6 @@ const FILTERS = [
     display: none;
   }
 
-  @media (min-width: 1280px) {
-    .preview-sidebar {
-      position: sticky;
-      top: 24px;
-      max-height: calc(100vh - 48px);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .preview-sidebar-body {
-      flex: 1;
-      min-height: 0;
-    }
-
-    /* flex-grow が残ると、行を 0fr にしても高さが埋まってしまう */
-    :global(:root[data-preview-sidebar="collapsed"]) .preview-sidebar-body {
-      flex: 0 0 auto;
-    }
-
-    .preview-sidebar-list {
-      flex: 1;
-      min-height: 0;
-    }
-  }
 </style>
 
 <script>

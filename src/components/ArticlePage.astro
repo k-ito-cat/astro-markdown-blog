@@ -1,0 +1,268 @@
+---
+import { getCollection, render } from "astro:content";
+import type { CollectionEntry } from "astro:content";
+import Article from "~/components/Article.astro";
+import Navigation from "~/components/Navigation.astro";
+import RecordRelations from "~/components/RecordRelations.astro";
+import { Icon } from "astro-icon/components";
+import { PUBLISHED_STATUS } from "~/constants/publishedStatus";
+import { getPostRelations } from "~/utils/postRelations";
+
+/*
+ * 公開する記事ページの本体。プレビューの画面幅確認（/preview/frame）も
+ * これを読むので、本番と同じものを見ていることが構成上わかるようにする。
+ */
+type Props = {
+  post: CollectionEntry<"posts">;
+  /*
+   * 下書きは本番では猫のままだが、公開後の見え方を確かめたいことがある。
+   * 開けるのは dev 限定の /preview/frame だけで、公開ページは常に既定のまま
+   */
+  showsDraftBody?: boolean;
+};
+
+const { post, showsDraftBody = false } = Astro.props;
+const { Content, headings } = await render(post);
+const isDraft = post.data.status === PUBLISHED_STATUS.DRAFT;
+// 本文を出す下書きは、公開済みと同じ組み立てで見せないとモックにならない
+const asPublished = !isDraft || showsDraftBody;
+const { groups, older, newer } = getPostRelations(
+  post,
+  await getCollection("posts"),
+);
+---
+
+  <main id="main-content" class="article-main">
+    <div
+      class:list={[
+        "article-grid",
+        { "has-trace": asPublished && headings.length > 0 },
+      ]}
+    >
+      <Article
+        title={post.data.title}
+        publishedAt={post.data.publishedAt}
+        updatedAt={post.data.updatedAt}
+        categories={post.data.categories}
+        tags={post.data.tags}
+        githubUrl={post.data.githubUrl}
+        content={Content}
+        headings={headings}
+        status={post.data.status}
+        revisions={post.data.revisions}
+        forceRenderContent={showsDraftBody}
+        returnHref="/blog"
+        returnLabel="一覧へ戻る"
+        returnSourcePaths={["/", "/blog"]}
+        copyPath={Astro.url.pathname}
+      />
+      {
+        asPublished && (
+          <Navigation
+            headings={headings}
+            title={post.data.title}
+            returnHref="/blog"
+            returnLabel="一覧へ戻る"
+            returnSourcePaths={["/", "/blog"]}
+            copyPath={Astro.url.pathname}
+          />
+        )
+      }
+    </div>
+
+    {
+      asPublished && (
+        <RecordRelations
+          groups={groups}
+          currentTitle={post.data.title}
+          older={older}
+          newer={newer}
+        />
+      )
+    }
+
+    {
+      /*
+       * 読み終えた合図として、ページの末尾に来たときだけ下から出す。
+       * 本文の途中では出さないので、脚注を行き来しても顔を出さない
+       */
+    }
+    {
+      asPublished && (
+        <>
+          <a class="reading-return" href="/blog" data-reading-return-dock>
+            <Icon name="octicon:arrow-left-16" aria-hidden="true" />
+            <span>一覧へ戻る</span>
+          </a>
+        </>
+      )
+    }
+  </main>
+<style>
+  /*
+   * 読み終えた合図。ページの末尾に来たときだけ、画面の下から現れる。
+   * Desktopは欄外のtraceが戻り口を持つので、狭い画面にだけ出す
+   */
+  .reading-return {
+    position: fixed;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: max(16px, env(safe-area-inset-left));
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    color: var(--color-primary);
+    font-family: var(--font-machine);
+    font-size: 12px;
+    text-decoration: none;
+
+    /* 出るのも戻るのも画面の下。出た辺と動きの向きを合わせる */
+    transform: translateY(calc(100% + 24px));
+    transition:
+      transform var(--duration-state) var(--ease-trace),
+      visibility var(--duration-state);
+    visibility: hidden;
+  }
+
+  /*
+   * hidden 属性で隠すと UA の display: none と競合し、滑り出す前の位置を
+   * 持てない。見せる・隠すは class で切り替える
+   */
+  .reading-return.is-visible {
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  /* 出るのは合図なので見せる。引っ込むのは用済みなので短く切り上げる */
+  .reading-return:not(.is-visible) {
+    transition-duration: var(--duration-feedback);
+  }
+
+  .reading-return :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .reading-return:hover,
+  .reading-return:focus-visible {
+    color: var(--color-interaction-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /*
+   * 960px から左端に edge navigation（48px）が立つ。その幅ぶん逃がして
+   * menu の裏へ入らないようにする。Desktopは欄外のtraceが戻り口を持つので出さない
+   */
+  @media (min-width: 960px) {
+    .reading-return {
+      left: calc(48px + max(16px, env(safe-area-inset-left)));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .reading-return {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reading-return {
+      transition: none;
+    }
+  }
+
+  .article-main {
+    width: 100%;
+    max-width: var(--max-width-content);
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .article-grid {
+    display: grid;
+    gap: 36px;
+  }
+
+  @media (min-width: 640px) {
+    .article-main {
+      padding: 36px 24px 96px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .article-main {
+      --trace-column: 220px;
+      --trace-gap: 48px;
+    }
+
+    .article-grid.has-trace {
+      grid-template-columns: minmax(0, 1fr) var(--trace-column);
+      gap: var(--trace-gap);
+    }
+
+    /*
+     * 関係は grid の外にあるので、放っておくと目次の幅を勘定に入れずに
+     * main の中央へ置かれ、本文より右へずれる。本文の列と同じ幅へ詰める
+     */
+    .article-grid.has-trace ~ :global(.record-relations) {
+      max-width: calc(100% - var(--trace-column) - var(--trace-gap));
+      margin-inline-start: 0;
+      margin-inline-end: auto;
+    }
+  }
+</style>
+
+<script>
+  import { onPageLoad, onPageEvent } from "~/scripts/pageLifecycle";
+
+  /*
+   * 読み終えた合図。下端へ着いたら出し、上へ戻り始めたら引っ込める。
+   *
+   * 残り距離だけで引っ込めると、戻る途中ずっと居座って関連記事に被る。
+   * 読み進める向きに動いている間だけ出していればよいので、引っ込める側は
+   * 距離ではなく向きで決める。
+   */
+  // 下端までの残りがこれ以内まで来たら出す
+  const SHOW_WITHIN = 120;
+  // 端の跳ね返りや指の揺れで引っ込めない。ここまでは戻っても消さない
+  const UP_TOLERANCE = 4;
+
+  onPageLoad(() => {
+    const dock = document.querySelector<HTMLElement>(
+      "[data-reading-return-dock]",
+    );
+    if (!dock) return;
+
+    const doc = document.scrollingElement ?? document.documentElement;
+    /*
+     * 直前の位置と比べると、ゆっくり戻したとき 1 回ぶんの差が遊びに届かず
+     * いつまでも消えない。いちばん下まで行った位置を覚えておき、そこから
+     * どれだけ戻ったかで判断する
+     */
+    let deepestY = doc.scrollTop;
+
+    const update = () => {
+      const y = doc.scrollTop;
+      const remaining = doc.scrollHeight - doc.clientHeight - y;
+
+      if (y >= deepestY) {
+        deepestY = y;
+        if (remaining <= SHOW_WITHIN) dock.classList.add("is-visible");
+        return;
+      }
+
+      if (deepestY - y <= UP_TOLERANCE) return;
+
+      dock.classList.remove("is-visible");
+      // 戻りきった位置を新しい基準にする。ここから下へ進めばまた出す
+      deepestY = y;
+    };
+
+    onPageEvent(window, "scroll", update, { passive: true });
+    // 画像の読み込みやソフトキーボードで下端の位置は変わる
+    onPageEvent(window, "resize", update);
+    update();
+  });
+</script>

@@ -4,11 +4,12 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 import Article from "~/components/Article.astro";
 import Navigation from "~/components/Navigation.astro";
 import { Icon } from "astro-icon/components";
-import CopyLinkButton from "~/components/CopyLinkButton.astro";
 import RecordRelations from "~/components/RecordRelations.astro";
 import { getPostRelations } from "~/utils/postRelations";
 import PreviewBodyEditor from "~/components/preview/PreviewBodyEditor.astro";
+import PreviewDeleteDialog from "~/components/preview/PreviewDeleteDialog.astro";
 import PreviewFrontmatterEditor from "~/components/preview/PreviewFrontmatterEditor.astro";
+import PreviewViewportDialog from "~/components/preview/PreviewViewportDialog.astro";
 import PreviewPostsIndex from "~/components/preview/PreviewPostsIndex.astro";
 import PreviewSidebar from "~/components/preview/PreviewSidebar.astro";
 import {
@@ -61,10 +62,6 @@ const headings = stripMemoHeadings(rendered?.headings ?? []);
 
 const posts = await getCollection("posts");
 
-// 本番ページは非公開記事を生成しないため、導線もそのときだけ出す
-const publicPath = post ? `/blog/${normalizePostSlug(post.id)}` : "";
-const hasPublicPage = post?.data.status !== PUBLISHED_STATUS.PRIVATE;
-
 const relations = post ? getPostRelations(post, posts) : null;
 // 本番の記事ページは下書きのとき関係を出さない
 const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
@@ -74,40 +71,7 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   {
     post && Content ? (
       <div class="preview-layout">
-        <PreviewSidebar posts={posts} currentId={post.id} />
         <main id="main-content" class="preview-detail">
-          <div class="preview-toolbar-nav">
-            <a
-              href="/preview/posts"
-              data-reading-return
-              data-return-paths='["/preview/posts"]'
-            >
-              一覧へ戻る
-            </a>
-            <CopyLinkButton
-              path={Astro.url.pathname}
-              label="リンクをコピー"
-              class="preview-toolbar-copy"
-            />
-            {hasPublicPage ? (
-              <a class="preview-toolbar-public" href={publicPath}>
-                本番ページ
-              </a>
-            ) : (
-              <span class="preview-toolbar-public preview-toolbar-note">
-                本番ページなし
-              </span>
-            )}
-            <button
-              type="button"
-              class="preview-toolbar-delete"
-              data-delete-post={normalizePostSlug(post.id)}
-              data-post-title={post.data.title}
-            >
-              削除
-            </button>
-          </div>
-
           <p
             class="preview-toolbar-state preview-toolbar-state-mobile"
             data-publication={post.data.status}
@@ -131,6 +95,24 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
               <span>{WRITING_STATUS_LABELS[post.data.writingStatus]}</span>
               <span>優先度 {POST_PRIORITY_LABELS[post.data.priority]}</span>
             </p>
+
+            <PreviewSidebar slot="tools" posts={posts} currentId={post.id} />
+
+            <PreviewViewportDialog
+              slot="tools"
+              slug={normalizePostSlug(post.id)}
+              isDraft={post.data.status === PUBLISHED_STATUS.DRAFT}
+            />
+
+            <button
+              slot="tools-end"
+              type="button"
+              class="preview-toolbar-delete"
+              data-delete-post={normalizePostSlug(post.id)}
+              data-post-title={post.data.title}
+            >
+              削除
+            </button>
 
             <PreviewFrontmatterEditor
               slot="tools"
@@ -157,7 +139,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
               status={post.data.status}
               revisions={post.data.revisions}
               forceRenderContent
-              showGithubCard={false}
             />
             {headings.length > 0 && (
               <Navigation
@@ -193,6 +174,9 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
       <PreviewPostsIndex posts={posts} />
     )
   }
+
+  {/* 一覧からも記事からも同じ確認面を開く */}
+  <PreviewDeleteDialog />
 </BaseLayout>
 
 <!-- JS が作る要素には scoped style が当たらないため、共通のチップはここで当てる -->
@@ -307,44 +291,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     font-size: var(--text-sm);
   }
 
-  /* ページの操作。編集の道具とは役割が違うので、追従させず右上へ置く */
-  .preview-toolbar-nav {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-
-  .preview-toolbar-public {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .preview-toolbar-public svg {
-    width: 0.85em;
-    height: 0.85em;
-  }
-
-  .preview-toolbar-delete {
-    min-height: 24px;
-    padding: 0 8px;
-    border: 0;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-
-  .preview-toolbar-delete:hover,
-  .preview-toolbar-delete:focus-visible {
-    color: var(--danger);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
   /*
    * 編集の判断材料になる状態は、frontmatter を開かなくても読めるようにする。
    * 公開ステータスだけ色を持たせ、残りは本文より前に出ないよう控えめに置く。
@@ -382,23 +328,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     display: none;
   }
 
-  .preview-toolbar-note {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-  }
-
-  .preview-toolbar-nav a {
-    color: var(--color-text-sub);
-    font-size: var(--text-sm);
-    text-decoration: none;
-  }
-
-  .preview-toolbar-nav a:hover,
-  .preview-toolbar-nav a:focus-visible {
-    color: var(--color-interaction-text);
-    text-decoration: underline;
-  }
-
   /*
    * Article と Prose は自分で margin-inline: auto して中央に寄る。
    * 列の幅を本文の測度に合わせれば余白が生まれず、サイドバー側の端に揃う。
@@ -433,7 +362,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
 
   @media (max-width: 1023px) {
     /* 指で触る操作子なので、なぞりや長押しで選択が割り込まないようにする */
-    .preview-toolbar-nav,
     .preview-toolbar-state {
       -webkit-touch-callout: none;
       user-select: none;
@@ -441,22 +369,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   }
 
   @media (max-width: 639px) {
-    .preview-toolbar-nav {
-      justify-content: flex-start;
-      gap: 8px 14px;
-    }
-
-    .preview-toolbar-nav > :first-child {
-      margin-right: auto;
-    }
-
-    .preview-toolbar-nav :is(a, button),
-    :global(.preview-toolbar-copy) {
-      display: inline-flex;
-      align-items: center;
-      min-height: 44px;
-    }
-
     .preview-toolbar-state-mobile {
       display: flex;
       margin-bottom: 8px;
@@ -470,18 +382,11 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
   /* 記事の横に一覧を出し、別の記事へすぐ移れるようにする。
      本文が痩せないよう、二段組みは十分な幅があるときだけにする */
   @media (min-width: 1280px) {
-    .preview-layout {
-      display: grid;
-      grid-template-columns: 320px minmax(0, 1fr);
-      gap: 72px;
-      max-width: calc(var(--max-width-content) + 320px + 72px);
-      align-items: start;
-    }
   }
 
   @media (min-width: 1024px) {
     .preview-detail {
-      --trace-column: 180px;
+      --trace-column: 220px;
       --trace-gap: 48px;
     }
 

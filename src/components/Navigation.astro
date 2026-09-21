@@ -14,7 +14,6 @@ type Props = {
   returnLabel?: string;
   returnSourcePaths?: string[];
   copyPath: string;
-  previewHref?: string;
 };
 
 const {
@@ -24,7 +23,6 @@ const {
   returnLabel = "一覧へ戻る",
   returnSourcePaths = ["/", "/blog"],
   copyPath,
-  previewHref,
 } = Astro.props;
 const returnPaths = JSON.stringify(returnSourcePaths);
 const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(Astro.url.href)}`;
@@ -128,12 +126,6 @@ const firstSection = sections[0];
           <Icon name="x-logo" aria-hidden="true" />
           <span>Xで共有</span>
         </a>
-        {previewHref && (
-          <a href={previewHref}>
-            <Icon name="octicon:eye-16" aria-hidden="true" />
-            <span>プレビュー</span>
-          </a>
-        )}
       </div>
     </aside>
   )
@@ -146,12 +138,23 @@ const firstSection = sections[0];
 
   @media (min-width: 1024px) {
     .current-trace {
+      --trace-offset: 32px;
+
       position: sticky;
-      top: 32px;
+      top: var(--trace-offset);
       display: grid;
       grid-template-rows: auto auto minmax(0, 1fr) auto;
       align-self: start;
-      max-height: calc(100vh - 64px);
+      max-height: calc(100vh - var(--trace-offset) - 32px);
+    }
+
+    /*
+     * プレビューには記事の上に追従する編集バーがあり、欄外の列にも被さる。
+     * 目次（Article 側）と同じく、吸着の基準にバーの実高を足して下へ逃がす。
+     * 変数を配るのはプレビューのスクリプトだけなので、本番は 32px のまま
+     */
+    :global(.preview-detail) .current-trace {
+      --trace-offset: calc(32px + var(--preview-editor-bar-height, 0px));
     }
 
     /* 現在位置の見出しと入口が地続きに見えないよう、間を空ける */

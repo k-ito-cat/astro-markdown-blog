@@ -337,18 +337,61 @@ const initializeCreate = (dialog: HTMLDialogElement) => {
   });
 };
 
-const initializeDelete = (button: HTMLButtonElement) => {
-  const slug = button.dataset.deletePost;
-  const title = button.dataset.postTitle ?? slug;
-  if (!slug) throw new Error("Slug not found");
+// 面はページに一つ。トリガーはここ越しに開く
+let deleteDialog: { open: (slug: string, title: string) => void } | null = null;
 
+/**
+ * 不可逆な削除の確認面。design/hig.md の `button.destructive` に従い、
+ * 実行までを一箇所へ集める。面はページに一つで、押されたトリガーが対象を渡す。
+ */
+const initializeDeleteDialog = (dialog: HTMLDialogElement) => {
+  const target = dialog.querySelector("[data-delete-target]");
+  const status = dialog.querySelector("[data-delete-status]");
+  const cancel = dialog.querySelector("[data-delete-cancel]");
+  const run = dialog.querySelector("[data-delete-run]");
+  if (!(target instanceof HTMLElement)) throw new Error("Target not found");
+  if (!(status instanceof HTMLElement)) throw new Error("Status not found");
+  if (!(cancel instanceof HTMLButtonElement))
+    throw new Error("Cancel button not found");
+  if (!(run instanceof HTMLButtonElement))
+    throw new Error("Run button not found");
+
+  let current: { slug: string; title: string } | null = null;
   let busy = false;
 
-  button.addEventListener("click", async () => {
-    if (busy) return;
-    if (!window.confirm(`「${title}」の md ファイルを削除します。`)) return;
+  const setBusy = (value: boolean) => {
+    busy = value;
+    run.disabled = value;
+    cancel.disabled = value;
+    // 通信中であることを見た目に出す。押した後の無反応を作らない
+    run.textContent = value ? "削除中…" : "削除";
+  };
 
-    busy = true;
+  const close = () => {
+    if (busy) return;
+
+    current = null;
+    dialog.close();
+  };
+
+  cancel.addEventListener("click", close);
+
+  // 面の外を押したら閉じる。Escape は dialog の既定に任せる
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) close();
+  });
+
+  // 通信中に Escape で閉じられると、結果を伝える先が無くなる
+  dialog.addEventListener("cancel", (event) => {
+    if (busy) event.preventDefault();
+  });
+
+  run.addEventListener("click", async () => {
+    if (busy || !current) return;
+
+    const { slug } = current;
+    status.textContent = "";
+    setBusy(true);
     try {
       const result = await request({ action: "delete", slug });
       const references =
@@ -365,9 +408,39 @@ const initializeDelete = (button: HTMLButtonElement) => {
       if (location.pathname === "/preview/posts") location.reload();
       else location.href = "/preview/posts";
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : String(error));
-      busy = false;
+      setBusy(false);
+      status.textContent =
+        error instanceof Error ? error.message : String(error);
     }
+  });
+
+  deleteDialog = {
+    open: (slug: string, title: string) => {
+      if (busy) return;
+
+      current = { slug, title };
+      target.textContent = title;
+      status.textContent = "";
+      setBusy(false);
+      dialog.showModal();
+      // 既定のフォーカスは取りやめ側。実行は明示的に選ばせる
+      cancel.focus();
+    },
+  };
+};
+
+const initializeDelete = (button: HTMLButtonElement) => {
+  const slug = button.dataset.deletePost;
+  const title = button.dataset.postTitle ?? slug ?? "";
+  if (!slug) throw new Error("Slug not found");
+
+  button.addEventListener("click", () => {
+    if (!deleteDialog) {
+      console.error("[preview] 削除の確認面が見つかりません");
+      return;
+    }
+
+    deleteDialog.open(slug, title);
   });
 };
 
@@ -391,5 +464,8 @@ const initEach = <T extends HTMLElement>(
 export const initPreviewPostManager = () => {
   initEach<HTMLDialogElement>("[data-create-dialog]", initializeCreate);
   initTagDelete(document);
+  // トリガーより先に面を用意する。押された時点で開ける状態にしておく
+  deleteDialog = null;
+  initEach<HTMLDialogElement>("[data-delete-dialog]", initializeDeleteDialog);
   initEach<HTMLButtonElement>("[data-delete-post]", initializeDelete);
 };

@@ -336,9 +336,6 @@ const SNIPPET_GROUPS = [
       >
         <span>保存</span>
         <span class="body-editor-save-count" data-save-count hidden></span>
-        <span class="body-editor-save-shortcut" aria-hidden="true">
-          <kbd>⌘ S</kbd><span>/</span><kbd>Ctrl S</kbd>
-        </span>
       </button>
       <button
         type="button"
@@ -348,6 +345,7 @@ const SNIPPET_GROUPS = [
         hidden>差分</button
       >
       <button type="button" data-discard disabled>破棄</button>
+      <slot name="tools-end" />
       <details class="body-editor-more" data-body-editor-more>
         <summary>
           <Icon name="octicon:kebab-horizontal-16" aria-hidden="true" />
@@ -468,7 +466,7 @@ const SNIPPET_GROUPS = [
   }
 
   .body-editor-status[data-tone="error"] {
-    color: var(--danger);
+    color: var(--danger-text);
   }
 
   .body-editor-count {
@@ -512,24 +510,6 @@ const SNIPPET_GROUPS = [
     gap: 8px;
   }
 
-  .body-editor-save-shortcut {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 400;
-  }
-
-  .body-editor-save-shortcut kbd {
-    padding: 2px 4px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--bg-subtle);
-    line-height: 1;
-    white-space: nowrap;
-  }
-
   .body-editor-save-count,
   .body-editor-more {
     display: none;
@@ -553,7 +533,10 @@ const SNIPPET_GROUPS = [
 
   .body-editor-help > summary,
   .body-editor-guide > summary,
-  .body-editor-more > summary {
+  .body-editor-more > summary,
+  .body-editor-tools :global(.preview-sidebar-filter-open),
+  .body-editor-tools :global(.viewport-open),
+  .body-editor-tools :global(.preview-toolbar-delete) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -562,10 +545,38 @@ const SNIPPET_GROUPS = [
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-label);
     color: var(--text-secondary);
+    font-family: inherit;
     font-size: var(--text-sm);
     line-height: 1;
     list-style: none;
     cursor: pointer;
+  }
+
+  /*
+   * 不可逆な削除のトリガー。design/hig.md `button.destructive` に従い、
+   * 面は透明のまま文字と枠だけを danger にする。塗りつぶしは確認面が持つ。
+   * 保存と地続きに見えないよう、隣との間も広げる
+   */
+  .body-editor-tools :global(.preview-toolbar-delete) {
+    margin-inline-start: 8px;
+    color: var(--danger);
+    border-color: var(--danger-border);
+  }
+
+  .body-editor-tools :global(.preview-toolbar-delete):hover,
+  .body-editor-tools :global(.preview-toolbar-delete):focus-visible {
+    background: var(--danger-tint);
+    color: var(--danger);
+  }
+
+  /* 押している最中だけ面を濃くする。色は変えない */
+  .body-editor-tools :global(.preview-toolbar-delete):active {
+    background: color-mix(in srgb, var(--danger) 22%, var(--color-background));
+  }
+
+  .body-editor-tools :global(.preview-toolbar-delete):disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .body-editor-help > summary::-webkit-details-marker,
@@ -579,7 +590,11 @@ const SNIPPET_GROUPS = [
   .body-editor-guide > summary:hover,
   .body-editor-guide > summary:focus-visible,
   .body-editor-more > summary:hover,
-  .body-editor-more > summary:focus-visible {
+  .body-editor-more > summary:focus-visible,
+  .body-editor-tools :global(.preview-sidebar-filter-open):hover,
+  .body-editor-tools :global(.preview-sidebar-filter-open):focus-visible,
+  .body-editor-tools :global(.viewport-open):hover,
+  .body-editor-tools :global(.viewport-open):focus-visible {
     background: var(--bg-subtle);
     color: var(--text-primary);
   }
@@ -593,7 +608,9 @@ const SNIPPET_GROUPS = [
 
   .body-editor-help svg,
   .body-editor-guide svg,
-  .body-editor-more svg {
+  .body-editor-more svg,
+  .body-editor-tools :global(.preview-sidebar-filter-open) svg,
+  .body-editor-tools :global(.viewport-open) svg {
     width: 14px;
     height: 14px;
     flex: 0 0 auto;
@@ -640,8 +657,9 @@ const SNIPPET_GROUPS = [
     display: none;
   }
 
+  /* 破棄はやり直せるので、危険の色を使わない（hig.md button.destructive） */
   .body-editor-more-menu button[data-discard-mobile] {
-    color: var(--danger);
+    color: var(--text-secondary);
   }
 
   @media (max-width: 959px) {
@@ -737,7 +755,6 @@ const SNIPPET_GROUPS = [
     }
 
     .body-editor-count,
-    .body-editor-save-shortcut,
     .body-editor-help > summary,
     .body-editor-guide > summary,
     .body-editor-tools > [data-diff],

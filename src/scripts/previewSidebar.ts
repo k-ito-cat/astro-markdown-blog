@@ -2,8 +2,6 @@ import { normalizeSearchText } from "~/utils/search";
 
 const QUERY_KEY = "preview-sidebar:query";
 const FILTER_KEY = "preview-sidebar:filters";
-const COLLAPSED_KEY = "preview-sidebar:collapsed";
-const COLLAPSED_ATTRIBUTE = "data-preview-sidebar";
 
 const readStorage = (key: string) => {
   try {
@@ -20,18 +18,6 @@ const writeStorage = (key: string, value: string) => {
   } catch {
     /* 状態が引き継がれないだけなので続行する */
   }
-};
-
-const isCollapsed = () =>
-  document.documentElement.getAttribute(COLLAPSED_ATTRIBUTE) === "collapsed";
-
-const setCollapsed = (collapsed: boolean) => {
-  if (collapsed) {
-    document.documentElement.dataset.previewSidebar = "collapsed";
-  } else {
-    delete document.documentElement.dataset.previewSidebar;
-  }
-  writeStorage(COLLAPSED_KEY, collapsed ? "1" : "");
 };
 
 const readFilters = (): Record<string, string> => {
@@ -64,14 +50,26 @@ const initializeSidebar = (host: HTMLElement) => {
   const input = requireElement(host, "[data-sidebar-search]", HTMLInputElement);
   const empty = requireElement(host, "[data-sidebar-empty]", HTMLElement);
   const list = requireElement(host, ".preview-sidebar-list", HTMLElement);
-  const toggle = requireElement(
+  const count = requireElement(host, "[data-sidebar-count]", HTMLElement);
+  const dialog = requireElement(
     host,
-    "[data-sidebar-toggle]",
+    "[data-sidebar-filter-dialog]",
+    HTMLDialogElement,
+  );
+  const filterOpen = requireElement(
+    host,
+    "[data-sidebar-filter-open]",
     HTMLButtonElement,
   );
-  const body = requireElement(host, "#preview-sidebar-body", HTMLElement);
-  const count = requireElement(host, "[data-sidebar-count]", HTMLElement);
-  const clear = requireElement(host, "[data-sidebar-clear]", HTMLButtonElement);
+  const filterClose = requireElement(
+    host,
+    "[data-sidebar-filter-close]",
+    HTMLButtonElement,
+  );
+  // 解除はバーとダイアログの両方に置く。どちらから押しても同じ
+  const clears = Array.from(
+    host.querySelectorAll<HTMLButtonElement>("[data-sidebar-clear]"),
+  );
 
   const items = Array.from(
     host.querySelectorAll<HTMLElement>("[data-sidebar-item]"),
@@ -105,7 +103,10 @@ const initializeSidebar = (host: HTMLElement) => {
       select.toggleAttribute("data-active", select.value !== ""),
     );
     count.textContent = active ? `${visible}/${items.length}` : "";
-    clear.hidden = !active;
+    clears.forEach((button) => {
+      button.hidden = !active;
+    });
+    filterOpen.toggleAttribute("data-active", active);
     empty.hidden = visible > 0;
   };
 
@@ -117,16 +118,6 @@ const initializeSidebar = (host: HTMLElement) => {
       FILTER_KEY,
       entries.length === 0 ? "" : JSON.stringify(Object.fromEntries(entries)),
     );
-  };
-
-  const syncToggle = () => {
-    const collapsed = isCollapsed();
-    toggle.setAttribute("aria-expanded", String(!collapsed));
-    // 畳んでいる間は見えないので、キーボードの巡回からも外す
-    body.toggleAttribute("inert", collapsed);
-    const label = collapsed ? "記事一覧を開く" : "記事一覧を閉じる";
-    toggle.title = label;
-    toggle.setAttribute("aria-label", label);
   };
 
   // 現在の記事が一覧の外にあると見つけられないので、視界に入れる
@@ -153,23 +144,33 @@ const initializeSidebar = (host: HTMLElement) => {
     }),
   );
 
-  clear.addEventListener("click", () => {
-    input.value = "";
-    selects.forEach((select) => {
-      select.value = "";
-    });
-    apply();
-    writeStorage(QUERY_KEY, "");
-    persistFilters();
+  clears.forEach((button) =>
+    button.addEventListener("click", () => {
+      input.value = "";
+      selects.forEach((select) => {
+        select.value = "";
+      });
+      apply();
+      writeStorage(QUERY_KEY, "");
+      persistFilters();
+      focusCurrent();
+    }),
+  );
+
+  filterOpen.addEventListener("click", () => {
+    dialog.showModal();
+    // 開いた直後から打ち始められるようにする。前の語は選択して上書きしやすく
+    input.focus();
+    input.select();
+    // 一覧の中で今の記事がどこにいるかは、開いた時点で見えている必要がある
     focusCurrent();
   });
 
-  toggle.addEventListener("click", () => {
-    const collapsed = !isCollapsed();
-    setCollapsed(collapsed);
-    syncToggle();
-    // 開いた直後は現在位置が見えている必要がある
-    if (!collapsed) focusCurrent();
+  filterClose.addEventListener("click", () => dialog.close());
+
+  // 面の外を押したら閉じる。Escape は dialog の既定に任せる
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
   });
 
   // 記事を移動するたびに読み込み直すため、検索と絞り込みは引き継ぐ
@@ -180,9 +181,7 @@ const initializeSidebar = (host: HTMLElement) => {
   });
   input.value = readStorage(QUERY_KEY) ?? "";
 
-  syncToggle();
   apply();
-  focusCurrent();
 };
 
 export const initPreviewSidebar = () => {
