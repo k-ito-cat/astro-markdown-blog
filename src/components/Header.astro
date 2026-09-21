@@ -17,7 +17,6 @@ const articleSlug = isArticle ? path.slice("/blog/".length) : "";
 const previewSlug = /^\/preview\/posts\/[^/]/.test(path)
   ? path.slice("/preview/posts/".length)
   : "";
-const isPreviewArea = path === "/preview/posts" || previewSlug !== "";
 // 画面幅を見るための素の記事。iframe の中なので書き手の道具は出さない
 const isFrame = path.startsWith("/preview/frame");
 
@@ -47,12 +46,6 @@ const publicHref =
     ? `/blog/${previewSlug}`
     : "";
 
-// プレビューの中ではプレビューへ送らない。下段はいつでも「一覧へ」と読める場所にする
-const indexHref = isPreviewArea ? "/blog" : "/preview/posts";
-const indexLabel = isPreviewArea ? "記事一覧" : "プレビュー一覧";
-const indexIcon = isPreviewArea
-  ? "octicon:list-unordered-16"
-  : "octicon:eye-16";
 const navItems = [
   {
     href: "/",
@@ -73,6 +66,23 @@ const navItems = [
     current: false,
   },
 ];
+
+/*
+ * 左の常設ナビだけ、開発時はプレビュー一覧を足す。書き手の道具なので読者には出ない。
+ * 幅を確かめるだけの frame では、道具が混ざると確認の邪魔になるので出さない
+ */
+const edgeNavItems =
+  import.meta.env.DEV && !isFrame
+    ? [
+        ...navItems,
+        {
+          href: "/preview/posts",
+          label: "プレビュー一覧",
+          icon: "octicon:eye-16",
+          current: pathname.startsWith("/preview"),
+        },
+      ]
+    : navItems;
 ---
 
 <header class="site-header">
@@ -87,7 +97,7 @@ const navItems = [
     </a>
     <nav class="edge-nav" aria-label="サイト内ナビゲーション">
       {
-        navItems.map((item) => (
+        edgeNavItems.map((item) => (
           <a
             href={item.href}
             class="edge-link"
@@ -246,10 +256,11 @@ const navItems = [
 
 {
   /*
-   * プレビューへの入口。行き先でも読み方の設定でもない、書き手の道具なので
-   * ナビゲーションから出す。開発時しか出ないため、読者の画面には現れない
+   * 今いる記事の相手側（プレビュー / 本番）へ渡る入口。一覧への遷移は左の
+   * 常設ナビが持つので、ここは今の記事に紐づく行き先だけを置く。
+   * 開発時しか出ないため、読者の画面には現れない
    */
-  import.meta.env.DEV && !isFrame && (
+  import.meta.env.DEV && !isFrame && (previewHref || previewSlug) && (
     <div class="preview-dock">
       {previewHref && (
         <a
@@ -283,14 +294,6 @@ const navItems = [
             <Icon name="octicon:globe-16" aria-hidden="true" />
           </span>
         ))}
-      <a
-        class="preview-dock-link"
-        href={indexHref}
-        aria-label={indexLabel}
-        data-tip={indexLabel}
-      >
-        <Icon name={indexIcon} aria-hidden="true" />
-      </a>
     </div>
   )
 }
