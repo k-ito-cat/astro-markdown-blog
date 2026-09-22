@@ -333,6 +333,105 @@ const initPanes = (root: ParentNode) => {
   });
 };
 
+/**
+ * 記法ペインの地図。塊ごとの帯を、実際の高さの比で縦に並べる。
+ *
+ * 40 項目を縦に積んだ一覧なので、いま全体のどこを見ているかが分からなくなる。
+ * 中身を縮小しても文字は読めないため、塊の名前と占める長さだけを写す。
+ * 帯は押せるようにして、索引としても使えるようにする。
+ */
+/** 送り先の位置。offsetParent に頼らず、いまの見た目から測る */
+const offsetIn = (pane: HTMLElement, node: HTMLElement) =>
+  node.getBoundingClientRect().top -
+  pane.getBoundingClientRect().top +
+  pane.scrollTop;
+
+/**
+ * 塊への案内。記法は 8 つの塊に分かれていて縦に長いので、名前から直接送れるようにする。
+ *
+ * 道具の行に相乗りさせ、入りきらない幅では横へ送る。いま見ている塊は
+ * `design/hig.md` の nav.current に従い、色・太さ・Line の 3 つで示す。
+ */
+const initGroupNav = (pane: HTMLElement, toolbar: HTMLElement) => {
+  const groups = Array.from(pane.querySelectorAll<HTMLElement>(".help-group"));
+  if (groups.length === 0) return;
+
+  const nav = document.createElement("nav");
+  nav.className = "help-group-nav";
+  nav.setAttribute("aria-label", "記法の分類");
+
+  const items = groups.map((group) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "help-group-nav-item";
+    button.textContent = group.querySelector("h2")?.textContent?.trim() ?? "";
+    // 押しただけで編集が終わらないよう、フォーカスは編集欄に残す
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", () => {
+      pane.scrollTo({ top: offsetIn(pane, group) });
+    });
+    nav.append(button);
+    return { button, group };
+  });
+
+  toolbar.prepend(nav);
+
+  /** 送るたびに測り直さないよう、塊の位置は測った時点のものを持ち回る */
+  let offsets: number[] = [];
+
+  const measure = () => {
+    offsets = items.map(({ group }) => offsetIn(pane, group));
+  };
+
+  let shown = -1;
+
+  /** 案内が横へ溢れているとき、現在地を見える位置まで送る */
+  const reveal = (button: HTMLElement) => {
+    const left = button.offsetLeft;
+    const right = left + button.offsetWidth;
+    if (left < nav.scrollLeft) nav.scrollLeft = left;
+    else if (right > nav.scrollLeft + nav.clientWidth) {
+      nav.scrollLeft = right - nav.clientWidth;
+    }
+  };
+
+  const syncCurrent = () => {
+    // 吸着した見出しの下に来ている塊を、いま見ているものとする
+    const at = pane.scrollTop + toolbar.offsetHeight + 1;
+    let current = 0;
+    offsets.forEach((top, index) => {
+      if (top <= at) current = index;
+    });
+    // 末尾の塊は残りが画面より短く、頭が吸着線まで上がらない。底に着いたら最後とする
+    const atBottom =
+      pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 1;
+    if (atBottom) current = offsets.length - 1;
+    if (current === shown) return;
+
+    shown = current;
+    items.forEach(({ button }, index) => {
+      const isCurrent = index === current;
+      button.classList.toggle("is-current", isCurrent);
+      if (isCurrent) button.setAttribute("aria-current", "true");
+      else button.removeAttribute("aria-current");
+    });
+    reveal(items[current].button);
+  };
+
+  measure();
+  syncCurrent();
+  pane.addEventListener("scroll", syncCurrent);
+
+  // 表示例の開閉で中身の高さが変わる。位置を測り直す
+  const observer = new ResizeObserver(() => {
+    measure();
+    shown = -1;
+    syncCurrent();
+  });
+  groups.forEach((group) => observer.observe(group));
+  onPageCleanup(() => observer.disconnect());
+};
+
 /** 記法ヘルプのコピーと、右ペインの開閉をつなぐ */
 export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
   initPanes(root);
@@ -342,6 +441,10 @@ export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
 
   initSyntaxPreviews(help);
   initVariants(help);
+
+  const body = help.querySelector<HTMLElement>(".body-editor-help-body");
+  const toolbar = help.querySelector<HTMLElement>(".syntax-help-toolbar");
+  if (body && toolbar) initGroupNav(body, toolbar);
 
   help.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(

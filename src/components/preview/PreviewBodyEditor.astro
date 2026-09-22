@@ -893,13 +893,15 @@ const SNIPPET_GROUPS = [
     --syntax-help-toolbar-height: 43px;
   }
 
+  /* 左に塊への案内、右に表示例の切り替えを置く */
   .syntax-help-toolbar {
     position: sticky;
     top: 0;
     z-index: 3;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 12px;
     height: var(--syntax-help-toolbar-height);
     background: var(--bg-base);
     border-bottom: 1px solid var(--border);
@@ -907,8 +909,11 @@ const SNIPPET_GROUPS = [
 
   .body-editor .help-preview-toggle {
     display: inline-flex;
+    /* 案内が伸びても、切り替えは縮ませない */
+    flex: 0 0 auto;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
     height: 30px;
     padding: 0 10px;
     border-color: var(--border);
@@ -1268,6 +1273,7 @@ const SNIPPET_GROUPS = [
   }
 
   /* 本文のラベル付き罫線（メモ欄の見出し）と同じ「語 + Line」の形にする */
+  /* 塊の頭は見出しとして読ませる。本文の h3 と同じくらいの大きさにする */
   .help-group h2 {
     position: sticky;
     top: 0;
@@ -1278,24 +1284,16 @@ const SNIPPET_GROUPS = [
     margin: 0;
     padding: 10px 0 12px;
     background: var(--bg-base);
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
   }
 
   .body-editor-help-body .help-group h2 {
     top: var(--syntax-help-toolbar-height);
   }
 
-  .help-group h2::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* 見出しの文字は小さく、Line も細い。塊の切れ目は余白で示す */
+  /* 塊の切れ目は余白で示す。見出しに罫線は引かない */
   .help-group + .help-group {
     margin-top: 30px;
   }
@@ -1311,7 +1309,7 @@ const SNIPPET_GROUPS = [
     border-top: 1px solid var(--border);
   }
 
-  /* 見出しの Line と重なって二重に見えるため、先頭の項目は線を持たない */
+  /* 見出しのすぐ下に線が来ると窮屈なので、先頭の項目は線を持たない */
   .help-group li:first-child {
     border-top: 0;
   }
@@ -1475,6 +1473,46 @@ const SNIPPET_GROUPS = [
 </style>
 
 <style is:global>
+  /*
+   * 塊への案内。JS で作るためグローバル側に置く。
+   * 面を持たない文字だけの行にし、入りきらない幅では横へ送る
+   */
+  .body-editor .help-group-nav {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .body-editor .help-group-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .body-editor .help-group-nav-item {
+    height: auto;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .body-editor .help-group-nav-item:hover {
+    color: var(--text-primary);
+  }
+
+  /* 現在地は色・太さ・Line の 3 つで示す（design/hig.md の nav.current） */
+  .body-editor .help-group-nav-item.is-current {
+    color: var(--color-primary);
+    font-weight: 700;
+    box-shadow: inset 0 -1px 0 0 var(--color-primary);
+  }
   /* 保存から再読み込み完了までの間、画面の揺れを覆い隠す */
   :root[data-preview-reloading]::after {
     content: "";
