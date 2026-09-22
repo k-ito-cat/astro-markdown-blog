@@ -10,6 +10,11 @@ const OPEN_DELAY_MS = 120;
 const CLOSE_DELAY_MS = 160;
 const GAP_PX = 8;
 const VIEWPORT_MARGIN_PX = 12;
+/*
+ * 語が画面の端へ寄ったら閉じる。端に着いてからでは、吹き出しだけが画面に残って
+ * どの語の説明か分からなくなる。置く余地が尽きる手前で引く
+ */
+const DISMISS_MARGIN_PX = 24;
 
 const supportsPopover = "popover" in HTMLElement.prototype;
 
@@ -39,6 +44,15 @@ const place = ({ root, bubble }: Term) => {
 
   bubble.style.top = `${fitsBelow || above < VIEWPORT_MARGIN_PX ? below : above}px`;
   bubble.style.left = `${Math.max(VIEWPORT_MARGIN_PX, Math.min(centered, rightLimit))}px`;
+};
+
+/** 語がまだ画面の中にあり、吹き出しを添える余地があるか */
+const anchorInView = ({ root }: Term) => {
+  const rect = root.getBoundingClientRect();
+  return (
+    rect.bottom > DISMISS_MARGIN_PX &&
+    rect.top < window.innerHeight - DISMISS_MARGIN_PX
+  );
 };
 
 const sync = (term: Term) => {
@@ -142,7 +156,13 @@ export const initGlossaryTerms = (
 
   const reposition = () => {
     terms.forEach((term) => {
-      if (isOpen(term.bubble)) place(term);
+      if (!isOpen(term.bubble)) return;
+      // 語が画面から出る手前で閉じる。追いかけて端に貼り付かせない
+      if (!anchorInView(term)) {
+        close(term);
+        return;
+      }
+      place(term);
     });
   };
 

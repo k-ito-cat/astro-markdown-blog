@@ -658,11 +658,9 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     font-size: var(--text-sm);
     line-height: 1.75;
     background: var(--bg-card);
+    /* 浮かせる影は使わず、紙の面と罫線だけで本文から切り離す */
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-card);
-    /* accent の短い線で、本文ではなく注釈だと分かるようにする。
-       浮かせる影は使わず、紙の面と罫線だけで本文から切り離す */
-    border-inline-start: 2px solid var(--color-accent);
   }
 
   .prose .glossary-term-bubble:is(:popover-open, [data-open]) {

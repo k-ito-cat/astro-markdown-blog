@@ -85,11 +85,11 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
 <article class="article">
   <header class="article-header">
-    <h1 class="article-title">{title}</h1>
-    <div class="article-record-line">
-      <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
+    <div class="article-kicker">
       <RecordType recordType={recordType} />
+      <Meta publishedAt={publishedAt} updatedAt={updatedAt} />
     </div>
+    <h1 class="article-title">{title}</h1>
     <Categories categories={categories} tags={tags} />
     {githubUrl && showGithubCard && <GithubCard url={githubUrl} />}
   </header>
@@ -241,15 +241,24 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
   }
 
   /*
-   * 記録日・最終改訂は左、型は行の右端。日付と型を同じ高さで読ませる。
-   * 型は日付の値と並ぶので、ラベル（11px）ではなく値と同じ大きさにする
+   * 型と記録日は題を読むより先に渡すので、タイトルの前へ 1 行で置く。
+   * 型を左、日付を右へ振り分ける。型は日付の値と並ぶので、ラベル（11px）では
+   * なく値と同じ大きさにする
    */
-  .article-record-line {
+  .article-kicker {
     --record-type-size: var(--text-sm);
     display: flex;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 16px;
+    gap: 8px 16px;
+  }
+
+  /* 型と高さを揃えるため、記事の頭だけラベルと値を横に置く */
+  .article-kicker :global(.record-meta div) {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .article-title {
