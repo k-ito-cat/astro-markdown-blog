@@ -11,6 +11,39 @@ const { entryId, body } = Astro.props;
 // `</script>` で JSON が閉じられないようにエスケープする
 const serializedBody = JSON.stringify(body).replace(/</g, "\\u003c");
 
+type SnippetVariant = { label: string; code: string };
+
+/**
+ * 表示例の一覧。追加指定が互いに排他のものは、雛形の該当箇所を差し替えて作る。
+ *
+ * 表示例のためだけの見本は持たない。雛形を書き換えれば表示例もそのまま追従し、
+ * 差し替える場所が無くなれば、切り替えを出さず 1 つだけ出す。
+ */
+const variantsOf = (item: {
+  code: string;
+  previewCode?: string;
+  options?: readonly { label: string; code: string }[];
+  variantPattern?: string;
+}): SnippetVariant[] => {
+  const base = item.previewCode ?? item.code;
+  if (!item.variantPattern || !item.options || item.options.length < 2) {
+    return [{ label: "既定", code: base }];
+  }
+
+  const pattern = new RegExp(item.variantPattern);
+  const matched = pattern.exec(base);
+  if (!matched) return [{ label: "既定", code: base }];
+
+  const replaced = item.options.map((option) => ({
+    label: option.label,
+    code: base.replace(pattern, option.code),
+  }));
+  // 雛形自体が追加指定のどれかなら、同じものを二度出さない
+  return item.options.some((option) => option.code === matched[0])
+    ? replaced
+    : [{ label: "既定", code: base }, ...replaced];
+};
+
 // 記法ヘルプ。雛形はそのまま貼って使えるものだけを載せる
 const SNIPPET_GROUPS = [
   {
@@ -22,6 +55,8 @@ const SNIPPET_GROUPS = [
       {
         label: "マーカー",
         code: "==マーカー==",
+        // 追加指定は互いに排他。表示例は先頭の記号を差し替えて作る
+        variantPattern: "^==",
         options: [
           { label: "緑", code: "=g=" },
           { label: "青", code: "=b=" },
@@ -158,17 +193,20 @@ const SNIPPET_GROUPS = [
       },
       {
         label: "語句のマーク",
-        code: '```ts "const" ins="足した語" del="消した語"\nconst a = 1;\n```',
+        // 指定した語が本文に無いと何も起きない。雛形の中に3つとも置いておく
+        code: '```ts "const" ins="足した語" del="消した語"\nconst a = "足した語";\nconst b = "消した語";\n```',
         options: [
           { label: "ハイライト", code: '"const"' },
           { label: "追加した語", code: 'ins="足した語"' },
           { label: "削除した語", code: 'del="消した語"' },
-          { label: "正規表現", code: "/正規表現/" },
+          { label: "正規表現", code: "/const [ab]/" },
         ],
       },
       {
         label: "枠の指定",
         code: '```sh frame="none"\necho "枠なし"\n```',
+        // 追加指定は互いに排他。表示例は frame の値を差し替えて作る
+        variantPattern: 'frame="[^"]*"',
         options: [
           { label: "枠なし", code: 'frame="none"' },
           { label: "コード", code: 'frame="code"' },
@@ -396,7 +434,29 @@ const SNIPPET_GROUPS = [
                   {group.items.map((item) => (
                     <li class="help-item">
                       <p class="help-label">{item.label}</p>
-                      <div class="help-code-wrap">
+                      <div
+                        class="help-switch"
+                        role="group"
+                        aria-label={`${item.label}の見せ方`}
+                      >
+                        <button
+                          type="button"
+                          class="help-switch-item"
+                          data-help-view="code"
+                          aria-pressed="true"
+                        >
+                          コード
+                        </button>
+                        <button
+                          type="button"
+                          class="help-switch-item"
+                          data-help-view="preview"
+                          aria-pressed="false"
+                        >
+                          表示例
+                        </button>
+                      </div>
+                      <div class="help-code-wrap" data-help-pane="code">
                         <pre class="help-code">{item.code}</pre>
                         <button
                           type="button"
@@ -412,6 +472,39 @@ const SNIPPET_GROUPS = [
                           />
                         </button>
                       </div>
+                      <figure
+                        class="help-preview"
+                        data-help-preview
+                        data-help-pane="preview"
+                        hidden
+                      >
+                        {variantsOf(item).length > 1 && (
+                          <div
+                            class="help-variants"
+                            role="group"
+                            aria-label={`${item.label}の表示例を切り替える`}
+                          >
+                            {variantsOf(item).map((variant, index) => (
+                              <button
+                                type="button"
+                                class="help-variant"
+                                data-variant-index={index}
+                                aria-pressed={index === 0 ? "true" : "false"}
+                              >
+                                {variant.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {variantsOf(item).map((variant, index) => (
+                          <div
+                            class="help-preview-content prose"
+                            data-syntax-preview
+                            data-preview-snippet={variant.code}
+                            hidden={index > 0}
+                          />
+                        ))}
+                      </figure>
                       {"options" in item && (
                         <div class="help-options">
                           <p class="help-options-label">追加指定</p>
@@ -442,16 +535,6 @@ const SNIPPET_GROUPS = [
                         </div>
                       )}
                       {"note" in item && <p class="help-note">{item.note}</p>}
-                      <figure class="help-preview" data-help-preview hidden>
-                        <figcaption>表示例</figcaption>
-                        <div
-                          class="help-preview-content prose"
-                          data-syntax-preview
-                          data-preview-snippet={
-                            "previewCode" in item ? item.previewCode : item.code
-                          }
-                        />
-                      </figure>
                     </li>
                   ))}
                 </ul>
@@ -835,6 +918,64 @@ const SNIPPET_GROUPS = [
   .body-editor .help-preview-toggle[aria-pressed="true"] {
     border-color: var(--color-primary);
     color: var(--color-primary);
+  }
+
+  /* 雛形と表示例の切り替え。面を持たない小さな文字の並びにする */
+  .body-editor .help-switch {
+    display: flex;
+    gap: 12px;
+    margin-block: 8px 6px;
+  }
+
+  .body-editor .help-switch-item {
+    height: auto;
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  .body-editor .help-switch-item:hover {
+    color: var(--text-primary);
+  }
+
+  .body-editor .help-switch-item[aria-pressed="true"] {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  /* 表示例の切り替え。面を持たない小さな文字の並びにする */
+  .body-editor .help-variants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .body-editor .help-variant {
+    height: auto;
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  .body-editor .help-variant:hover {
+    color: var(--text-primary);
+  }
+
+  .body-editor .help-variant[aria-pressed="true"] {
+    color: var(--color-primary);
+    font-weight: 700;
+    box-shadow: inset 0 -1px 0 0 var(--color-primary);
   }
 
   .help-preview-toggle-state {

@@ -39,6 +39,35 @@ const copy = async (button: HTMLElement) => {
   }
 };
 
+/** 排他の追加指定は、見た目が 1 つでは足りない。押した分へ差し替える */
+const initVariants = (help: HTMLElement) => {
+  help
+    .querySelectorAll<HTMLElement>("[data-help-preview]")
+    .forEach((figure) => {
+      const buttons = Array.from(
+        figure.querySelectorAll<HTMLButtonElement>("[data-variant-index]"),
+      );
+      if (buttons.length === 0) return;
+
+      const contents = Array.from(
+        figure.querySelectorAll<HTMLElement>("[data-syntax-preview]"),
+      );
+
+      buttons.forEach((button, at) => {
+        // 押しただけで編集が終わらないよう、フォーカスは編集欄に残す
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => {
+          buttons.forEach((other, index) => {
+            other.setAttribute("aria-pressed", String(index === at));
+          });
+          contents.forEach((content, index) => {
+            content.hidden = index !== at;
+          });
+        });
+      });
+    });
+};
+
 const initSyntaxPreviews = (help: HTMLElement) => {
   const button = help.querySelector<HTMLButtonElement>("[data-preview-toggle]");
   const previews = Array.from(
@@ -46,9 +75,6 @@ const initSyntaxPreviews = (help: HTMLElement) => {
   );
   if (!button || previews.length === 0) return;
 
-  const figures = previews
-    .map((preview) => preview.closest<HTMLElement>("[data-help-preview]"))
-    .filter((figure): figure is HTMLElement => figure !== null);
   const state = button.querySelector<HTMLElement>(".help-preview-toggle-state");
   let loaded = false;
   let loading: Promise<void> | null = null;
@@ -102,12 +128,51 @@ const initSyntaxPreviews = (help: HTMLElement) => {
     return loading;
   };
 
+  /** 雛形と表示例は同じ場所で入れ替える。切り替えの語と中身を合わせる */
+  const showView = (item: HTMLElement, view: "code" | "preview") => {
+    item.querySelectorAll<HTMLElement>("[data-help-pane]").forEach((pane) => {
+      pane.hidden = pane.dataset.helpPane !== view;
+    });
+    item
+      .querySelectorAll<HTMLElement>("[data-help-view]")
+      .forEach((switchItem) => {
+        switchItem.setAttribute(
+          "aria-pressed",
+          String(switchItem.dataset.helpView === view),
+        );
+      });
+    if (view === "preview") void load();
+  };
+
+  const items = Array.from(help.querySelectorAll<HTMLElement>(".help-item"));
+
+  help.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const switchItem = target.closest<HTMLElement>("[data-help-view]");
+    const item = switchItem?.closest<HTMLElement>(".help-item");
+    if (!switchItem || !item) return;
+
+    showView(
+      item,
+      switchItem.dataset.helpView === "preview" ? "preview" : "code",
+    );
+  });
+
+  // 押しただけで編集が終わらないよう、フォーカスは編集欄に残す
+  help.addEventListener("mousedown", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("[data-help-view]")) {
+      event.preventDefault();
+    }
+  });
+
+  /** 道具の行の切り替えは、すべての項目をまとめて動かす */
   const apply = (enabled: boolean, persist = true) => {
     button.setAttribute("aria-pressed", String(enabled));
     if (state) state.textContent = enabled ? "ON" : "OFF";
-    figures.forEach((figure) => {
-      figure.hidden = !enabled;
-    });
+    items.forEach((item) => showView(item, enabled ? "preview" : "code"));
     if (enabled) void load();
 
     if (!persist) return;
@@ -276,6 +341,7 @@ export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
   if (!help) return;
 
   initSyntaxPreviews(help);
+  initVariants(help);
 
   help.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
