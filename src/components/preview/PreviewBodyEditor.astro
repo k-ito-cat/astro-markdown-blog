@@ -847,6 +847,19 @@ const SNIPPET_GROUPS = [
   }
 
   /*
+   * 道具の切れ目を細い Line で示す。先頭の「記事」だけは左に置かない。
+   * 面を持たない並びなので、間隔だけでは語の切れ目が読み取りにくい
+   */
+  .body-editor-tools > button,
+  .body-editor-help > summary,
+  .body-editor-more > summary,
+  .body-editor-tools :global(.viewport-open),
+  .body-editor-tools :global(.fm-summary) {
+    border-inline-start: 1px solid var(--border);
+    padding-inline-start: 12px;
+  }
+
+  /*
    * ヘルプは「その他」から開く。ペイン本体は残して引き金だけ畳む。
    * 幅 0 の器が並びに残ると gap を 1 つ分余計に食うため、流れから外す。
    * display: contents だと details の閉じた状態が壊れるので位置指定で外す
