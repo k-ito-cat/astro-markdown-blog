@@ -20,7 +20,8 @@ const MARK_BLOCK = "is-footnote-marked-block";
 const BLOCK = "p, li, td, th";
 
 export const initFootnoteMark = (signal: AbortSignal) => {
-  const prose = document.querySelector<HTMLElement>(".prose");
+  // 記法ペインの表示例も .prose を名乗るため、記事の本文に限って拾う
+  const prose = document.querySelector<HTMLElement>(".article .prose");
   if (!prose) return;
 
   const clear = () => {

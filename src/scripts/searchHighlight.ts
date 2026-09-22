@@ -7,8 +7,13 @@
  */
 import { toMarkTerms } from "~/utils/search";
 
-/** 本文ではあるが読み上げや編集用で、読者が探す対象ではないもの */
-export const SKIP_SELECTOR = "script, style, .sr-only, .prose-memo-section";
+/**
+ * 本文ではあるが読み上げ用で、探す対象ではないもの。
+ *
+ * メモは外さない。公開前に書き手が消すもので、消し忘れはプレビューの警告が
+ * 受け持つ。書いている本人にとっては自分の覚書も探したい対象になる
+ */
+export const SKIP_SELECTOR = "script, style, .sr-only";
 
 export type Occurrence = {
   node: Text;

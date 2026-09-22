@@ -22,7 +22,12 @@ const SNIPPET_GROUPS = [
       {
         label: "マーカー",
         code: "==マーカー==",
-        note: "⌘⇧M / Ctrl+Shift+M。色は =g= 緑 / =b= 青 / =r= 赤 を先頭に付ける",
+        options: [
+          { label: "緑", code: "=g=" },
+          { label: "青", code: "=b=" },
+          { label: "赤", code: "=r=" },
+        ],
+        note: "⌘⇧M / Ctrl+Shift+M。色の指定は先頭に付ける",
       },
       { label: "マーカー（色）", code: "=g=緑のマーカー==" },
       { label: "インラインコード", code: "`code`" },
@@ -47,6 +52,11 @@ const SNIPPET_GROUPS = [
         note: "目次に載るのは h2 と h3",
       },
       { label: "箇条書き", code: "- 項目\n  - 入れ子" },
+      {
+        label: "ファイル構成",
+        code: "- src/\n  - components/\n    - Prose.astro\n  - index.ts",
+        note: "`/` で終わる項目をフォルダ、拡張子の付いた項目をファイルの icon で表す。`/` で終わる項目を 1 つ以上含むリストだけが対象なので、技術名を並べた箇条書きは中黒のまま。項目がパスだけのときに効き、説明を書き足した項目は中黒に戻る",
+      },
       { label: "番号付き", code: "1. 一つ目\n2. 二つ目" },
       {
         label: "チェックリスト",
@@ -82,7 +92,12 @@ const SNIPPET_GROUPS = [
       {
         label: "テーブル（上ヘッダ）",
         code: "| 項目 | 説明 | 数 |\n| --- | :---: | ---: |\n| left | center | right |\n| a | b | c |",
-        note: "--- が左寄せ、:---: が中央、---: が右寄せ。同じ観点の項目が 3 つ以上並ぶときに使う。2 つなら文のままでよい",
+        options: [
+          { label: "左寄せ", code: "---" },
+          { label: "中央寄せ", code: ":---:" },
+          { label: "右寄せ", code: "---:" },
+        ],
+        note: "同じ観点の項目が 3 つ以上並ぶときに使う。2 つなら文のままでよい",
       },
       {
         label: "テーブル（左ヘッダ）",
@@ -92,7 +107,17 @@ const SNIPPET_GROUPS = [
       {
         label: "トグル",
         code: "<details>\n<summary>クリックで開く</summary>\n\n中身は **Markdown** として書ける\n\n</details>",
-        note: "summary の次の空行が必須。<details open> で最初から開く。長いログや、読み飛ばしても本筋を追える補助情報に使う",
+        options: [{ label: "デフォルトで開く", code: "open" }],
+        note: "summary の次の空行が必須。長いログや、読み飛ばしても本筋を追える補助情報に使う",
+      },
+      {
+        label: "トグル（フォルダ）",
+        code: '<details data-icon="folder">\n<summary>src/</summary>\n\n- components/\n- index.ts\n\n</details>',
+        options: [
+          { label: "フォルダ表示", code: 'data-icon="folder"' },
+          { label: "デフォルトで開く", code: "open" },
+        ],
+        note: "三角がフォルダの icon になり、開くと開いたフォルダに変わる。ファイル構成をたたんで見せるときに使う。入れ子にする場合は、内側の details の前後も空行で挟む",
       },
     ],
   },
@@ -102,36 +127,54 @@ const SNIPPET_GROUPS = [
       {
         label: "コードブロック",
         code: "```ts\nconst a = 1;\n```",
+        options: [{ label: "言語", code: "ts" }],
         note: "⌘⇧` / Ctrl+Shift+` で選択範囲を囲める。地の文に混ざったコマンド、キー、設定値、ファイル名はインラインコードへ移す",
       },
       {
         label: "ファイル名タブ",
         code: '```ts title="src/example.ts"\nconst a = 1;\n```',
+        options: [{ label: "ファイル名", code: 'title="src/example.ts"' }],
         note: "1 行目のコメント（// src/example.ts）でもタブになる",
       },
       {
         label: "差分",
         code: '```diff lang="ts"\n-const a = 1;\n+const a = 2;\n```',
+        options: [{ label: "色付けする言語", code: 'lang="ts"' }],
         note: "lang を付けると差分のまま色も付く",
       },
       {
         label: "追加・削除した行",
         code: "```ts ins={2} del={3-4}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = 4;\n```",
+        options: [
+          { label: "追加した行", code: "ins={2}" },
+          { label: "削除した行", code: "del={3-4}" },
+        ],
         note: "行番号で指定する。{2,4} や {2-4} も使える",
       },
       {
         label: "行のハイライト",
         code: "```ts {2-3}\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```",
+        options: [{ label: "対象行", code: "{2-3}" }],
       },
       {
         label: "語句のマーク",
         code: '```ts "const" ins="足した語" del="消した語"\nconst a = 1;\n```',
-        note: "/正規表現/ でも指定できる",
+        options: [
+          { label: "ハイライト", code: '"const"' },
+          { label: "追加した語", code: 'ins="足した語"' },
+          { label: "削除した語", code: 'del="消した語"' },
+          { label: "正規表現", code: "/正規表現/" },
+        ],
       },
       {
         label: "枠の指定",
         code: '```sh frame="none"\necho "枠なし"\n```',
-        note: "frame は none / code / terminal / auto",
+        options: [
+          { label: "枠なし", code: 'frame="none"' },
+          { label: "コード", code: 'frame="code"' },
+          { label: "ターミナル", code: 'frame="terminal"' },
+          { label: "自動", code: 'frame="auto"' },
+        ],
       },
     ],
   },
@@ -147,11 +190,14 @@ const SNIPPET_GROUPS = [
       {
         label: "画像",
         code: "![画像の説明](../images/example.png)",
+        previewCode: "![画像の説明](/favicon.png)",
         note: "角括弧の中は alt。画面に出ず、読み上げと代替表示に使う。空のままにしない。編集欄へのドラッグ＆ドロップ／貼り付けでも入る",
       },
       {
         label: "画像（キャプション付き）",
         code: '![画像の説明](../images/example.png "キャプション")',
+        previewCode: '![画像の説明](/favicon.png "キャプション")',
+        options: [{ label: "キャプション", code: '"キャプション"' }],
         note: "引用符の中がキャプション。画像の下に出る。alt とは役割が違うので両方書く",
       },
     ],
@@ -186,6 +232,21 @@ const SNIPPET_GROUPS = [
       },
     ],
   },
+  {
+    title: "添削",
+    items: [
+      {
+        label: "REVIEW（一文への指摘）",
+        code: "> [!REVIEW]\n> 指摘の内容",
+        note: "原稿へ一時的に書き込む指摘。対象のブロックの直下へ置く。公開のビルドでは節ごと落ちるので、消し忘れても本番には出ない",
+      },
+      {
+        label: "OUTLINE（構成への指摘）",
+        code: "> [!OUTLINE]\n> 構成に対する指摘",
+        note: "一文ではなく記事全体の組み立てに対する指摘。REVIEW と同じく公開のビルドでは落ちる",
+      },
+    ],
+  },
 ] as const;
 ---
 
@@ -213,10 +274,20 @@ const SNIPPET_GROUPS = [
   <script type="application/json" data-post-body set:html={serializedBody} />
   <p class="body-editor-hint" data-hint></p>
   <div class="body-editor-bar">
-    <slot name="state" />
-    <div class="body-editor-tools">
+    <div class="body-editor-state">
+      <slot name="state" />
       <p class="body-editor-status" data-status aria-live="polite"></p>
       <span class="body-editor-count" data-count hidden></span>
+      <button
+        type="button"
+        data-diff
+        aria-pressed="true"
+        title="追加・変更・削除を色で示す"
+        hidden>差分</button
+      >
+      <button type="button" data-discard disabled>破棄</button>
+    </div>
+    <div class="body-editor-tools">
       <details class="body-editor-guide" data-preview-pane>
         <summary aria-label="ヘルプ">
           <Icon name="octicon:question-16" aria-hidden="true" />
@@ -287,12 +358,26 @@ const SNIPPET_GROUPS = [
           </section>
         </div>
       </details>
+      <slot name="tools" />
       <details class="body-editor-help" data-preview-pane>
         <summary aria-label="記法">
           <Icon name="octicon:book-16" aria-hidden="true" />
           <span>記法</span>
         </summary>
         <div class="body-editor-help-body">
+          <div class="syntax-help-toolbar">
+            <button
+              type="button"
+              class="help-preview-toggle"
+              data-preview-toggle
+              aria-pressed="false"
+            >
+              <span>表示例</span>
+              <span class="help-preview-toggle-state" aria-hidden="true"
+                >OFF</span
+              >
+            </button>
+          </div>
           {
             SNIPPET_GROUPS.map((group) => (
               <section class="help-group">
@@ -317,7 +402,46 @@ const SNIPPET_GROUPS = [
                           />
                         </button>
                       </div>
+                      {"options" in item && (
+                        <div class="help-options">
+                          <p class="help-options-label">追加指定</p>
+                          <ul>
+                            {item.options.map((option) => (
+                              <li>
+                                <span>{option.label}</span>
+                                <code>{option.code}</code>
+                                <button
+                                  type="button"
+                                  class="help-option-copy"
+                                  data-copy-snippet={option.code}
+                                  title={`${option.label}をコピー`}
+                                  aria-label={`${option.label}をコピー`}
+                                >
+                                  <Icon
+                                    name="octicon:copy-16"
+                                    class="help-copy-icon"
+                                  />
+                                  <Icon
+                                    name="octicon:check-16"
+                                    class="help-copy-done"
+                                  />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       {"note" in item && <p class="help-note">{item.note}</p>}
+                      <figure class="help-preview" data-help-preview hidden>
+                        <figcaption>表示例</figcaption>
+                        <div
+                          class="help-preview-content prose"
+                          data-syntax-preview
+                          data-preview-snippet={
+                            "previewCode" in item ? item.previewCode : item.code
+                          }
+                        />
+                      </figure>
                     </li>
                   ))}
                 </ul>
@@ -326,7 +450,7 @@ const SNIPPET_GROUPS = [
           }
         </div>
       </details>
-      <slot name="tools" />
+      <slot name="tools-end" />
       <button
         type="button"
         class="body-editor-save"
@@ -337,15 +461,6 @@ const SNIPPET_GROUPS = [
         <span>保存</span>
         <span class="body-editor-save-count" data-save-count hidden></span>
       </button>
-      <button
-        type="button"
-        data-diff
-        aria-pressed="true"
-        title="追加・変更・削除を色で示す"
-        hidden>差分</button
-      >
-      <button type="button" data-discard disabled>破棄</button>
-      <slot name="tools-end" />
       <details class="body-editor-more" data-body-editor-more>
         <summary>
           <Icon name="octicon:kebab-horizontal-16" aria-hidden="true" />
@@ -356,14 +471,28 @@ const SNIPPET_GROUPS = [
             <Icon name="octicon:question-16" aria-hidden="true" />
             <span>ヘルプ</span>
           </button>
-          <button type="button" data-mobile-pane=".body-editor-help">
+          <slot name="more" />
+          <button
+            type="button"
+            class="body-editor-more-narrow"
+            data-mobile-pane=".body-editor-help"
+          >
             <Icon name="octicon:book-16" aria-hidden="true" />
             <span>記法</span>
           </button>
-          <button type="button" data-diff-mobile aria-pressed="true" hidden>
-            差分
-          </button>
-          <button type="button" data-discard-mobile disabled>破棄</button>
+          <button
+            type="button"
+            class="body-editor-more-narrow"
+            data-diff-mobile
+            aria-pressed="true"
+            hidden>差分</button
+          >
+          <button
+            type="button"
+            class="body-editor-more-narrow"
+            data-discard-mobile
+            disabled>破棄</button
+          >
         </div>
       </details>
     </div>
@@ -510,8 +639,12 @@ const SNIPPET_GROUPS = [
     gap: 8px;
   }
 
-  .body-editor-save-count,
-  .body-editor-more {
+  .body-editor-save-count {
+    display: none;
+  }
+
+  /* 狭い画面だけで要る控えは、広い画面では「その他」の中からも外す */
+  .body-editor-more-menu .body-editor-more-narrow {
     display: none;
   }
 
@@ -525,56 +658,103 @@ const SNIPPET_GROUPS = [
     margin-left: auto;
   }
 
+  /* 状態と、変更があるときだけ出るものを一続きに読ませる */
+  .body-editor-state {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .body-editor-state > button:hover:not(:disabled),
+  .body-editor-state > button:focus-visible,
+  .body-editor-tools > button:hover:not(:disabled),
+  .body-editor-tools > button:focus-visible,
+  .body-editor-help > summary:hover,
+  .body-editor-help > summary:focus-visible,
+  .body-editor-more > summary:hover,
+  .body-editor-more > summary:focus-visible,
+  .body-editor-tools :global(.preview-sidebar-filter-open):hover,
+  .body-editor-tools :global(.preview-sidebar-filter-open):focus-visible,
+  .body-editor-tools :global(.viewport-open):hover,
+  .body-editor-tools :global(.viewport-open):focus-visible,
+  .body-editor-tools :global(.fm-summary):hover,
+  .body-editor-tools :global(.fm-summary):focus-visible {
+    background: transparent;
+    color: var(--text-primary);
+    text-decoration-color: currentColor;
+  }
+
   .body-editor-help,
   .body-editor-guide,
   .body-editor-more {
     position: relative;
   }
 
+  /*
+   * 追従領域の道具は面を持たない（design/hig.md `hover.surface`）。
+   * 下線の場所は常に確保し、hover / focus で色だけを付けて行を動かさない
+   */
+  .body-editor-state > button,
+  .body-editor-tools > button,
   .body-editor-help > summary,
-  .body-editor-guide > summary,
   .body-editor-more > summary,
   .body-editor-tools :global(.preview-sidebar-filter-open),
   .body-editor-tools :global(.viewport-open),
-  .body-editor-tools :global(.preview-toolbar-delete) {
+  .body-editor-tools :global(.fm-summary) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 30px;
-    padding: 0 14px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-label);
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-secondary);
     font-family: inherit;
     font-size: var(--text-sm);
     line-height: 1;
     list-style: none;
+    text-decoration: underline 1px transparent;
+    text-underline-offset: 4px;
     cursor: pointer;
   }
 
   /*
-   * 不可逆な削除のトリガー。design/hig.md `button.destructive` に従い、
-   * 面は透明のまま文字と枠だけを danger にする。塗りつぶしは確認面が持つ。
-   * 保存と地続きに見えないよう、隣との間も広げる
+   * ヘルプは「その他」から開く。ペイン本体は残して引き金だけ畳む。
+   * 幅 0 の器が並びに残ると gap を 1 つ分余計に食うため、流れから外す。
+   * display: contents だと details の閉じた状態が壊れるので位置指定で外す
    */
-  .body-editor-tools :global(.preview-toolbar-delete) {
-    margin-inline-start: 8px;
-    color: var(--danger);
-    border-color: var(--danger-border);
+  .body-editor-guide {
+    position: absolute;
   }
 
-  .body-editor-tools :global(.preview-toolbar-delete):hover,
-  .body-editor-tools :global(.preview-toolbar-delete):focus-visible {
+  .body-editor-guide > summary {
+    display: none;
+  }
+
+  /*
+   * 不可逆な削除のトリガー。design/hig.md `button.destructive` に従い、
+   * 面は透明のまま文字だけを danger にする。塗りつぶしは確認面が持つ。
+   * 主要操作と隣接させないため、置き場所は「その他」の中にする
+   */
+  .body-editor-more-menu :global(.preview-toolbar-delete) {
+    color: var(--danger);
+  }
+
+  .body-editor-more-menu :global(.preview-toolbar-delete):hover,
+  .body-editor-more-menu :global(.preview-toolbar-delete):focus-visible {
     background: var(--danger-tint);
     color: var(--danger);
   }
 
   /* 押している最中だけ面を濃くする。色は変えない */
-  .body-editor-tools :global(.preview-toolbar-delete):active {
+  .body-editor-more-menu :global(.preview-toolbar-delete):active {
     background: color-mix(in srgb, var(--danger) 22%, var(--color-background));
   }
 
-  .body-editor-tools :global(.preview-toolbar-delete):disabled {
+  .body-editor-more-menu :global(.preview-toolbar-delete):disabled {
     opacity: 0.55;
     cursor: not-allowed;
   }
@@ -585,25 +765,10 @@ const SNIPPET_GROUPS = [
     display: none;
   }
 
-  .body-editor-help > summary:hover,
-  .body-editor-help > summary:focus-visible,
-  .body-editor-guide > summary:hover,
-  .body-editor-guide > summary:focus-visible,
-  .body-editor-more > summary:hover,
-  .body-editor-more > summary:focus-visible,
-  .body-editor-tools :global(.preview-sidebar-filter-open):hover,
-  .body-editor-tools :global(.preview-sidebar-filter-open):focus-visible,
-  .body-editor-tools :global(.viewport-open):hover,
-  .body-editor-tools :global(.viewport-open):focus-visible {
-    background: var(--bg-subtle);
-    color: var(--text-primary);
-  }
-
   .body-editor-help[open] > summary,
-  .body-editor-guide[open] > summary,
   .body-editor-more[open] > summary {
-    border-color: var(--color-primary);
     color: var(--color-primary);
+    text-decoration-color: currentColor;
   }
 
   .body-editor-help svg,
@@ -625,10 +790,50 @@ const SNIPPET_GROUPS = [
     z-index: 20;
     width: min(440px, 92vw);
     height: calc(100dvh - var(--preview-pane-top, 52px));
-    padding: 4px 20px 24px;
+    padding: 0 20px 24px;
     overflow-y: auto;
     border-left: 1px solid var(--border-strong);
     background: var(--bg-base);
+  }
+
+  .body-editor-help-body {
+    --syntax-help-toolbar-height: 43px;
+  }
+
+  .syntax-help-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: var(--syntax-help-toolbar-height);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .body-editor .help-preview-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 10px;
+    border-color: var(--border);
+    background: transparent;
+  }
+
+  .body-editor .help-preview-toggle[aria-pressed="true"] {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .help-preview-toggle-state {
+    min-width: 2.6em;
+    padding-left: 8px;
+    border-left: 1px solid currentColor;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-align: center;
   }
 
   .body-editor-more-menu {
@@ -651,6 +856,24 @@ const SNIPPET_GROUPS = [
     gap: 8px;
     width: 100%;
     border-color: transparent;
+  }
+
+  /* 差し込まれた削除は別componentの scope を持つため、個別に形を合わせる */
+  .body-editor-more-menu :global(.preview-toolbar-delete) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-label);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: 1;
+    cursor: pointer;
   }
 
   .body-editor-more-menu button[hidden] {
@@ -684,8 +907,9 @@ const SNIPPET_GROUPS = [
             var(--chrome-rubber-max, 0px)
           )
       );
+      /* 状態と道具を一段に収める。道具の側だけが縮む */
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: auto minmax(0, 1fr);
       gap: 8px;
       padding: 8px 0;
     }
@@ -694,14 +918,14 @@ const SNIPPET_GROUPS = [
       --chrome-shift: var(--chrome-hidden-shift);
     }
 
-    .body-editor-bar > :global(.preview-toolbar-state) {
+    .body-editor-state {
       grid-column: 1;
       justify-self: start;
     }
 
     .body-editor-tools {
-      grid-column: 1;
-      width: 100%;
+      grid-column: 2;
+      justify-self: end;
       margin-left: 0;
       justify-content: flex-end;
       gap: 8px;
@@ -731,6 +955,14 @@ const SNIPPET_GROUPS = [
       padding: 4px 0;
     }
 
+    /*
+     * この幅では記事状態をバーの外で見せる（screens.md の Preview / Admin）。
+     * 器を残すと中身が無いまま 1 行を占めるので、枠から外して一段に収める
+     */
+    .body-editor-state {
+      display: contents;
+    }
+
     .body-editor-tools {
       flex-wrap: nowrap;
       gap: 8px;
@@ -756,9 +988,21 @@ const SNIPPET_GROUPS = [
 
     .body-editor-count,
     .body-editor-help > summary,
-    .body-editor-guide > summary,
-    .body-editor-tools > [data-diff],
-    .body-editor-tools > [data-discard] {
+    .body-editor-state > button {
+      display: none;
+    }
+
+    /* 記法もここでは「その他」から開くので、器を並びから外す */
+    .body-editor-help {
+      position: absolute;
+    }
+
+    /* 道具の列から外したものを、ここでは「その他」から開けるようにする */
+    .body-editor-more-menu .body-editor-more-narrow {
+      display: flex;
+    }
+
+    .body-editor-more-menu .body-editor-more-narrow[hidden] {
       display: none;
     }
 
@@ -809,10 +1053,6 @@ const SNIPPET_GROUPS = [
 
     .body-editor-save-count[hidden] {
       display: none;
-    }
-
-    .body-editor-more {
-      display: block;
     }
 
     .body-editor-more > summary {
@@ -893,6 +1133,10 @@ const SNIPPET_GROUPS = [
     letter-spacing: 0.04em;
   }
 
+  .body-editor-help-body .help-group h2 {
+    top: var(--syntax-help-toolbar-height);
+  }
+
   .help-group h2::after {
     content: "";
     flex: 1;
@@ -954,6 +1198,82 @@ const SNIPPET_GROUPS = [
     font-size: var(--text-sm);
   }
 
+  .help-options {
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .help-options-label {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .help-options ul {
+    display: grid;
+    gap: 4px;
+  }
+
+  .help-options li {
+    display: grid;
+    grid-template-columns: minmax(7.5em, auto) minmax(0, 1fr) 26px;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .help-options code {
+    min-width: 0;
+    padding: 2px 5px;
+    overflow-x: auto;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  .body-editor .help-option-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  .body-editor .help-option-copy:hover:not(:disabled),
+  .body-editor .help-option-copy:focus-visible {
+    background: var(--bg-subtle);
+    color: var(--color-interaction-text);
+  }
+
+  .help-preview {
+    margin: 12px 0 0;
+    padding: 10px 12px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg-base);
+  }
+
+  .help-preview figcaption {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .help-preview[hidden] {
+    display: none;
+  }
+
   .body-editor .help-copy {
     position: absolute;
     top: 5px;
@@ -976,7 +1296,8 @@ const SNIPPET_GROUPS = [
     color: var(--color-interaction-text);
   }
 
-  .body-editor .help-copy svg {
+  .body-editor .help-copy svg,
+  .body-editor .help-option-copy svg {
     width: 14px;
     height: 14px;
   }
@@ -985,19 +1306,19 @@ const SNIPPET_GROUPS = [
     display: none;
   }
 
-  .body-editor .help-copy[data-copy-state="copied"] {
+  .body-editor [data-copy-state="copied"] {
     color: var(--success);
   }
 
-  .body-editor .help-copy[data-copy-state="copied"] .help-copy-icon {
+  .body-editor [data-copy-state="copied"] .help-copy-icon {
     display: none;
   }
 
-  .body-editor .help-copy[data-copy-state="copied"] .help-copy-done {
+  .body-editor [data-copy-state="copied"] .help-copy-done {
     display: inline-block;
   }
 
-  .body-editor .help-copy[data-copy-state="failed"] {
+  .body-editor [data-copy-state="failed"] {
     color: var(--danger);
   }
 </style>

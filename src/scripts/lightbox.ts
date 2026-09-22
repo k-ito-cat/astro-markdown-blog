@@ -17,7 +17,7 @@ export const initLightbox = (signal: AbortSignal) => {
   if (!dialog || !track) return;
 
   const thumbnails = Array.from(
-    document.querySelectorAll<HTMLImageElement>(".prose img"),
+    document.querySelectorAll<HTMLImageElement>(".article .prose img"),
   );
   if (thumbnails.length === 0) {
     dialog.remove();

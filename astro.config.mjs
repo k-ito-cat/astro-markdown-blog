@@ -26,6 +26,7 @@ import createSuggester from "./src/plugins/createSuggester.mjs";
 import tagEditor from "./src/plugins/tagEditor.mjs";
 import previewPinnedEditor from "./src/plugins/previewPinnedEditor.mjs";
 import contentRefresh from "./src/plugins/contentRefresh.mjs";
+import syntaxPreview from "./src/plugins/syntaxPreview.mjs";
 import blockRange from "./src/plugins/blockRange.mjs";
 
 import astroExpressiveCode, {
@@ -138,6 +139,8 @@ export default defineConfig({
         },
       },
     }),
+    // Expressive Code を含む本文の描画設定を控え、編集用の blockRange は含めない
+    syntaxPreview(),
     // expressive-code の後に置くこと。rehype プラグインを最後に走らせる必要がある
     blockRange(),
   ],

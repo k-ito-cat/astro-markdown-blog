@@ -4,6 +4,7 @@ import {
   observePage,
 } from "~/scripts/pageLifecycle";
 const FEEDBACK_MS = 1600;
+const PREVIEW_STORAGE_KEY = "preview-syntax-help:previews";
 
 /**
  * ペインは summary、Escape、ペイン外の押下、他ペインの表示と四方から閉じられる。
@@ -36,6 +37,103 @@ const copy = async (button: HTMLElement) => {
   } catch {
     setState(button, "failed");
   }
+};
+
+const initSyntaxPreviews = (help: HTMLElement) => {
+  const button = help.querySelector<HTMLButtonElement>("[data-preview-toggle]");
+  const previews = Array.from(
+    help.querySelectorAll<HTMLElement>("[data-syntax-preview]"),
+  );
+  if (!button || previews.length === 0) return;
+
+  const figures = previews
+    .map((preview) => preview.closest<HTMLElement>("[data-help-preview]"))
+    .filter((figure): figure is HTMLElement => figure !== null);
+  const state = button.querySelector<HTMLElement>(".help-preview-toggle-state");
+  let loaded = false;
+  let loading: Promise<void> | null = null;
+
+  const load = () => {
+    if (loaded) return Promise.resolve();
+    if (loading) return loading;
+
+    previews.forEach((preview) => {
+      preview.textContent = "表示例を読み込んでいます…";
+    });
+
+    loading = fetch("/__syntax-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        snippets: previews.map(
+          (preview) => preview.dataset.previewSnippet ?? "",
+        ),
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const value = (await response.json()) as { html?: unknown };
+        if (
+          !Array.isArray(value.html) ||
+          value.html.length !== previews.length ||
+          value.html.some((html) => typeof html !== "string")
+        ) {
+          throw new Error("Invalid response");
+        }
+
+        // 上の検証を通った時点で中身は文字列だけなので、その形で受け直す
+        const html = value.html as string[];
+        previews.forEach((preview, index) => {
+          preview.innerHTML = html[index];
+        });
+        loaded = true;
+      })
+      .catch((error) => {
+        console.error("[preview] 記法の表示例を読み込めませんでした", error);
+        previews.forEach((preview) => {
+          preview.textContent = "表示例を読み込めませんでした。";
+        });
+      })
+      .finally(() => {
+        loading = null;
+      });
+
+    return loading;
+  };
+
+  const apply = (enabled: boolean, persist = true) => {
+    button.setAttribute("aria-pressed", String(enabled));
+    if (state) state.textContent = enabled ? "ON" : "OFF";
+    figures.forEach((figure) => {
+      figure.hidden = !enabled;
+    });
+    if (enabled) void load();
+
+    if (!persist) return;
+    try {
+      sessionStorage.setItem(PREVIEW_STORAGE_KEY, enabled ? "on" : "off");
+    } catch {
+      // 保存できなくても、このページでの切り替えは続ける
+    }
+  };
+
+  button.addEventListener("click", () => {
+    apply(button.getAttribute("aria-pressed") !== "true");
+  });
+
+  help.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    if (event.target.closest("[data-syntax-preview] a")) event.preventDefault();
+  });
+
+  let enabled = false;
+  try {
+    enabled = sessionStorage.getItem(PREVIEW_STORAGE_KEY) === "on";
+  } catch {
+    // sessionStorage が使えないときは既定の OFF にする
+  }
+  apply(enabled, false);
 };
 
 /**
@@ -176,6 +274,8 @@ export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
 
   const help = root.querySelector<HTMLDetailsElement>(".body-editor-help");
   if (!help) return;
+
+  initSyntaxPreviews(help);
 
   help.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
