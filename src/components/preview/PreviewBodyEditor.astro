@@ -143,7 +143,7 @@ const SNIPPET_GROUPS = [
         label: "トグル",
         code: "<details>\n<summary>クリックで開く</summary>\n\n中身は **Markdown** として書ける\n\n</details>",
         options: [{ label: "デフォルトで開く", code: "open" }],
-        note: "summary の次の空行が必須。長いログや、読み飛ばしても本筋を追える補助情報に使う",
+        note: "summary の次の空行が必須。入れ子にもでき、内側も同じで summary の次に空行を置く。閉じタグは連続でも空行を挟んでもよい。長いログや、読み飛ばしても本筋を追える補助情報に使う",
       },
       {
         label: "トグル（フォルダ）",
@@ -152,7 +152,7 @@ const SNIPPET_GROUPS = [
           { label: "フォルダ表示", code: 'data-icon="folder"' },
           { label: "デフォルトで開く", code: "open" },
         ],
-        note: "三角がフォルダの icon になり、開くと開いたフォルダに変わる。ファイル構成をたたんで見せるときに使う。入れ子にする場合は、内側の details の前後も空行で挟む",
+        note: "三角がフォルダの icon になり、開くと開いたフォルダに変わる。入れ子にすると階層をそのまま表せる。必要なのは内側の summary の次の空行だけで、details の前後の空行は要らない。ファイル構成をたたんで見せるときに使う",
       },
     ],
   },
