@@ -1089,6 +1089,11 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
 
   /* inline code: 本文に馴染ませる (design ui-patterns Code Block / Inline Code) */
   .prose :not(pre) > code {
+    /*
+     * 長い識別子やパスは行内で割る。親の break-word はまず次の行へ
+     * 送ってから割るので、直前の行の右が大きく空く
+     */
+    overflow-wrap: anywhere;
     font-family: var(--font-mono);
     font-size: 0.94em;
     padding: 0.1em 0.4em;
