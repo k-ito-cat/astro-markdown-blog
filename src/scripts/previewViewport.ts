@@ -21,9 +21,9 @@ const initializeViewport = (host: HTMLElement) => {
   const src = host.dataset.frameSrc;
   if (!src) throw new Error("Frame src not found");
 
-  // 下書きは既定で猫のまま。公開後の見え方は明示的に選ばせる
+  // 幅の確認は本文の組み替えを見るためのものなので、下書きも既定で本文を出す
   const body = host.querySelector<HTMLButtonElement>("[data-viewport-body]");
-  let showsBody = false;
+  let showsBody = true;
 
   const load = () => {
     // 静的ルートは query を受け取れないので、行き先そのものを切り替える
@@ -36,7 +36,10 @@ const initializeViewport = (host: HTMLElement) => {
 
   /** 空文字は「実幅」。台の幅いっぱいまで伸ばす */
   const applyWidth = (value: string) => {
-    frame.style.setProperty("--frame-width", value === "" ? "100%" : `${value}px`);
+    frame.style.setProperty(
+      "--frame-width",
+      value === "" ? "100%" : `${value}px`,
+    );
     widths.forEach((button) => {
       const pressed = button.dataset.viewportWidth === value;
       button.setAttribute("aria-pressed", String(pressed));
@@ -75,13 +78,11 @@ const initializeViewport = (host: HTMLElement) => {
 };
 
 export const initPreviewViewport = () => {
-  document
-    .querySelectorAll<HTMLElement>("preview-viewport")
-    .forEach((host) => {
-      try {
-        initializeViewport(host);
-      } catch (error) {
-        console.error("[preview] 画面幅の確認の初期化に失敗しました", error);
-      }
-    });
+  document.querySelectorAll<HTMLElement>("preview-viewport").forEach((host) => {
+    try {
+      initializeViewport(host);
+    } catch (error) {
+      console.error("[preview] 画面幅の確認の初期化に失敗しました", error);
+    }
+  });
 };

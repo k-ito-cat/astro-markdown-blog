@@ -301,7 +301,8 @@ const edgeNavItems =
 <style>
   .preview-dock {
     position: fixed;
-    z-index: 40;
+    /* ヘッダー(30)とプレビューの右ペイン(24)より奥に置く */
+    z-index: 23;
     /* 記事の「一覧へ戻る」は左下にいるので、こちらは右下へ置く */
     inset-block-end: 16px;
     inset-inline-end: 16px;

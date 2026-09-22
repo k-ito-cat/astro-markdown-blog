@@ -56,5 +56,5 @@ if (!post) return Astro.redirect("/404");
   ogTitle={post.data.title}
   ogImage={post.data.thumbnail}
 >
-  <ArticlePage post={post} showsDraftBody={showsBody} />
+  <ArticlePage post={post} showsDraftBody={showsBody} hidesMemo />
 </BaseLayout>

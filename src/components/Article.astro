@@ -34,6 +34,7 @@ type Props = {
   status: PublishedStatus;
   revisions?: { date: Date; summary: string }[];
   forceRenderContent?: boolean;
+  hidesMemo?: boolean;
   showGithubCard?: boolean;
   returnHref?: string;
   returnLabel?: string;
@@ -54,6 +55,7 @@ const {
   status,
   revisions,
   forceRenderContent = false,
+  hidesMemo = false,
   showGithubCard = true,
   returnHref,
   returnLabel,
@@ -187,7 +189,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 
   {
     showContent ? (
-      <Prose content={content} status={status} />
+      <Prose content={content} status={status} hidesMemo={hidesMemo} />
     ) : (
       <div class="draft-placeholder">
         <Image

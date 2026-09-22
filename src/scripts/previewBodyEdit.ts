@@ -13,6 +13,7 @@ import {
   replaceBlock,
   type Block,
   type Draft,
+  type InsertMode,
 } from "./previewDraft";
 
 const ENDPOINT = "/__body";
@@ -55,6 +56,8 @@ const EDITOR_HINTS: [string, string][] = [
 ];
 const CODE_FENCE = "```";
 const isApple = /Mac|iPhone|iPad/.test(navigator.userAgent);
+/** 編集中に引く道具。ここを触っている間の blur では、編集を確定しない */
+const HOLD_SELECTOR = ".body-editor-help, .body-editor-guide";
 const DRAG_SCROLL_ZONE = 64;
 const DRAG_SCROLL_STEP = 12;
 type EditMode = "replace" | "insert-after" | "insert-before";
@@ -134,6 +137,8 @@ const fillMissingRanges = (prose: HTMLElement, blocks: Block[]) => {
     (element) =>
       element.id !== "external-link-new-tab" &&
       element.tagName !== "SCRIPT" &&
+      // 脚注はまとめて末尾へ移されるため、サーバー側と同じく数から外す
+      element.dataset.footnotes === undefined &&
       // Prose 側が後から差し込む要素は原文のブロックではない
       !element.classList.contains("prose-memo-section") &&
       !element.classList.contains("prose-memo-note"),
@@ -401,7 +406,7 @@ const initializeEditor = (host: HTMLElement) => {
   const mobileDiffButton = requireElement(host, "[data-diff-mobile]");
   const discardButton = requireElement(host, "[data-discard]");
   const mobileDiscardButton = requireElement(host, "[data-discard-mobile]");
-  const prose = requireElement(document, ".preview-detail .prose");
+  const prose = requireElement(document, ".preview-article-grid .prose");
 
   const serverBody = readEmbeddedBody(host);
   if (serverBody === null) throw new Error("Post body not found");
@@ -435,6 +440,8 @@ const initializeEditor = (host: HTMLElement) => {
   const bulkAction = createBulkAction();
 
   let draft: Draft = { body: serverBody, blocks };
+  /** 記法・ヘルプを押している最中か。フォーカスを持てない場所を押した時の保険 */
+  let holdsEditor = false;
   let lastTouched = 0;
   const dirty = new Set<number>();
   /**
@@ -588,7 +595,7 @@ const initializeEditor = (host: HTMLElement) => {
     nodes[index] = node;
   };
 
-  const applyInsert = (anchorIndex: number, mode: EditMode, text: string) => {
+  const applyInsert = (anchorIndex: number, mode: InsertMode, text: string) => {
     const after = mode === "insert-after";
     const result = insertBlock(draft, anchorIndex, mode, text);
     draft = result.draft;
@@ -882,9 +889,25 @@ const initializeEditor = (host: HTMLElement) => {
       setStatus("");
     };
 
+    /**
+     * value へ直接代入するとブラウザの取り消し履歴が捨てられ、記号を足した後に
+     * Cmd+Z が効かなくなる。入力として差し込み、履歴に残す。
+     *
+     * execCommand は非推奨だが、履歴を保てる代替が無いためこの用途に限って使う。
+     * 断られた場合は履歴を諦めて代入に落とす
+     */
+    const applyText = (from: number, to: number, text: string) => {
+      textarea.focus();
+      textarea.setSelectionRange(from, to);
+      const command = text === "" ? "delete" : "insertText";
+      if (document.execCommand(command, false, text)) return;
+
+      const value = textarea.value;
+      textarea.value = `${value.slice(0, from)}${text}${value.slice(to)}`;
+    };
+
     const insertImage = async (file: File) => {
       // 選択範囲は保存を待つ間に変わりうるので、先に控える
-      const previous = textarea.value;
       const from = textarea.selectionStart;
       const to = textarea.selectionEnd;
       // 入力を止めつつフォーカスを保つため readOnly にする
@@ -893,7 +916,9 @@ const initializeEditor = (host: HTMLElement) => {
       try {
         const url = await uploadImage(file);
         const markdown = `![](${url})`;
-        textarea.value = `${previous.slice(0, from)}${markdown}${previous.slice(to)}`;
+        // 入力として差し込むので、先に readOnly を外す
+        textarea.readOnly = false;
+        applyText(from, to, markdown);
         textarea.setSelectionRange(
           from + markdown.length,
           from + markdown.length,
@@ -927,11 +952,11 @@ const initializeEditor = (host: HTMLElement) => {
         lines.at(-1)?.trim() === CODE_FENCE
       ) {
         const inner = lines.slice(1, -1).join("\n");
-        textarea.value = value.slice(0, from) + inner + value.slice(to);
+        applyText(from, to, inner);
         textarea.setSelectionRange(from, from + inner.length);
       } else {
         const block = `${CODE_FENCE}\n${selected}\n${CODE_FENCE}`;
-        textarea.value = value.slice(0, from) + block + value.slice(to);
+        applyText(from, to, block);
         // 言語名をすぐ書けるよう、開いたフェンスの後ろへ置く
         const caret = from + CODE_FENCE.length;
         textarea.setSelectionRange(caret, caret);
@@ -957,18 +982,17 @@ const initializeEditor = (host: HTMLElement) => {
       ) {
         // 記号ごと選んでいる場合
         const stripped = selected.slice(width, -width);
-        textarea.value = value.slice(0, from) + stripped + value.slice(to);
+        applyText(from, to, stripped);
         textarea.setSelectionRange(from, from + stripped.length);
       } else if (
         value.slice(from - width, from) === mark &&
         value.slice(to, to + width) === mark
       ) {
         // 記号の内側だけを選んでいる場合
-        textarea.value =
-          value.slice(0, from - width) + selected + value.slice(to + width);
+        applyText(from - width, to + width, selected);
         textarea.setSelectionRange(from - width, to - width);
       } else {
-        textarea.value = `${value.slice(0, from)}${mark}${selected}${mark}${value.slice(to)}`;
+        applyText(from, to, `${mark}${selected}${mark}`);
         // 選択がなければ記号の中へ入れる
         if (from === to) textarea.setSelectionRange(from + width, from + width);
         else textarea.setSelectionRange(from + width, to + width);
@@ -977,7 +1001,17 @@ const initializeEditor = (host: HTMLElement) => {
     };
 
     textarea.addEventListener("input", autosize);
-    textarea.addEventListener("blur", finish);
+    /*
+     * 記法とヘルプは編集の途中で引くものなので、触っただけで編集を終えない。
+     * 保存や破棄など他の道具は、押す前に編集を確定させたいので対象にしない
+     */
+    textarea.addEventListener("blur", (event) => {
+      const next = event.relatedTarget;
+      if (next instanceof Element && next.closest(HOLD_SELECTOR)) return;
+      if (holdsEditor) return;
+
+      finish();
+    });
     textarea.addEventListener("paste", (event) => {
       const file = pickImageFile(event.clipboardData);
       if (!file) return;
@@ -1507,6 +1541,12 @@ const initializeEditor = (host: HTMLElement) => {
     if (event.detail >= 2) return;
 
     keepSelection = selectFromTextSelection();
+  });
+
+  onPageEvent(document, "pointerdown", (event) => {
+    const target = event.target;
+    holdsEditor =
+      target instanceof Element && Boolean(target.closest(HOLD_SELECTOR));
   });
 
   onPageEvent(document, "keydown", (event) => {

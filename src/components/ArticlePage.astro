@@ -19,9 +19,11 @@ type Props = {
    * 開けるのは dev 限定の /preview/frame だけで、公開ページは常に既定のまま
    */
   showsDraftBody?: boolean;
+  /* メモは執筆者向けの覚書なので、画面幅の確認では落とす */
+  hidesMemo?: boolean;
 };
 
-const { post, showsDraftBody = false } = Astro.props;
+const { post, showsDraftBody = false, hidesMemo = false } = Astro.props;
 const { Content, headings } = await render(post);
 const isDraft = post.data.status === PUBLISHED_STATUS.DRAFT;
 // 本文を出す下書きは、公開済みと同じ組み立てで見せないとモックにならない
@@ -52,6 +54,7 @@ const { groups, older, newer } = getPostRelations(
       status={post.data.status}
       revisions={post.data.revisions}
       forceRenderContent={showsDraftBody}
+      hidesMemo={hidesMemo}
       returnHref="/"
       returnLabel="一覧へ戻る"
       returnSourcePaths={["/", "/blog"]}

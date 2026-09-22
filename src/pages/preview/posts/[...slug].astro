@@ -99,13 +99,19 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             <PreviewSidebar slot="tools" posts={posts} currentId={post.id} />
 
             <PreviewViewportDialog
-              slot="tools"
+              slot="tools-end"
               slug={normalizePostSlug(post.id)}
               isDraft={post.data.status === PUBLISHED_STATUS.DRAFT}
             />
 
-            <button
+            <PreviewFrontmatterEditor
               slot="tools-end"
+              entryId={post.id}
+              data={post.data}
+            />
+
+            <button
+              slot="more"
               type="button"
               class="preview-toolbar-delete"
               data-delete-post={normalizePostSlug(post.id)}
@@ -113,12 +119,6 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
             >
               削除
             </button>
-
-            <PreviewFrontmatterEditor
-              slot="tools"
-              entryId={post.id}
-              data={post.data}
-            />
           </PreviewBodyEditor>
 
           <div
@@ -345,9 +345,10 @@ const relationsHidden = post?.data.status === PUBLISHED_STATUS.DRAFT;
     }
   }
 
+  /* ヘッダーの分だけ下げ、その下の余白は広い幅の20pxに近い量へ抑える */
   @media (max-width: 959px) {
     .preview-layout {
-      padding-top: calc(52px + clamp(24px, 5vw, 36px));
+      padding-top: calc(52px + clamp(12px, 3vw, 24px));
     }
   }
 

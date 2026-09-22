@@ -111,10 +111,12 @@ const FILTERS = [
     ></span>
   </button>
 
-  {/*
+  {
+    /*
     一覧そのものを面へ入れる。絞り込みは下の一覧へ直接効くので、
     記事内検索と同じく「語を入れる欄 ＋ その結果」の二段で足りる
-  */}
+  */
+  }
   <dialog
     class="sidebar-filter-dialog"
     aria-label="記事一覧"
@@ -123,7 +125,9 @@ const FILTERS = [
     <div class="sidebar-filter-panel">
       <div class="sidebar-filter-field">
         <Icon name="octicon:search-16" aria-hidden="true" />
-        <label class="sr-only" for="preview-sidebar-search">記事を絞り込む</label>
+        <label class="sr-only" for="preview-sidebar-search"
+          >記事を絞り込む</label
+        >
         <input
           id="preview-sidebar-search"
           type="search"
@@ -396,6 +400,11 @@ const FILTERS = [
     text-underline-offset: 3px;
   }
 
+  /* 件数が無いときは、隙間だけが残らないよう器ごと畳む */
+  .preview-sidebar-count:empty {
+    display: none;
+  }
+
   .preview-sidebar-count {
     margin-left: 6px;
     color: var(--text-muted);
@@ -507,7 +516,6 @@ const FILTERS = [
   .preview-sidebar-list li[hidden] {
     display: none;
   }
-
 </style>
 
 <script>

@@ -35,7 +35,11 @@ const WIDTHS = [
     <span>画面幅</span>
   </button>
 
-  <dialog class="viewport-dialog" aria-label="画面幅を確かめる" data-viewport-dialog>
+  <dialog
+    class="viewport-dialog"
+    aria-label="画面幅を確かめる"
+    data-viewport-dialog
+  >
     <div class="viewport-panel">
       <div class="viewport-bar">
         <div class="viewport-widths" role="group" aria-label="幅">
@@ -57,10 +61,10 @@ const WIDTHS = [
             <button
               type="button"
               class="viewport-body"
-              aria-pressed="false"
+              aria-pressed="true"
               data-viewport-body
             >
-              下書きの本文を出す
+              下書きの表示に戻す
             </button>
           )
         }

@@ -9,11 +9,20 @@ import {
 type Props = {
   content: AstroComponentFactory;
   status: PublishedStatus;
+  /*
+   * メモは執筆者向けの覚書なので、画面幅の確認では組み替えの邪魔になる。
+   * 落とすのは dev 限定の /preview/frame だけで、公開ページは常に出す
+   */
+  hidesMemo?: boolean;
 };
-const { content: Content, status } = Astro.props;
+const { content: Content, status, hidesMemo = false } = Astro.props;
 ---
 
-<div class="prose" data-is-published={status === PUBLISHED_STATUS.PUBLISHED}>
+<div
+  class="prose"
+  data-is-published={status === PUBLISHED_STATUS.PUBLISHED}
+  data-hides-memo={hidesMemo ? "" : undefined}
+>
   <span id="external-link-new-tab" class="sr-only">新しいタブで開きます</span>
   <Content />
 </div>
@@ -100,12 +109,17 @@ const { content: Content, status } = Astro.props;
         currentNode = nextNode;
       }
 
-      const memoNote = document.createElement("p");
-      memoNote.className = "prose-memo-note";
-      memoNote.textContent = isPublished
-        ? "このメモは本番にも表示されます。メモを削除するか、公開状態を変更してください。"
-        : "編集用メモです。公開済みにする前に削除してください。";
-      memoHeading.insertAdjacentElement("afterend", memoNote);
+      // 画面幅の確認ではメモごと落とす。覚書は組み替えの確認に要らない
+      if (prose?.dataset.hidesMemo !== undefined) {
+        memoSection.remove();
+      } else {
+        const memoNote = document.createElement("p");
+        memoNote.className = "prose-memo-note";
+        memoNote.textContent = isPublished
+          ? "このメモは本番にも表示されます。メモを削除するか、公開状態を変更してください。"
+          : "編集用メモです。公開済みにする前に削除してください。";
+        memoHeading.insertAdjacentElement("afterend", memoNote);
+      }
     }
 
     // 横に溢れる表は、マウス以外でも送れるようフォーカスできるようにする
