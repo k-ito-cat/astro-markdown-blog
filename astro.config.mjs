@@ -14,6 +14,7 @@ import remarkLinkCardDev from "./src/plugins/remarkLinkCardDev.mjs";
 import remarkReviewCallout from "./src/plugins/remarkReviewCallout.mjs";
 import remarkGlossaryTerm from "./src/plugins/remarkGlossaryTerm.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
+import remarkPathList from "./src/plugins/remarkPathList.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
@@ -85,6 +86,7 @@ export default defineConfig({
         remarkGithubBlockquoteAlert,
         remarkDividerVariant,
         remarkImageFigure,
+        remarkPathList,
         // リンクカードより先に置く。説明の中のリンクを段落直下から外し、
         // カード化の対象に入らないようにする
         remarkGlossaryTerm,

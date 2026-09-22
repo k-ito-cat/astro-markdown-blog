@@ -338,6 +338,8 @@ const { content: Content, status } = Astro.props;
   }
 
   .prose {
+    --prose-nesting-indent: 1.6em;
+
     width: 100%;
     max-width: var(--measure-prose);
     margin-inline: auto;
@@ -724,6 +726,52 @@ const { content: Content, status } = Astro.props;
     color: var(--text-muted);
   }
 
+  /*
+   * ファイル構成の箇条書きは、中黒ではなくフォルダとファイルで示す。
+   * icon は装飾で、`/` と拡張子は本文に残るため、出ない環境でも読み取れる
+   */
+  .prose ul[data-path-list] {
+    padding-inline-start: 0;
+  }
+
+  .prose li[data-path-kind] > ul[data-path-list] {
+    padding-inline-start: var(--prose-nesting-indent);
+  }
+
+  .prose li[data-path-kind] {
+    list-style: none;
+    /* icon を項目の左端から始めるため、中黒のぶら下げ用の余白を戻す */
+    padding-inline-start: 0;
+    font-family: var(--font-machine);
+  }
+
+  .prose li[data-path-kind]::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    /* 文字までの距離を字下げの刻みに合わせ、入れ子のフォルダと頭を揃える */
+    margin-right: calc(var(--prose-nesting-indent) - 1em);
+    /* 文字の中心へ合わせる。cap 未対応の環境向けに em での近似を先に置く */
+    vertical-align: -0.15em;
+    vertical-align: calc(0.5cap - 0.5em);
+    background: var(--text-muted);
+    -webkit-mask-image: var(--path-icon);
+    mask-image: var(--path-icon);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  .prose li[data-path-kind="folder"] {
+    --path-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M0%202.75C0%201.784.784%201%201.75%201H5c.55%200%201.07.26%201.4.7l.9%201.2a.25.25%200%200%200%20.2.1h6.75c.966%200%201.75.784%201.75%201.75v8.5A1.75%201.75%200%200%201%2014.25%2015H1.75A1.75%201.75%200%200%201%200%2013.25Zm1.75-.25a.25.25%200%200%200-.25.25v10.5c0%20.138.112.25.25.25h12.5a.25.25%200%200%200%20.25-.25v-8.5a.25.25%200%200%200-.25-.25H7.5c-.55%200-1.07-.26-1.4-.7l-.9-1.2a.25.25%200%200%200-.2-.1Z'%2F%3E%3C%2Fsvg%3E");
+  }
+
+  .prose li[data-path-kind="file"] {
+    --path-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M2%201.75C2%20.784%202.784%200%203.75%200h6.586c.464%200%20.909.184%201.237.513l2.914%202.914c.329.328.513.773.513%201.237v9.586A1.75%201.75%200%200%201%2013.25%2016h-9.5A1.75%201.75%200%200%201%202%2014.25Zm1.75-.25a.25.25%200%200%200-.25.25v12.5c0%20.138.112.25.25.25h9.5a.25.25%200%200%200%20.25-.25V6h-2.75A1.75%201.75%200%200%201%209%204.25V1.5Zm6.75.062V4.25c0%20.138.112.25.25.25h2.688l-.011-.013l-2.914-2.914z'%2F%3E%3C%2Fsvg%3E");
+  }
+
   /* チェックリストは点を出さず、チェックボックスを本文の左脇に置く */
   .prose .contains-task-list {
     list-style: none;
@@ -855,7 +903,7 @@ const { content: Content, status } = Astro.props;
 
   /* トグル。三角と文字の間、そして中身の字下げを同じ幅で揃える */
   .prose details {
-    --details-indent: 1.6em;
+    --details-indent: var(--prose-nesting-indent);
     /* 中身の高さを auto へ動かすための許可。未対応ブラウザは即時開閉になる */
     interpolate-size: allow-keywords;
     margin: 24px 0;
@@ -907,6 +955,33 @@ const { content: Content, status } = Astro.props;
     background: var(--color-interaction-text);
   }
 
+  /*
+   * フォルダのトグルは、三角ではなく開閉するフォルダで示す。
+   * 中身が増えるのではなく、既にある場所を開く操作だと分かるようにする
+   */
+  .prose details[data-icon="folder"] > summary::before {
+    /* 三角と違い icon は字面いっぱいなので、項目の左端から始める */
+    left: 0;
+    width: 1em;
+    height: 1em;
+    background: var(--text-muted);
+    clip-path: none;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M1.75%201A1.75%201.75%200%200%200%200%202.75v10.5C0%2014.216.784%2015%201.75%2015h12.5A1.75%201.75%200%200%200%2016%2013.25v-8.5A1.75%201.75%200%200%200%2014.25%203H7.5a.25.25%200%200%201-.2-.1l-.9-1.2C6.07%201.26%205.55%201%205%201z'%2F%3E%3C%2Fsvg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M1.75%201A1.75%201.75%200%200%200%200%202.75v10.5C0%2014.216.784%2015%201.75%2015h12.5A1.75%201.75%200%200%200%2016%2013.25v-8.5A1.75%201.75%200%200%200%2014.25%203H7.5a.25.25%200%200%201-.2-.1l-.9-1.2C6.07%201.26%205.55%201%205%201z'%2F%3E%3C%2Fsvg%3E");
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    /* 形が変わるので、三角のような回転はしない */
+    rotate: none;
+  }
+
+  .prose details[data-icon="folder"][open] > summary::before {
+    rotate: none;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M.513%201.513A1.75%201.75%200%200%201%201.75%201h3.5c.55%200%201.07.26%201.4.7l.9%201.2a.25.25%200%200%200%20.2.1H13a1%201%200%200%201%201%201v.5H2.75a.75.75%200%200%200%200%201.5h11.978a1%201%200%200%201%20.994%201.117L15%2013.25A1.75%201.75%200%200%201%2013.25%2015H1.75A1.75%201.75%200%200%201%200%2013.25V2.75c0-.464.184-.91.513-1.237'%2F%3E%3C%2Fsvg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M.513%201.513A1.75%201.75%200%200%201%201.75%201h3.5c.55%200%201.07.26%201.4.7l.9%201.2a.25.25%200%200%200%20.2.1H13a1%201%200%200%201%201%201v.5H2.75a.75.75%200%200%200%200%201.5h11.978a1%201%200%200%201%20.994%201.117L15%2013.25A1.75%201.75%200%200%201%2013.25%2015H1.75A1.75%201.75%200%200%201%200%2013.25V2.75c0-.464.184-.91.513-1.237'%2F%3E%3C%2Fsvg%3E");
+  }
+
   /* 開閉を滑らかにする。未対応ブラウザではこの指定ごと無視される */
   .prose details::details-content {
     block-size: 0;
@@ -936,8 +1011,21 @@ const { content: Content, status } = Astro.props;
     margin-left: var(--details-indent);
   }
 
-  .prose details > :not(summary):first-of-type {
+  /* first-of-type では要素種別ごとの先頭に効くため、summary 直後だけを対象にする */
+  .prose details > summary + * {
     margin-top: 8px;
+  }
+
+  /* フォルダツリーは通常ブロックの余白を持ち込まず、リストの入れ子と同じ間隔にする */
+  .prose details[data-icon="folder"] > ul[data-path-list],
+  .prose details[data-icon="folder"] > details[data-icon="folder"] {
+    margin-block: 2px;
+    margin-inline-start: var(--details-indent);
+  }
+
+  .prose details[data-icon="folder"] > summary + ul[data-path-list],
+  .prose details[data-icon="folder"] > summary + details[data-icon="folder"] {
+    margin-block-start: 8px;
   }
 
   /* 区切りは面ではなく Line と余白で強さを分ける（design/DESIGN.md 固有ルール5） */

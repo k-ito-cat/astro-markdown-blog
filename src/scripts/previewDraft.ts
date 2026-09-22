@@ -103,32 +103,43 @@ export const moveBlock = (
   };
 };
 
-const DETAILS_OPEN = /<details[\s>]/i;
-const DETAILS_CLOSE = /<\/details\s*>/i;
+const DETAILS_TAG = /^ {0,3}<(?<closing>\/?)details(?:\s[^>]*)?>\s*$/gim;
+
+const detailsDepthChange = (text: string) => {
+  let change = 0;
+  for (const match of text.matchAll(DETAILS_TAG)) {
+    change += match.groups?.closing ? -1 : 1;
+  }
+  return change;
+};
 
 /**
  * `<details>` は中身との間に空行があると開始・中身・終了で別ブロックに割れるが、
  * 描画後は 1 要素になる。要素とブロックの数が合わないとインライン編集が止まるため、
- * 開始から終了までを 1 ブロックへまとめる。入れ子の details は扱わない。
+ * 開始から対応する終了までを、入れ子も含めて 1 ブロックへまとめる。
  */
 export const mergeDetailsBlocks = (blocks: Block[], body: string): Block[] => {
   const merged: Block[] = [];
   let open: Block | null = null;
+  let depth = 0;
 
   for (const block of blocks) {
     const text = body.slice(block[0], block[1]);
+    const change = detailsDepthChange(text);
 
     if (open) {
       open = [open[0], block[1]];
-      if (DETAILS_CLOSE.test(text)) {
+      depth += change;
+      if (depth === 0) {
         merged.push(open);
         open = null;
       }
       continue;
     }
 
-    if (DETAILS_OPEN.test(text) && !DETAILS_CLOSE.test(text)) {
+    if (change > 0) {
       open = block;
+      depth = change;
       continue;
     }
 
