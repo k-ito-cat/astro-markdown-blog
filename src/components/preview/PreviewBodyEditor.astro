@@ -623,6 +623,7 @@ const SNIPPET_GROUPS = [
     position: sticky;
     top: 0;
     z-index: 24;
+    isolation: isolate;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -631,7 +632,6 @@ const SNIPPET_GROUPS = [
     margin-bottom: 12px;
     padding: 10px 0;
     background: var(--bg-base);
-    border-bottom: 1px solid var(--border);
   }
 
   /* 説明はヘルプへ移したので、普段は空。異常時だけ文言が入る */
@@ -749,6 +749,38 @@ const SNIPPET_GROUPS = [
     align-items: center;
     gap: 12px;
     margin-left: auto;
+  }
+
+  /*
+   * 追従に入ったら、面と下線だけを画面の端まで開く。道具の並びは動かさない。
+   * 見せ方は記事冒頭の目次（Article の .article-structure）と同じにする
+   */
+  .body-editor-bar::before {
+    position: absolute;
+    z-index: -1;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--bar-bleed-start, 0px));
+    inset-inline-end: calc(-1 * var(--bar-bleed-end, 0px));
+    pointer-events: none;
+    content: "";
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+    clip-path: inset(0 var(--bar-bleed-end, 0px) 0 var(--bar-bleed-start, 0px));
+    transition:
+      border-color var(--duration-feedback) ease,
+      box-shadow var(--duration-state) var(--ease-trace),
+      clip-path var(--duration-state) var(--ease-trace);
+  }
+
+  .body-editor-bar[data-stuck]::before {
+    border-bottom-color: var(--border-strong);
+    box-shadow: 0 6px 12px -6px rgb(0 0 0 / 18%);
+    clip-path: inset(0);
+  }
+
+  /* 追従の合図を取るためだけの目印。高さも面も持たない */
+  .body-editor-bar-sentinel {
+    height: 0;
   }
 
   /* 状態と、変更があるときだけ出るものを一続きに読ませる */
@@ -1241,21 +1273,6 @@ const SNIPPET_GROUPS = [
       /* 指で触る操作子なので、なぞりや長押しで選択が割り込まないようにする */
       -webkit-touch-callout: none;
       user-select: none;
-    }
-
-    .body-editor-bar::before {
-      position: absolute;
-      z-index: -1;
-      /*
-       * 絶対配置の基準はバーの padding box なので、0 のままだと下端が
-       * バーの罫線の内側で止まり、線が 1px ずれて二重に見える。
-       * 罫線の外側まで伸ばして 1 本に重ねる
-       */
-      inset-block: 0 -1px;
-      inset-inline: calc(-1 * var(--preview-bar-side-inset));
-      content: "";
-      background: var(--bg-base);
-      border-bottom: 1px solid var(--border);
     }
 
     /* 保存状態はバーの下にぶら下がるので、同じ幅で出す */

@@ -393,7 +393,48 @@ const requireElement = (root: ParentNode, selector: string) => {
   return element;
 };
 
+/**
+ * 追従に入った合図を、バーへ印として付ける。
+ *
+ * 吸着する位置は画面幅とヘッダーの出入りで動くため、値を持たずに、
+ * 直前へ置いた目印との離れ方で判断する。離れていれば貼り付いている。
+ */
+const trackStuck = (host: HTMLElement) => {
+  const bar = host.querySelector<HTMLElement>(".body-editor-bar");
+  if (!bar) return;
+
+  const sentinel = document.createElement("div");
+  sentinel.className = "body-editor-bar-sentinel";
+  bar.before(sentinel);
+
+  const sync = () => {
+    // 目印は常に元の流れに居るので、広げる量はこちらから測る
+    const box = sentinel.getBoundingClientRect();
+    const width = document.documentElement.clientWidth;
+    // 左のレールの下へ潜らせない。無い幅では 0 になる
+    const rail = document.querySelector(".desktop-edge");
+    const railRight = rail ? rail.getBoundingClientRect().right : 0;
+    bar.style.setProperty(
+      "--bar-bleed-start",
+      `${Math.max(0, box.left - railRight)}px`,
+    );
+    bar.style.setProperty(
+      "--bar-bleed-end",
+      `${Math.max(0, width - box.right)}px`,
+    );
+
+    const stuck = box.bottom < bar.getBoundingClientRect().top - 0.5;
+    bar.toggleAttribute("data-stuck", stuck);
+  };
+
+  sync();
+  onPageEvent(window, "scroll", sync, { passive: true });
+  onPageEvent(window, "resize", sync);
+};
+
 const initializeEditor = (host: HTMLElement) => {
+  trackStuck(host);
+
   const entryId = host.dataset.entryId;
   if (!entryId) throw new Error("Entry id not found");
 
