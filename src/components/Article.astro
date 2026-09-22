@@ -818,9 +818,10 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
 </style>
 
 <style is:global>
+  /* 飛んだ先の頭上は、その見出しが本来持つ上の余白と同じだけ空ける */
   .prose h2,
   .prose h3 {
-    scroll-margin-top: 24px;
+    scroll-margin-top: var(--heading-gap);
   }
 
   @media (max-width: 1023px) {
@@ -828,7 +829,7 @@ const xShareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&
     .prose h3 {
       scroll-margin-top: calc(
         var(--article-structure-offset) +
-          var(--article-structure-summary-height) + 24px
+          var(--article-structure-summary-height) + var(--heading-gap)
       );
     }
   }

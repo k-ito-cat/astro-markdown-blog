@@ -1,5 +1,5 @@
 import { defineConfig } from "astro/config";
-import { unified } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import tailwindcss from "@tailwindcss/vite";
 import icon from "astro-icon";
 
@@ -16,6 +16,7 @@ import remarkGlossaryTerm from "./src/plugins/remarkGlossaryTerm.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import remarkPathList from "./src/plugins/remarkPathList.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
+import rehypeInPageLink from "./src/plugins/rehypeInPageLink.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
 import imageUploader from "./src/plugins/imageUploader.mjs";
@@ -111,6 +112,9 @@ export default defineConfig({
       ],
       rehypePlugins: [
         rehypeTableScroll,
+        // 見出しの id は Astro が後段で振る。ページ内リンクは id を見るので先に振らせる
+        rehypeHeadingIds,
+        rehypeInPageLink,
         [rehypeExternalLinks, { internalHosts: ["k-ito-blog.netlify.app"] }],
       ],
     }),

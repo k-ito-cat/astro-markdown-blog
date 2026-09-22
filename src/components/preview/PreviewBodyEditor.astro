@@ -179,9 +179,14 @@ const SNIPPET_GROUPS = [
     ],
   },
   {
-    title: "埋め込み",
+    title: "リンク",
     items: [
       { label: "リンク", code: "[表示テキスト](https://example.com)" },
+      {
+        label: "ページ内リンク",
+        code: "[この記事の別の節](#見出しの文字)",
+        note: "同じページの見出しへ飛ぶ。`#` の後ろは見出しの文字で、空白はハイフンに変わり、記号は落ちる（例：`### bug ― 最初の一匹は、本当に虫だった` → `#bug--最初の一匹は本当に虫だった`）。鎖の印が付く。その見出しが無いときは印を出さないので、綴りの間違いに気づける",
+      },
       {
         label: "リンクカード",
         code: "https://example.com",
@@ -225,6 +230,11 @@ const SNIPPET_GROUPS = [
         code: "> [!WARNING]\n> これは警告メッセージです",
         note: "問題を避けるため今すぐ注意が要る",
       },
+    ],
+  },
+  {
+    title: "画像",
+    items: [
       {
         label: "CAUTION（危険）",
         code: "> [!CAUTION]\n> これは危険メッセージです",

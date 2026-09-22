@@ -438,6 +438,19 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     vertical-align: 0.06em;
   }
 
+  /*
+   * 同じページの見出しへ飛ぶリンク。外部リンクの矢印と同じ置き方・大きさにして、
+   * 印の有無と形で行き先を読み分けられるようにする
+   */
+  .prose .in-page-link-icon {
+    display: inline-block;
+    width: 0.76em;
+    height: 0.76em;
+    margin-inline-start: 0.28em;
+    color: currentColor;
+    vertical-align: 0.06em;
+  }
+
   /* マーカー。上を空けて下だけ塗り、行が詰まって見えないようにする */
   .prose mark,
   .prose .flexible-marker {
@@ -689,16 +702,22 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     scroll-margin-top: 24px;
   }
 
+  /*
+   * 見出しの上の余白は、飛び先の頭上に取る余白でもある（Article の
+   * scroll-margin-top）。ずれないよう、同じ値をひとつの変数から配る
+   */
   .prose h2 {
+    --heading-gap: 48px;
     font-size: 24px;
-    margin: 48px 0 16px;
+    margin: var(--heading-gap) 0 16px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--color-border-strong);
   }
 
   .prose h3 {
+    --heading-gap: 36px;
     font-size: 20px;
-    margin: 36px 0 12px;
+    margin: var(--heading-gap) 0 12px;
   }
 
   .prose h4 {
