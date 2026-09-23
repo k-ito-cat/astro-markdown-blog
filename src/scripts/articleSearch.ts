@@ -26,6 +26,12 @@ const HIGHLIGHT_CURRENT = "article-search-current";
 /** 一覧に並べる上限。これを超えた分は件数だけ伝える */
 const LIST_LIMIT = 20;
 
+/**
+ * 一覧の一行で、語の手前に残す文字数。文の頭から出すと、狭幅では語が
+ * 省略の先へ押し出されて、何に当たったのか読めない。前後の文脈はプレビューが持つ
+ */
+const LEAD_LIMIT = 8;
+
 /*
  * 文の切れ目。読点や小数点で切ると語の途中で切れるので、和文の終止符だけ見る。
  * 改行も段落内の切れ目として扱う
@@ -76,7 +82,7 @@ const toHit = (occurrence: Occurrence): Hit => {
   const start = block ? offsetInBlock(block, node) + at : at;
   const end = start + length;
 
-  // ヒットを含む一文を、頭から丸ごと出す。行に収まらない分は CSS が省略する
+  // ヒットを含む一文を採る。語の手前は LEAD_LIMIT で詰め、後ろの収まらない分は CSS が省略する
   let from = 0;
   for (let i = start - 1; i >= 0; i -= 1) {
     if (SENTENCE_END.test(source[i] ?? "")) {
@@ -93,9 +99,15 @@ const toHit = (occurrence: Occurrence): Hit => {
     }
   }
 
+  // 絵文字などのサロゲートペアを割らないよう、コードポイント単位で数える
+  const lead = Array.from(flatten(source.slice(from, start)).trimStart());
+
   return {
     range,
-    before: flatten(source.slice(from, start)).trimStart(),
+    before:
+      lead.length > LEAD_LIMIT
+        ? `…${lead.slice(-LEAD_LIMIT).join("")}`
+        : lead.join(""),
     text: flatten(source.slice(start, end)),
     after: flatten(source.slice(end, to)),
     context: source,
@@ -142,6 +154,12 @@ export const initArticleSearch = (signal: AbortSignal) => {
   const close = dialog?.querySelector<HTMLButtonElement>(
     "[data-article-search-close]",
   );
+  const go = dialog?.querySelector<HTMLButtonElement>(
+    "[data-article-search-go]",
+  );
+  const clearButton = dialog?.querySelector<HTMLButtonElement>(
+    "[data-article-search-clear]",
+  );
   if (
     !prose ||
     !dialog ||
@@ -152,9 +170,22 @@ export const initArticleSearch = (signal: AbortSignal) => {
     !close ||
     !results ||
     !preview ||
-    !previewBody
+    !previewBody ||
+    !go ||
+    !clearButton
   )
     return;
+
+  /*
+   * 語を入れた時点で先頭を選んでおくのは、Enter で送る先がある環境だけ。
+   * Touch では選んだ印が押す前から付いていても、何も指していない
+   */
+  const hoverable = window.matchMedia("(hover: hover)");
+
+  const panel = dialog.querySelector<HTMLElement>(".article-search-panel");
+
+  /* 行の送りの矢印は script で作るため、アイコンはプレビューのボタンから借りる */
+  const arrow = go.querySelector("svg");
 
   const entries = Array.from(
     document.querySelectorAll<HTMLElement>("[data-article-search-entry-group]"),
@@ -194,9 +225,27 @@ export const initArticleSearch = (signal: AbortSignal) => {
     });
   };
 
+  /*
+   * 差し替える前に、面の中に残った選択を外す。iOS では選ばれていた文字を
+   * 差し替えると、選択の塗りだけが画面に残る。まだ文字があるうちに外す
+   */
+  const releaseSelection = () => {
+    /*
+     * 打っている最中は触らない。入力欄のキャレットは anchorNode が入力欄の
+     * 親を指すことがあり、外すと変換中の語やキャレットまで失う
+     */
+    if (document.activeElement === input) return;
+    const selection = document.getSelection();
+    const anchor = selection?.anchorNode;
+    if (!selection || !anchor || !dialog.contains(anchor)) return;
+    selection.removeAllRanges();
+  };
+
   /* 選んだヒットを含む段落を丸ごと出す。飛ぶ前に、そこで合っているか見る */
   const renderPreview = () => {
+    releaseSelection();
     const hit = hits[current];
+    preview.toggleAttribute("data-empty", !hit);
     if (!hit) {
       previewBody.replaceChildren();
       return;
@@ -210,11 +259,16 @@ export const initArticleSearch = (signal: AbortSignal) => {
       hit.context.slice(hit.at + hit.length),
     );
 
-    // 長い段落では、ヒットが見えるところまでプレビューの中だけを送る
-    preview.scrollTop = Math.max(
-      0,
-      mark.offsetTop - preview.clientHeight / 2 - preview.offsetTop,
-    );
+    /*
+     * 長い段落では、プレビューの中だけを送ってヒットの行を2行目に置く。
+     * 1行ぶんの前置きがあると、どういう流れで語が出てきたかが読める。
+     * 行の途中で切れないよう、行の高さ単位で送る
+     */
+    const lineHeight = parseFloat(getComputedStyle(previewBody).lineHeight);
+    const line = Math.floor(mark.offsetTop / lineHeight);
+    previewBody.scrollTop = Number.isFinite(line)
+      ? Math.max(0, (line - 1) * lineHeight)
+      : 0;
   };
 
   const render = () => {
@@ -225,10 +279,11 @@ export const initArticleSearch = (signal: AbortSignal) => {
         ? "見つからない"
         : `${hits.length}件`;
 
-    // 語があるうちは語を消す操作、空なら閉じる操作として使う
-    close.setAttribute("aria-label", query ? "検索を解除" : "閉じる");
+    clearButton.hidden = query === "";
+    panel?.toggleAttribute("data-idle", query === "");
     syncEntries(query);
 
+    releaseSelection();
     list.replaceChildren();
 
     hits.slice(0, LIST_LIMIT).forEach((hit, order) => {
@@ -249,7 +304,16 @@ export const initArticleSearch = (signal: AbortSignal) => {
       text.append(hit.before, mark, hit.after);
 
       button.append(index, text);
-      item.append(button);
+
+      // 狭幅で選んでいる行にだけ見える送りの矢印。見せるかどうかは CSS が決める
+      const rowGo = document.createElement("button");
+      rowGo.type = "button";
+      rowGo.className = "hit-go";
+      rowGo.dataset.hitGo = "";
+      rowGo.setAttribute("aria-label", "本文へ移る");
+      if (arrow) rowGo.append(arrow.cloneNode(true));
+
+      item.append(button, rowGo);
       list.append(item);
     });
 
@@ -263,7 +327,7 @@ export const initArticleSearch = (signal: AbortSignal) => {
 
   const search = () => {
     hits = collectHits(prose, input.value.trim());
-    current = hits.length > 0 ? 0 : -1;
+    current = hits.length > 0 && hoverable.matches ? 0 : -1;
     paint();
     render();
   };
@@ -360,6 +424,11 @@ export const initArticleSearch = (signal: AbortSignal) => {
         event.target instanceof Element
           ? event.target.closest<HTMLButtonElement>("[data-hit-index]")
           : null;
+      // 送る操作。広幅はプレビューのボタン、狭幅は選んでいる行の矢印
+      const onGo =
+        event.target === go ||
+        (event.target instanceof Element &&
+          event.target.matches("[data-hit-go]"));
 
       if (event.key === "Escape") {
         // 語が残っているうちは解除が先。もう一度押したらダイアログを閉じる
@@ -374,8 +443,9 @@ export const initArticleSearch = (signal: AbortSignal) => {
         if (hits.length === 0) return;
         event.preventDefault();
 
-        const from = button ? items().indexOf(button) : -1;
-        if (!button) {
+        // 送る操作の上からは、選んでいる候補を起点に動く
+        const from = button ? items().indexOf(button) : onGo ? current : -1;
+        if (from < 0) {
           focusItem(event.key === "ArrowDown" ? 0 : hits.length - 1);
           return;
         }
@@ -383,16 +453,68 @@ export const initArticleSearch = (signal: AbortSignal) => {
         return;
       }
 
-      if (event.key !== "Enter" || button) return;
+      /*
+       * 左右は、選んでいる候補と「本文へ移る」の行き来に使う。入力欄の上では
+       * 文字のカーソル移動なので奪わない
+       */
+      if (event.key === "ArrowRight" && button) {
+        event.preventDefault();
+        const rowGo = button.nextElementSibling;
+        (rowGo instanceof HTMLElement && rowGo.checkVisibility()
+          ? rowGo
+          : go
+        ).focus();
+        return;
+      }
+
+      if (event.key === "ArrowLeft" && onGo) {
+        event.preventDefault();
+        focusItem(current);
+        return;
+      }
+
+      /*
+       * Enter は選んでいる候補へ送る。候補のボタン上の Enter も、既定の click
+       * （選ぶだけ）にさせずに送る。矢印で選んだ時点で段落は見えている
+       */
+      if (event.key !== "Enter") return;
       event.preventDefault();
-      goTo(current);
+      goTo(button ? Number(button.dataset.hitIndex) : current);
     },
     { signal },
   );
 
+  /*
+   * 押しても送らず、選ぶだけにする。フォーカスを候補へ移して入力欄から外し、
+   * ソフトキーボードを畳んでプレビューに高さを渡す
+   */
   list.addEventListener(
     "click",
     (event) => {
+      if (!(event.target instanceof Element)) return;
+      if (event.target.closest("[data-hit-go]")) {
+        goTo(current);
+        return;
+      }
+
+      const button =
+        event.target.closest<HTMLButtonElement>("[data-hit-index]");
+      if (!button) return;
+      button.focus();
+      select(Number(button.dataset.hitIndex));
+      button.scrollIntoView({ block: "nearest" });
+    },
+    { signal },
+  );
+
+  /*
+   * Pointer では、ダブルクリックで選ぶと送るを一度に済ませる。Touch の
+   * ダブルタップにも dblclick が届く環境があるため、hover のある環境に限る
+   */
+  list.addEventListener(
+    "dblclick",
+    (event) => {
+      if (!hoverable.matches) return;
       const button =
         event.target instanceof Element
           ? event.target.closest<HTMLButtonElement>("[data-hit-index]")
@@ -403,14 +525,17 @@ export const initArticleSearch = (signal: AbortSignal) => {
     { signal },
   );
 
-  /* バツは語を消す。空のときだけ閉じる操作になる。Escapeと同じ二段にする */
-  close.addEventListener(
+  go.addEventListener("click", () => goTo(current), { signal });
+
+  /*
+   * 閉じると語を消すは別の手に分ける。同じボタンが語の有無で意味を変えると、
+   * 閉じるつもりで語を失い、消すつもりで面を失う
+   */
+  close.addEventListener("click", () => dialog.close(), { signal });
+
+  clearButton.addEventListener(
     "click",
     () => {
-      if (input.value === "") {
-        dialog.close();
-        return;
-      }
       clear();
       input.focus();
     },
