@@ -29,6 +29,7 @@ import previewPinnedEditor from "./src/plugins/previewPinnedEditor.mjs";
 import contentRefresh from "./src/plugins/contentRefresh.mjs";
 import syntaxPreview from "./src/plugins/syntaxPreview.mjs";
 import blockRange from "./src/plugins/blockRange.mjs";
+import internalLinkCheck from "./src/plugins/internalLinkCheck.mjs";
 
 import astroExpressiveCode, {
   createInlineSvgUrl,
@@ -147,5 +148,6 @@ export default defineConfig({
     syntaxPreview(),
     // expressive-code の後に置くこと。rehype プラグインを最後に走らせる必要がある
     blockRange(),
+    internalLinkCheck(),
   ],
 });
