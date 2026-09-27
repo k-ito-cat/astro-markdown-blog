@@ -123,8 +123,14 @@ const monthsByYear = Array.from(
 ---
 
 <BaseLayout title="技術記録">
-  {/* 場面は描画前に決める。script が無ければ付かず、時間軸と制作物が縦に並ぶ */}
-  <script is:inline>
+  {
+    /*
+     * 場面は描画前に決める。script が無ければ付かず、時間軸と制作物が縦に並ぶ。
+     * ClientRouter は同じ inline script を一度しか実行せず、html の属性は遷移の
+     * たびに入れ替えるので、Home へ来るたびに実行させる
+     */
+  }
+  <script is:inline data-astro-rerun>
     document.documentElement.dataset.homeScene =
       location.hash === "#works" ? "works" : "timeline";
   </script>
@@ -152,21 +158,29 @@ const monthsByYear = Array.from(
           すべての記録を探す
           <Icon name="octicon:arrow-right-16" aria-hidden="true" />
         </a>
+        {
+          /*
+           * 場面の末尾に行き先を置く。押す部品ではなく、下端で押し込めば
+           * もう一方の場面へ進むことを示す手がかり。操作の向きは chevron で示す
+           */
+        }
+        <div class="scene-pull" data-scene-pull="timeline" aria-hidden="true">
+          <span class="scene-pull-line"></span>
+          <span class="scene-pull-label">
+            <span class="scene-destination">制作物</span>
+            <span class="scene-chevron" data-input="pointer">
+              <Icon name="octicon:chevron-down-16" />
+            </span>
+            <span class="scene-chevron" data-input="touch">
+              <Icon name="octicon:chevron-up-16" />
+            </span>
+          </span>
+          <span class="scene-pull-line"></span>
+        </div>
       </section>
     </div>
 
-    <div class="scene-pull scene-band" data-scene-pull="timeline" aria-hidden="true">
-      <span class="scene-pull-line"></span>
-      <span class="scene-pull-label">制作物</span>
-      <span class="scene-pull-line"></span>
-    </div>
-
     <section class="works" id="works" aria-labelledby="works-title">
-      <div class="scene-pull" data-scene-pull="works" aria-hidden="true">
-        <span class="scene-pull-line"></span>
-        <span class="scene-pull-label">記録</span>
-        <span class="scene-pull-line"></span>
-      </div>
       <h2 id="works-title" tabindex="-1">制作物</h2>
       {
         githubProfile && (
@@ -215,6 +229,19 @@ const monthsByYear = Array.from(
           ))
         }
       </ul>
+      <div class="scene-pull" data-scene-pull="works" aria-hidden="true">
+        <span class="scene-pull-line"></span>
+        <span class="scene-pull-label">
+          <span class="scene-destination">記録</span>
+          <span class="scene-chevron" data-input="pointer">
+            <Icon name="octicon:chevron-down-16" />
+          </span>
+          <span class="scene-chevron" data-input="touch">
+            <Icon name="octicon:chevron-up-16" />
+          </span>
+        </span>
+        <span class="scene-pull-line"></span>
+      </div>
     </section>
   </main>
 </BaseLayout>
@@ -380,18 +407,13 @@ const monthsByYear = Array.from(
     padding-top: 0;
   }
 
-  /* 上端での下への押し込みを、再読み込みではなく場面の戻りに使う */
-  :global(html[data-home-scene="works"]) {
-    overscroll-behavior-y: contain;
-  }
-
   #record-flow-title:focus,
   .works h2:focus {
     outline: none;
   }
 
   /*
-   * 押し込み量を「—— 制作物 ——」の両側の Line が中央から外へ伸びる量で示す。
+   * 押し込み量を、行き先の両側の Line が中央から外へ伸びる量で示す。
    * --pull は 0–1 で script が渡す。閾値に届いたら文字を操作の色に替え、
    * 離せば切り替わることを示す
    */
@@ -406,12 +428,10 @@ const monthsByYear = Array.from(
     align-items: center;
     justify-content: center;
     gap: 12px;
-    color: var(--color-text-muted);
+    margin-top: 48px;
+    color: var(--color-primary);
     font-size: var(--text-xs);
-  }
-
-  .scene-pull[data-scene-pull="works"] {
-    margin-bottom: 24px;
+    font-weight: 700;
   }
 
   /* 押す前から短く見せて区切りとして読ませ、押し込むほど外へ伸ばす */
@@ -428,8 +448,59 @@ const monthsByYear = Array.from(
     transform-origin: left;
   }
 
+  /* 行き先の直下に、操作の向きを示す chevron を左右中央で置く */
   .scene-pull-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
     transition: color var(--duration-feedback) ease;
+  }
+
+  /*
+   * chevron は手の動きの向きに合わせる。PC は下へ送り、Touch は上へ払う。
+   * 入力手段は幅から推定せず、主なポインタの精度で出し分ける
+   */
+  .scene-chevron {
+    display: inline-flex;
+  }
+
+  .scene-chevron[data-input="touch"] {
+    display: none;
+  }
+
+  @media (pointer: coarse) {
+    .scene-chevron[data-input="touch"] {
+      display: inline-flex;
+    }
+
+    .scene-chevron[data-input="pointer"] {
+      display: none;
+    }
+  }
+
+  /*
+   * 行き先が見えた時に、chevron を操作の向きへ2回だけ弾ませて止める。
+   * 下端に気づかせるための例外で、表示中に動き続けることはしない
+   */
+  .scene-chevron {
+    --chevron-bounce: 4px;
+  }
+
+  .scene-chevron[data-input="touch"] {
+    --chevron-bounce: -4px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .scene-pull[data-cue] .scene-chevron {
+      animation: scene-chevron-bounce 600ms ease-in-out 2;
+    }
+  }
+
+  @keyframes scene-chevron-bounce {
+    50% {
+      transform: translateY(var(--chevron-bounce));
+    }
   }
 
   /* 指で引いている間は指に遅れないよう、戻るときだけ動かす */
@@ -439,51 +510,6 @@ const monthsByYear = Array.from(
 
   .scene-pull[data-ready] .scene-pull-label {
     color: var(--color-interaction-text);
-  }
-
-  /*
-   * 最下部付近でだけ、画面下端に曇らせた帯を出す。上端は gradient でぼかさず
-   * 罫線で区切り、時間軸と制作物の境界として読ませる。下端まで来れば、
-   * 帯は .home の下余白の上に乗り、記録を隠さない
-   */
-  :global(html[data-home-scene="timeline"]) .scene-band {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: 20;
-    height: calc(56px + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
-    border-top: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-background) 72%, transparent);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition:
-      opacity var(--duration-feedback) ease,
-      visibility var(--duration-feedback) allow-discrete;
-  }
-
-  :global(html[data-home-scene="timeline"]) .scene-band[data-visible] {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  /* 透過を減らす設定では、曇りをやめて紙の色で塗る */
-  @media (prefers-reduced-transparency: reduce) {
-    :global(html[data-home-scene="timeline"]) .scene-band {
-      background: var(--color-background);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-    }
-  }
-
-  /* 左端の常設ナビに重ねない。幅は body の左余白と同じ区分で切り替わる */
-  @media (min-width: 960px) {
-    :global(html[data-home-scene="timeline"]) .scene-band {
-      inset-inline-start: 48px;
-    }
   }
 
   /*
