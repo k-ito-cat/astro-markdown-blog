@@ -201,6 +201,8 @@ export const TAGS = [
   "Base64",
   "OGP",
   "スタックトレース",
+  "CLI",
+  "非対話モード",
 ] as const;
 export type Tag = (typeof TAGS)[number];
 
