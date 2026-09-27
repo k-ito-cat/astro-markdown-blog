@@ -29,6 +29,42 @@ const works = [
   },
 ];
 
+let githubProfile: { name: string; avatarUrl: string; htmlUrl: string } | null = null;
+const githubToken = import.meta.env.GITHUB_REPO_METADATA_TOKEN;
+
+try {
+  const response = await fetch("https://api.github.com/users/k-ito-cat", {
+    headers: {
+      Accept: "application/vnd.github+json",
+      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
+    },
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    if (
+      typeof data.name === "string" &&
+      data.name.trim() &&
+      typeof data.avatar_url === "string" &&
+      data.avatar_url.trim() &&
+      typeof data.html_url === "string" &&
+      data.html_url.trim()
+    ) {
+      githubProfile = {
+        name: data.name,
+        avatarUrl: data.avatar_url,
+        htmlUrl: data.html_url,
+      };
+    } else {
+      console.warn("GitHubのプロフィールに名前、画像、またはURLがありません");
+    }
+  } else {
+    console.warn(`GitHubのプロフィールを取得できませんでした: ${response.status}`);
+  }
+} catch (error) {
+  console.warn("GitHubのプロフィールを取得できませんでした", error);
+}
+
 const posts = await getCollection(
   "posts",
   ({ data }) => data.status !== PUBLISHED_STATUS.PRIVATE,
@@ -87,6 +123,11 @@ const monthsByYear = Array.from(
 ---
 
 <BaseLayout title="技術記録">
+  {/* 場面は描画前に決める。script が無ければ付かず、時間軸と制作物が縦に並ぶ */}
+  <script is:inline>
+    document.documentElement.dataset.homeScene =
+      location.hash === "#works" ? "works" : "timeline";
+  </script>
   <main id="main-content" class="home">
     <div class="home-layout">
       <aside class="month-trace" aria-label="表示中の時期">
@@ -105,7 +146,7 @@ const monthsByYear = Array.from(
       </aside>
 
       <section class="record-flow" aria-labelledby="record-flow-title">
-        <h1 id="record-flow-title" class="sr-only">技術理解の記録</h1>
+        <h1 id="record-flow-title" class="sr-only" tabindex="-1">技術理解の記録</h1>
         <Timeline entries={entries} yearLinks={yearLinks} />
         <a href="/blog" class="flow-more">
           すべての記録を探す
@@ -114,8 +155,50 @@ const monthsByYear = Array.from(
       </section>
     </div>
 
+    <div class="scene-pull scene-band" data-scene-pull="timeline" aria-hidden="true">
+      <span class="scene-pull-line"></span>
+      <span class="scene-pull-label">制作物</span>
+      <span class="scene-pull-line"></span>
+    </div>
+
     <section class="works" id="works" aria-labelledby="works-title">
-      <h2 id="works-title">制作物</h2>
+      <div class="scene-pull" data-scene-pull="works" aria-hidden="true">
+        <span class="scene-pull-line"></span>
+        <span class="scene-pull-label">記録</span>
+        <span class="scene-pull-line"></span>
+      </div>
+      <h2 id="works-title" tabindex="-1">制作物</h2>
+      {
+        githubProfile && (
+          <div class="works-profile">
+            <img
+              src={githubProfile.avatarUrl}
+              alt={`${githubProfile.name}のプロフィール画像`}
+              width="320"
+              height="320"
+              loading="lazy"
+              decoding="async"
+            />
+            <div>
+              <div class="works-profile-heading">
+                <p class="works-profile-name">{githubProfile.name}</p>
+                <a
+                  class="works-profile-link"
+                  href={githubProfile.htmlUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${githubProfile.name}のGitHubプロフィールを新しいタブで開く`}
+                >
+                  <Icon name="octicon:mark-github-16" aria-hidden="true" />
+                </a>
+              </div>
+              <p class="works-profile-intro">
+                フロントエンド技術と、プロダクトの品質向上を考えることが好き
+              </p>
+            </div>
+          </div>
+        )
+      }
       <ul class="works-list" aria-label="制作物">
         {
           works.map((work) => (
@@ -190,6 +273,60 @@ const monthsByYear = Array.from(
     font-weight: 700;
   }
 
+  .works-profile {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    align-items: center;
+    gap: 28px;
+    margin-top: 16px;
+    padding: 24px 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .works-profile img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  .works-profile-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .works-profile-name {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: var(--text-xl);
+    font-weight: 600;
+  }
+
+  .works-profile-intro {
+    margin: 10px 0 0;
+    color: var(--color-text-sub);
+    font-size: var(--text-md);
+    line-height: 1.75;
+  }
+
+  .works-profile-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--color-text-sub);
+    font-size: 18px;
+    text-decoration: none;
+  }
+
+  .works-profile-link:hover,
+  .works-profile-link:focus-visible {
+    color: var(--color-interaction-text);
+  }
+
   .works-list {
     margin: 16px 0 0;
     padding: 0;
@@ -205,6 +342,10 @@ const monthsByYear = Array.from(
     border-top: 1px solid var(--color-border);
   }
 
+  .works-profile + .works-list {
+    margin-top: 0;
+  }
+
   .works-list p {
     margin: 4px 0 0;
     color: var(--color-text-sub);
@@ -217,6 +358,162 @@ const monthsByYear = Array.from(
     gap: 5px;
     flex: none;
     font-size: var(--text-xs);
+  }
+
+  @media (max-width: 959px) {
+    .works {
+      scroll-margin-top: 52px;
+    }
+  }
+
+  /*
+   * 時間軸と制作物を別の場面にする。属性は script がある環境でだけ付くので、
+   * 無ければ下の規則は効かず、縦に並んだまま制作物へ scroll で届く
+   */
+  :global(html[data-home-scene="timeline"]) .works,
+  :global(html[data-home-scene="works"]) .home-layout {
+    display: none;
+  }
+
+  :global(html[data-home-scene="works"]) .works {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  /* 上端での下への押し込みを、再読み込みではなく場面の戻りに使う */
+  :global(html[data-home-scene="works"]) {
+    overscroll-behavior-y: contain;
+  }
+
+  #record-flow-title:focus,
+  .works h2:focus {
+    outline: none;
+  }
+
+  /*
+   * 押し込み量を「—— 制作物 ——」の両側の Line が中央から外へ伸びる量で示す。
+   * --pull は 0–1 で script が渡す。閾値に届いたら文字を操作の色に替え、
+   * 離せば切り替わることを示す
+   */
+  .scene-pull {
+    display: none;
+  }
+
+  :global(html[data-home-scene="timeline"]) .scene-pull[data-scene-pull="timeline"],
+  :global(html[data-home-scene="works"]) .scene-pull[data-scene-pull="works"] {
+    --pull: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .scene-pull[data-scene-pull="works"] {
+    margin-bottom: 24px;
+  }
+
+  /* 押す前から短く見せて区切りとして読ませ、押し込むほど外へ伸ばす */
+  .scene-pull-line {
+    width: 64px;
+    height: 1px;
+    background: var(--color-secondary);
+    transform: scaleX(calc(0.375 + 0.625 * var(--pull)));
+    transform-origin: right;
+    transition: transform var(--duration-feedback) var(--ease-trace);
+  }
+
+  .scene-pull-label + .scene-pull-line {
+    transform-origin: left;
+  }
+
+  .scene-pull-label {
+    transition: color var(--duration-feedback) ease;
+  }
+
+  /* 指で引いている間は指に遅れないよう、戻るときだけ動かす */
+  .scene-pull[data-dragging] .scene-pull-line {
+    transition: none;
+  }
+
+  .scene-pull[data-ready] .scene-pull-label {
+    color: var(--color-interaction-text);
+  }
+
+  /*
+   * 最下部付近でだけ、画面下端に曇らせた帯を出す。上端は gradient でぼかさず
+   * 罫線で区切り、時間軸と制作物の境界として読ませる。下端まで来れば、
+   * 帯は .home の下余白の上に乗り、記録を隠さない
+   */
+  :global(html[data-home-scene="timeline"]) .scene-band {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 20;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-feedback) ease,
+      visibility var(--duration-feedback) allow-discrete;
+  }
+
+  :global(html[data-home-scene="timeline"]) .scene-band[data-visible] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* 透過を減らす設定では、曇りをやめて紙の色で塗る */
+  @media (prefers-reduced-transparency: reduce) {
+    :global(html[data-home-scene="timeline"]) .scene-band {
+      background: var(--color-background);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* 左端の常設ナビに重ねない。幅は body の左余白と同じ区分で切り替わる */
+  @media (min-width: 960px) {
+    :global(html[data-home-scene="timeline"]) .scene-band {
+      inset-inline-start: 48px;
+    }
+  }
+
+  /*
+   * 場面の切替。ページ遷移と同じ root のクロスフェードにし、行きも戻りも同じ動きにする。
+   * ヘッダーは場面に属さないので、別の名前を与えて root から外す
+   */
+  :global(html[data-scene-transition] .desktop-edge) {
+    view-transition-name: home-scene-edge;
+  }
+
+  :global(html[data-scene-transition] .mobile-bar) {
+    view-transition-name: home-scene-bar;
+  }
+
+  :global(html[data-scene-transition]::view-transition-group(root)),
+  :global(html[data-scene-transition]::view-transition-old(root)),
+  :global(html[data-scene-transition]::view-transition-new(root)) {
+    animation-duration: var(--duration-scene);
+    animation-timing-function: ease-in-out;
+  }
+
+  @media (max-width: 480px) {
+    .works-profile {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .works-profile img {
+      width: 144px;
+    }
   }
 
   @media (min-width: 760px) {
@@ -274,9 +571,16 @@ const monthsByYear = Array.from(
 </style>
 
 <script>
-  import { onPageLoad, onPageEvent } from "~/scripts/pageLifecycle";
+  import { initHomeScene } from "~/scripts/homeScene";
+  import {
+    onPageLoad,
+    onPageEvent,
+    pageSignal,
+  } from "~/scripts/pageLifecycle";
 
   onPageLoad(() => {
+    initHomeScene(pageSignal());
+
     const monthLinks = Array.from(
       document.querySelectorAll<HTMLAnchorElement>("[data-month-link]"),
     );

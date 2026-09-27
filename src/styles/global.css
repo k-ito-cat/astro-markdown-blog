@@ -111,6 +111,8 @@
   --duration-feedback: 160ms;
   --duration-state: 280ms;
   --duration-page: 200ms;
+  /* Homeの場面切替。場所が変わることを見せるので、状態変化より長く取る */
+  --duration-scene: 480ms;
   --ease-trace: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   /* Existing components continue to consume these semantic aliases. */
@@ -391,6 +393,7 @@ samp {
     --duration-feedback: 0ms;
     --duration-state: 0ms;
     --duration-page: 0ms;
+    --duration-scene: 0ms;
   }
 
   html {
