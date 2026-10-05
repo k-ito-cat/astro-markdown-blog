@@ -7,9 +7,8 @@
  * 消す合図はclickだけにする。scroll や pointermove では、送っている最中の
  * scroll を拾ってしまい、見える前に消える。
  *
- * ただし脚注のlink自身のclickは数えない。ClientRouter は preventDefault して
- * から非同期に遷移するため、click と hashchange の到着順に頼ると、付けた直後に
- * 自分で消す形になりうる。押した先が脚注なら、消さずに付け直しへ任せる。
+ * ただし脚注のlink自身のclickは数えない。押した先が脚注なら、消さずに
+ * hashchange での付け直しへ任せる。
  *
  * URL は書き換えない。hash を消すと履歴に触れ、戻る操作の行き先が変わる。
  */
@@ -54,8 +53,6 @@ export const initFootnoteMark = (signal: AbortSignal) => {
 
   window.addEventListener("click", onClick, { signal, passive: true });
   window.addEventListener("hashchange", mark, { signal });
-  // 同一ページの hash 移動で ClientRouter が投げる。hashchange が来ない経路の保険
-  window.addEventListener("popstate", mark, { signal });
 
   mark();
 };

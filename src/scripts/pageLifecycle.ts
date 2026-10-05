@@ -1,9 +1,11 @@
-let pageController = new AbortController();
-let previousUrl = document.referrer;
-let didSwap = false;
+/*
+ * ページ遷移は通常の document navigation なので、初期化はページごとに一度で済む。
+ * BFCache から戻ったページは状態ごと復元されるため、初期化し直さない
+ */
+const pageController = new AbortController();
 
 export const pageSignal = () => pageController.signal;
-export const pageReferrer = () => previousUrl;
+export const pageReferrer = () => document.referrer;
 
 export const onPageCleanup = (cleanup: () => void) => {
   pageSignal().addEventListener("abort", cleanup, { once: true });
@@ -17,11 +19,7 @@ export const observePage = <T extends { disconnect(): void }>(
 };
 
 export const onPageLoad = (initialize: () => void | Promise<void>) => {
-  if (!document.startViewTransition) {
-    void initialize();
-    return;
-  }
-  document.addEventListener("astro:page-load", initialize);
+  void initialize();
 };
 
 export function onPageEvent<K extends keyof WindowEventMap>(
@@ -35,35 +33,3 @@ export function onPageEvent<K extends keyof WindowEventMap>(
     signal: pageSignal(),
   });
 }
-
-document.addEventListener("astro:before-swap", (event) => {
-  didSwap = true;
-  previousUrl = event.from.href;
-  pageController.abort();
-  pageController = new AbortController();
-  event.newDocument.documentElement.dataset.paper =
-    document.documentElement.dataset.paper;
-  event.newDocument.documentElement.dataset.glossary =
-    document.documentElement.dataset.glossary;
-  event.newDocument.documentElement.dataset.scroll =
-    document.documentElement.dataset.scroll;
-});
-
-document.addEventListener("astro:page-load", () => {
-  if (!didSwap) return;
-  didSwap = false;
-  if (document.activeElement !== document.body) return;
-  const content = document.querySelector<HTMLElement>("main");
-  if (!content) return;
-  content.tabIndex = -1;
-  content.focus({ preventScroll: true });
-});
-
-document.addEventListener("astro:after-swap", () => {
-  document
-    .querySelector("[data-theme-color]")
-    ?.setAttribute(
-      "content",
-      document.documentElement.dataset.paper === "dim" ? "#efe8d9" : "#ffffff",
-    );
-});

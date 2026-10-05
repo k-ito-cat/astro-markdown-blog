@@ -1,8 +1,4 @@
-import {
-  onPageEvent,
-  onPageCleanup,
-  pageSignal,
-} from "~/scripts/pageLifecycle";
+import { onPageEvent, onPageCleanup } from "~/scripts/pageLifecycle";
 import { hasUnsavedFrontmatter } from "~/scripts/previewFrontmatter";
 import {
   blockText,
@@ -1520,13 +1516,6 @@ const initializeEditor = (host: HTMLElement) => {
   onPageEvent(window, "beforeunload", (event) => {
     if (shouldHold()) event.preventDefault();
   });
-  document.addEventListener(
-    "astro:before-preparation",
-    (event) => {
-      if (shouldHold()) event.preventDefault();
-    },
-    { signal: pageSignal() },
-  );
 
   prose.addEventListener("pointerover", (event) => {
     if (active || busy) return;

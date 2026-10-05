@@ -46,15 +46,6 @@ export default defineConfig({
   output: "static",
   // og:image を絶対URLで組み立てるために必須
   site: "https://k-ito-blog.netlify.app",
-  /*
-   * ClientRouter があると prefetch は既定で有効になる。既定の hover は指に
-   * 届かないので tap にする。viewport にすると Safari が fetch へ落ち、
-   * cache headerが無い応答をダウンロード扱いすることがある
-   */
-  prefetch: {
-    prefetchAll: true,
-    defaultStrategy: "tap",
-  },
   image: {
     // Markdown 内の画像にも srcset / sizes を自動付与する
     layout: "constrained",

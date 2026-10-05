@@ -9,12 +9,9 @@
  * ブラウザが再読み込みに使い、overscroll-behavior でも止められないので使わない。
  * 押し込み量は `[data-scene-pull]` の `--pull`（0–1）として Line に渡す。
  *
- * 場面は `#works` と履歴に結ぶ。積むときは ClientRouter の navigate を通す。
- * ClientRouter は今いる URL を自分で覚えており、history.pushState で直接積むと
- * 戻る操作を hash の無い同じページへの遷移と取り違え、ページを取り直してしまう。
+ * 場面は `#works` と履歴に結ぶ。積む前に時間軸の位置を今の履歴へ残し、戻る操作で
+ * 元の位置へ出す。
  */
-import { navigate } from "astro:transitions/client";
-
 type Scene = "timeline" | "works";
 
 const WORKS_HASH = "#works";
@@ -50,11 +47,6 @@ const prefersReducedMotion = () =>
 export const initHomeScene = (signal: AbortSignal) => {
   const root = document.documentElement;
   if (!document.querySelector("[data-scene-pull]")) return;
-  /*
-   * 描画前の inline script が付けるが、ClientRouter は html の属性を新しいページの
-   * ものへ入れ替える。script の再実行が漏れても場面を失わないよう、ここでも付ける
-   */
-  root.dataset.homeScene ??= sceneFromHash();
 
   const homePath = location.pathname;
   const pulls = new Map<Scene, HTMLElement>();
@@ -130,7 +122,8 @@ export const initHomeScene = (signal: AbortSignal) => {
   const openWorks = () => {
     if (currentScene() === "works" || switching) return;
     worksPushed = true;
-    void navigate(WORKS_HASH);
+    history.replaceState({ ...history.state, scrollY: window.scrollY }, "");
+    history.pushState(null, "", WORKS_HASH);
     switchScene("works");
   };
 
@@ -236,7 +229,7 @@ export const initHomeScene = (signal: AbortSignal) => {
     { signal },
   );
 
-  // ClientRouter より先に拾い、同じページの #works を scroll ではなく場面の切替にする
+  // 同じページの #works を、ブラウザの hash 移動ではなく場面の切替にする
   document.addEventListener(
     "click",
     (event) => {

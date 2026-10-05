@@ -1,5 +1,4 @@
 import { onPageEvent } from "~/scripts/pageLifecycle";
-import { navigate } from "astro:transitions/client";
 import {
   POST_PRIORITY,
   POST_PRIORITY_LABELS,
@@ -779,7 +778,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
 
     const href = `/preview/posts/${slug}`;
     if (event.metaKey || event.ctrlKey) window.open(href, "_blank");
-    else void navigate(href);
+    else window.location.assign(href);
   });
 
   root.addEventListener("click", (event) => {

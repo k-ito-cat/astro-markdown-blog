@@ -125,12 +125,10 @@ const monthsByYear = Array.from(
 <BaseLayout title="技術記録">
   {
     /*
-     * 場面は描画前に決める。script が無ければ付かず、時間軸と制作物が縦に並ぶ。
-     * ClientRouter は同じ inline script を一度しか実行せず、html の属性は遷移の
-     * たびに入れ替えるので、Home へ来るたびに実行させる
+     * 場面は描画前に決める。script が無ければ付かず、時間軸と制作物が縦に並ぶ
      */
   }
-  <script is:inline data-astro-rerun>
+  <script is:inline>
     document.documentElement.dataset.homeScene =
       location.hash === "#works" ? "works" : "timeline";
   </script>
