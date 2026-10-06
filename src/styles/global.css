@@ -382,6 +382,14 @@ samp {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /*
+   * ページ間は通常の document navigation に任せ、対応ブラウザでだけ重ねる。
+   * 戻る操作をブラウザの履歴と BFCache に任せられるよう、client router は使わない
+   */
+  @view-transition {
+    navigation: auto;
+  }
+
   ::view-transition-group(root) {
     animation-duration: var(--duration-page);
     animation-timing-function: ease-out;
