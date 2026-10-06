@@ -57,6 +57,23 @@ const ogImageUrl = new URL(ogImage || ogDefault.src, Astro.site);
         document.documentElement.dataset.scroll = scroll;
       })();
     </script>
+    {/* 一時的な診断用。iOS 実機で遷移直前に上部がずれる原因を特定したら消す */}
+    <script is:inline>
+      (() => {
+        try {
+          const param = new URLSearchParams(location.search).get("diag");
+          if (param !== null) sessionStorage.setItem("diag", param);
+          (sessionStorage.getItem("diag") ?? "")
+            .split(",")
+            .filter(Boolean)
+            .forEach((n) =>
+              document.documentElement.setAttribute(`data-diag-${n}`, ""),
+            );
+        } catch {
+          /* 診断を切り替えられないだけなので何もしない */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

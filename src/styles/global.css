@@ -408,3 +408,39 @@ samp {
     scroll-behavior: auto;
   }
 }
+
+/*
+ * 一時的な診断用。iOS 実機で遷移直前に上部がずれる原因を特定したら消す。
+ * `?diag=1,3` のように指定すると、番号の候補を無効にする（`?diag=` で解除）
+ */
+/* 1: バーの真上へはみ出す紙と引き量の線 */
+:root[data-diag-1] .mobile-bar::before,
+:root[data-diag-1] .chrome-pull {
+  display: none !important;
+}
+
+/* 2: 固定バーの transform */
+:root[data-diag-2] .mobile-bar {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* 3: html と body の高さ指定 */
+:root[data-diag-3],
+:root[data-diag-3] body {
+  height: auto !important;
+}
+
+/* 4: 固定ヘッダーと body の上の余白 */
+:root[data-diag-4] .site-header {
+  position: sticky !important;
+}
+
+:root[data-diag-4] body {
+  padding-top: 0 !important;
+}
+
+/* 5: 滑らかスクロール */
+:root[data-diag-5] {
+  scroll-behavior: auto !important;
+}
