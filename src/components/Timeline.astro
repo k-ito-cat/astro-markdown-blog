@@ -532,8 +532,8 @@ const { entries, variant = "stream", yearLinks } = Astro.props;
      * 断層線が見えている間は出ず、見えなくなった瞬間に入れ替わる
      */
     const cueTop = () => (window.innerWidth >= 960 ? 24 : 64);
-    // 送りが止まったと見なすまでの待ち。指を離してからの惰性より少し長く取る
-    const SETTLE_DELAY = 700;
+    // 送りが止まったと見なすまでの待ち。惰性より長く取り、止まった直後に年を読み取れる余韻を残す
+    const SETTLE_DELAY = 1200;
 
     let shownYear = "";
     let settleTimer = 0;
