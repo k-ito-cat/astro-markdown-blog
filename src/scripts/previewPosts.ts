@@ -40,7 +40,8 @@ type SortColumn =
   | "memo"
   | "updated";
 type SortDirection = "asc" | "desc";
-type SortName = "recommended" | `${SortColumn}-${SortDirection}`;
+/** edited は列を持たない並び順で、最終編集が新しい順に並べる */
+type SortName = "recommended" | "edited" | `${SortColumn}-${SortDirection}`;
 type FilterKey =
   | "priority"
   | "writing"
@@ -76,6 +77,7 @@ type PreviewRow = {
   tags: string[];
   published: string;
   updated: number;
+  edited: number;
 };
 
 type GroupDefinition = {
@@ -156,6 +158,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
   const recordType = element.dataset.recordType as RecordType;
   const memo = element.dataset.memo as MemoState;
   const updated = Date.parse(element.dataset.updated ?? "");
+  const edited = Date.parse(element.dataset.edited ?? "");
 
   if (!Object.values(POST_PRIORITY).includes(priority)) {
     throw new Error(`Unknown priority: ${priority}`);
@@ -175,6 +178,9 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
   if (Number.isNaN(updated)) {
     throw new Error(`Invalid updated date: ${element.dataset.updated}`);
   }
+  if (Number.isNaN(edited)) {
+    throw new Error(`Invalid edited time: ${element.dataset.edited}`);
+  }
 
   return {
     element,
@@ -193,6 +199,7 @@ const getRow = (element: HTMLTableRowElement): PreviewRow => {
     tags: parseStringArray(element.dataset.tags ?? "[]", "tags"),
     published: element.dataset.published ?? "",
     updated,
+    edited,
   };
 };
 
@@ -204,7 +211,7 @@ const isSortColumn = (value: string): value is SortColumn =>
 
 const isSortName = (value: string | null): value is SortName => {
   if (value === null) return false;
-  if (value === "recommended") return true;
+  if (value === "recommended" || value === "edited") return true;
 
   const [column, direction] = value.split("-");
   return (
@@ -215,7 +222,7 @@ const isSortName = (value: string | null): value is SortName => {
 };
 
 const parseSort = (sort: SortName) => {
-  if (sort === "recommended") return null;
+  if (sort === "recommended" || sort === "edited") return null;
 
   const [column, direction] = sort.split("-");
   if (column === undefined || !isSortColumn(column)) {
@@ -389,6 +396,10 @@ const compareColumn = (a: PreviewRow, b: PreviewRow, column: SortColumn) => {
 };
 
 const sortRows = (rows: PreviewRow[], sort: SortName) => {
+  if (sort === "edited") {
+    return rows.sort((a, b) => b.edited - a.edited || compareTitle(a, b));
+  }
+
   const parsed = parseSort(sort);
   if (parsed === null) return rows.sort(compareRecommended);
 
@@ -525,6 +536,9 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const recentButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-recent-button]"),
   );
+  const editedSortButton = root.querySelector("[data-edited-sort]");
+  if (!(editedSortButton instanceof HTMLButtonElement))
+    throw new Error("Edited sort button not found");
   const recentDayOptions = recentButtons.map((button) => {
     const days = Number(button.dataset.recentButton);
     if (!Number.isInteger(days) || days < 1) {
@@ -585,6 +599,10 @@ const initializePreviewPosts = (root: HTMLElement) => {
     searchInput.value = state.query;
     groupSelect.value = state.group;
     syncSortHeaders();
+    editedSortButton.setAttribute(
+      "aria-pressed",
+      String(state.sort === "edited"),
+    );
     getFilterInputs().forEach((input) => {
       const key = input.dataset.filterKey as FilterKey;
       input.checked = getStateValues(key).includes(input.value as never);
@@ -714,6 +732,12 @@ const initializePreviewPosts = (root: HTMLElement) => {
         ...state,
         sort: getNextSort(state.sort, getSortColumn(button)),
       });
+    });
+  });
+  editedSortButton.addEventListener("click", () => {
+    applyState({
+      ...state,
+      sort: state.sort === "edited" ? "recommended" : "edited",
     });
   });
   recentButtons.forEach((button) => {

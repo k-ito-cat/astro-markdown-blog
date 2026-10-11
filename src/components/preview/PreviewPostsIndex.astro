@@ -1,4 +1,5 @@
 ---
+import fs from "node:fs/promises";
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
 import CopyLinkButton from "~/components/CopyLinkButton.astro";
@@ -48,41 +49,59 @@ const SORT_COLUMNS = [
   { value: "updated", label: "更新日" },
 ] as const;
 
-const previewPosts = posts
-  .map((post) => {
-    const memoState = detectMemoState(post.body ?? "") as MemoState;
-    const previewSlug = normalizePostSlug(post.id);
+// 今日かどうかは開いた時点で決める。開いたまま日付をまたいだら開き直すまで古いまま
+const todayDateString = new Date().toDateString();
+const formatEditedToday = (edited: Date) =>
+  edited.toDateString() === todayDateString
+    ? `今日 ${edited.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : null;
 
-    return {
-      ...post,
-      previewSlug,
-      memoState,
-      pinned: isPreviewPinned(previewSlug),
-      searchText: normalizeSearchText(
-        [
-          post.data.title,
-          previewSlug,
-          ...post.data.categories,
-          ...post.data.tags,
-          // 本文も対象にして、書いた内容から記事を引けるようにする
-          post.body ?? "",
-        ].join(" "),
-      ),
-    };
-  })
-  .sort((a, b) => {
-    const priorityDiff =
-      POST_PRIORITY_ORDER[a.data.priority] -
-      POST_PRIORITY_ORDER[b.data.priority];
-    if (priorityDiff !== 0) return priorityDiff;
+const previewPosts = (
+  await Promise.all(
+    posts.map(async (post) => {
+      const memoState = detectMemoState(post.body ?? "") as MemoState;
+      const previewSlug = normalizePostSlug(post.id);
+      if (!post.filePath) {
+        throw new Error(`記事ファイルの場所がわかりません: ${post.id}`);
+      }
+      // 最終編集はファイルの更新時刻をそのまま使う目安の値（TRM-023）
+      const { mtime: edited } = await fs.stat(post.filePath);
 
-    const writingStatusDiff =
-      WRITING_STATUS_ORDER[a.data.writingStatus] -
-      WRITING_STATUS_ORDER[b.data.writingStatus];
-    if (writingStatusDiff !== 0) return writingStatusDiff;
+      return {
+        ...post,
+        previewSlug,
+        memoState,
+        edited,
+        editedToday: formatEditedToday(edited),
+        pinned: isPreviewPinned(previewSlug),
+        searchText: normalizeSearchText(
+          [
+            post.data.title,
+            previewSlug,
+            ...post.data.categories,
+            ...post.data.tags,
+            // 本文も対象にして、書いた内容から記事を引けるようにする
+            post.body ?? "",
+          ].join(" "),
+        ),
+      };
+    }),
+  )
+).sort((a, b) => {
+  const priorityDiff =
+    POST_PRIORITY_ORDER[a.data.priority] - POST_PRIORITY_ORDER[b.data.priority];
+  if (priorityDiff !== 0) return priorityDiff;
 
-    return a.data.title.localeCompare(b.data.title, "ja");
-  });
+  const writingStatusDiff =
+    WRITING_STATUS_ORDER[a.data.writingStatus] -
+    WRITING_STATUS_ORDER[b.data.writingStatus];
+  if (writingStatusDiff !== 0) return writingStatusDiff;
+
+  return a.data.title.localeCompare(b.data.title, "ja");
+});
 
 const priorities = Object.values(POST_PRIORITY).sort(
   (a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b],
@@ -575,6 +594,21 @@ const publishedMemoFilterParams = new URLSearchParams({
         </div>
       </div>
 
+      <div class="preview-field" role="group" aria-label="並び順">
+        <span class="preview-field-label">並び順</span>
+        <div class="preview-recent-options">
+          <button
+            type="button"
+            class="preview-recent-button"
+            aria-pressed="false"
+            title="ファイル時刻による目安。clone・一括置換で変わる"
+            data-edited-sort
+          >
+            最終編集順
+          </button>
+        </div>
+      </div>
+
       <details class="preview-filters" data-filter-details>
         <summary class="preview-filter-summary">
           <span class="preview-filter-summary-label">
@@ -774,6 +808,7 @@ const publishedMemoFilterParams = new URLSearchParams({
                   data-updated={previewPost.data.updatedAt
                     .toISOString()
                     .slice(0, 10)}
+                  data-edited={previewPost.edited.toISOString()}
                 >
                   <th
                     scope="row"
@@ -857,6 +892,14 @@ const publishedMemoFilterParams = new URLSearchParams({
                       <code class="preview-slug">
                         {previewPost.previewSlug}
                       </code>
+                      {previewPost.editedToday && (
+                        <span
+                          class="preview-status-badge preview-edited-chip"
+                          title="最終編集。ファイル時刻による目安"
+                        >
+                          {previewPost.editedToday}
+                        </span>
+                      )}
                     </span>
                     <button
                       type="button"
@@ -2285,6 +2328,8 @@ const publishedMemoFilterParams = new URLSearchParams({
     --tint-warning: color-mix(in oklab, var(--warning) 13%, var(--bg-base));
     --tint-active: color-mix(in oklab, var(--link) 13%, var(--bg-base));
     --tint-done: color-mix(in oklab, var(--accent-warm) 55%, var(--bg-base));
+    /* 最終編集は改訂の痕跡として Accent に寄せ、完了の印より一段淡くする */
+    --tint-edited: color-mix(in oklab, var(--accent-warm) 30%, var(--bg-base));
   }
 
   .preview-post-row[data-priority="high"] [data-edit-select="priority"] {
@@ -2374,6 +2419,13 @@ const publishedMemoFilterParams = new URLSearchParams({
 
   .preview-recent-count:empty {
     display: none;
+  }
+
+  .preview-edited-chip {
+    margin-left: 6px;
+    padding: 0 5px;
+    background: var(--tint-edited);
+    font-variant-numeric: tabular-nums;
   }
 
   .preview-category-trigger {
@@ -2517,7 +2569,7 @@ const publishedMemoFilterParams = new URLSearchParams({
     }
 
     .preview-tools {
-      grid-template-columns: minmax(260px, 1fr) 180px 190px 150px;
+      grid-template-columns: minmax(160px, 1fr) 180px auto auto 150px;
       align-items: end;
     }
 
