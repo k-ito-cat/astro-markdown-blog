@@ -99,6 +99,10 @@ export const initLightbox = (signal: AbortSignal) => {
     { signal, passive: true },
   );
 
+  dialog
+    .querySelector<HTMLButtonElement>("[data-lightbox-close]")
+    ?.addEventListener("click", () => dialog.close(), { signal });
+
   steppers.forEach((stepper) => {
     stepper.addEventListener(
       "click",
