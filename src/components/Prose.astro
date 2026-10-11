@@ -1240,6 +1240,36 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     max-width: 100%;
   }
 
+  /*
+   * 画像の台紙（CMP-015）。枠線と本文幅は台紙が持ち、画像は自然な大きさで
+   * 中央に置く。縦横比の違いで出る余白は、紙に ink をわずかに混ぜた台紙の面に
+   * なる
+   */
+  .prose .prose-image-mount {
+    display: flex;
+    justify-content: center;
+    max-width: var(--measure-prose);
+    margin: 24px auto;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-text) 4%, var(--color-background));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .prose figure .prose-image-mount {
+    margin: 0;
+  }
+
+  /* 透過画像の透けた部分が台紙の色に染まらないよう、画像の背面は紙で塞ぐ */
+  .prose .prose-image-mount > img {
+    width: auto;
+    max-width: 100%;
+    margin: 0;
+    background: var(--color-background);
+    border: 0;
+    border-radius: 0;
+  }
+
   .prose figcaption {
     margin-top: 8px;
     color: var(--text-muted);

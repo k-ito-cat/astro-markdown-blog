@@ -16,6 +16,7 @@ import remarkGlossaryTerm from "./src/plugins/remarkGlossaryTerm.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import remarkPathList from "./src/plugins/remarkPathList.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
+import rehypeImageMount from "./src/plugins/rehypeImageMount.mjs";
 import rehypeInPageLink from "./src/plugins/rehypeInPageLink.mjs";
 import frontmatterEditor from "./src/plugins/frontmatterEditor.mjs";
 import bodyEditor from "./src/plugins/bodyEditor.mjs";
@@ -104,6 +105,7 @@ export default defineConfig({
       ],
       rehypePlugins: [
         rehypeTableScroll,
+        rehypeImageMount,
         // 見出しの id は Astro が後段で振る。ページ内リンクは id を見るので先に振らせる
         rehypeHeadingIds,
         rehypeInPageLink,
