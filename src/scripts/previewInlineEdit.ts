@@ -1,6 +1,6 @@
+import { placePopoverBelow } from "~/scripts/popoverPlacement";
+
 const ENDPOINT = "/__frontmatter";
-const POPOVER_GAP = 4;
-const VIEWPORT_MARGIN = 8;
 
 type ChoiceField = "priority" | "writingStatus" | "status" | "recordType";
 
@@ -273,22 +273,7 @@ const initializeRow = (row: HTMLTableRowElement, maxCategories: number) => {
 
   categoryPopover.addEventListener("toggle", (event) => {
     if (!(event instanceof ToggleEvent) || event.newState !== "open") return;
-
-    const anchor = categoryTrigger.getBoundingClientRect();
-    const panel = categoryPopover.getBoundingClientRect();
-    const left = Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(anchor.left, window.innerWidth - panel.width - VIEWPORT_MARGIN),
-    );
-    const overflowsBottom =
-      anchor.bottom + POPOVER_GAP + panel.height >
-      window.innerHeight - VIEWPORT_MARGIN;
-    const top = overflowsBottom
-      ? Math.max(VIEWPORT_MARGIN, anchor.top - POPOVER_GAP - panel.height)
-      : anchor.bottom + POPOVER_GAP;
-
-    categoryPopover.style.left = `${left}px`;
-    categoryPopover.style.top = `${top}px`;
+    placePopoverBelow(categoryTrigger, categoryPopover);
   });
 
   syncCategoryLimit();

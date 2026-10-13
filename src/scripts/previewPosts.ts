@@ -29,6 +29,7 @@ import {
 } from "~/constants/recordType";
 import { normalizeSearchText } from "~/utils/search";
 import { initPreviewInlineEdit } from "~/scripts/previewInlineEdit";
+import { placePopoverBelow } from "~/scripts/popoverPlacement";
 
 type GroupName = "priority" | "writing" | "publication" | "none";
 type SortColumn =
@@ -483,10 +484,14 @@ const getFilterLabel = (key: FilterKey, value: string) => {
   return `分野: ${value}`;
 };
 
+const formatSortLabel = (direction: SortDirection) =>
+  direction === "asc" ? "↑" : "↓";
+
 const initializePreviewPosts = (root: HTMLElement) => {
   const controls = root.querySelector("[data-preview-controls]");
   const searchInput = root.querySelector("[data-search-input]");
   const groupSelect = root.querySelector("[data-group-select]");
+  const sortSelect = root.querySelector("[data-sort-select]");
   const resultCount = root.querySelector("[data-result-count]");
   const table = root.querySelector("table");
   const tableWrap = root.querySelector("[data-table-wrap]");
@@ -494,7 +499,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const activeFilters = root.querySelector("[data-active-filters]");
   const filterChips = root.querySelector("[data-filter-chips]");
   const filterCount = root.querySelector("[data-filter-count]");
-  const filterDetails = root.querySelector("[data-filter-details]");
+  const facets = root.querySelector("[data-facets]");
+  const facetsToggle = root.querySelector("[data-facets-toggle]");
 
   if (!(controls instanceof HTMLFormElement))
     throw new Error("Preview controls not found");
@@ -502,6 +508,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
     throw new Error("Search input not found");
   if (!(groupSelect instanceof HTMLSelectElement))
     throw new Error("Group select not found");
+  if (!(sortSelect instanceof HTMLSelectElement))
+    throw new Error("Sort select not found");
   if (!(resultCount instanceof HTMLElement))
     throw new Error("Result count not found");
   if (!(table instanceof HTMLTableElement))
@@ -516,8 +524,9 @@ const initializePreviewPosts = (root: HTMLElement) => {
     throw new Error("Filter chips not found");
   if (!(filterCount instanceof HTMLElement))
     throw new Error("Filter count not found");
-  if (!(filterDetails instanceof HTMLDetailsElement))
-    throw new Error("Filter details not found");
+  if (!(facets instanceof HTMLElement)) throw new Error("Facets not found");
+  if (!(facetsToggle instanceof HTMLButtonElement))
+    throw new Error("Facets toggle not found");
 
   const rows = Array.from(
     root.querySelectorAll<HTMLTableRowElement>("[data-post-row]"),
@@ -533,19 +542,19 @@ const initializePreviewPosts = (root: HTMLElement) => {
     root.querySelectorAll<HTMLInputElement>('input[data-filter-key="tag"]'),
     (input) => input.value,
   );
-  const recentButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>("[data-recent-button]"),
+  // 「すべて」は 0 として持つ。期間の選択肢はそれ以外の値
+  const recentInputs = Array.from(
+    root.querySelectorAll<HTMLInputElement>("[data-recent-option]"),
   );
-  const editedSortButton = root.querySelector("[data-edited-sort]");
-  if (!(editedSortButton instanceof HTMLButtonElement))
-    throw new Error("Edited sort button not found");
-  const recentDayOptions = recentButtons.map((button) => {
-    const days = Number(button.dataset.recentButton);
-    if (!Number.isInteger(days) || days < 1) {
-      throw new Error(`Invalid recent days: ${button.dataset.recentButton}`);
-    }
-    return days;
-  });
+  const recentDayOptions = recentInputs
+    .map((input) => {
+      const days = Number(input.value);
+      if (!Number.isInteger(days) || days < 0) {
+        throw new Error(`Invalid recent days: ${input.value}`);
+      }
+      return days;
+    })
+    .filter((days) => days > 0);
   const total = rows.length;
   const collapsedGroups = new Set<string>();
   let state = readStateFromUrl(categoryValues, tagValues, recentDayOptions);
@@ -595,21 +604,45 @@ const initializePreviewPosts = (root: HTMLElement) => {
     });
   };
 
+  /*
+   * 列見出しで並べ替えている間は、並び順にその列と向きを出す。選択肢として
+   * 選び直す対象ではないので、その間だけ足して選べない状態で置く
+   */
+  const columnSortOption = document.createElement("option");
+  columnSortOption.disabled = true;
+
+  const syncSortSelect = () => {
+    const parsed = parseSort(state.sort);
+    if (parsed === null) {
+      columnSortOption.remove();
+      sortSelect.value = state.sort;
+      return;
+    }
+
+    const button = sortButtons.find(
+      (candidate) => getSortColumn(candidate) === parsed.column,
+    );
+    const columnLabel = button?.textContent?.trim() ?? parsed.column;
+    columnSortOption.value = state.sort;
+    columnSortOption.textContent = `列: ${columnLabel} ${formatSortLabel(parsed.direction)}`;
+    sortSelect.append(columnSortOption);
+    sortSelect.value = state.sort;
+  };
+
   const syncControls = () => {
     searchInput.value = state.query;
     groupSelect.value = state.group;
     syncSortHeaders();
-    editedSortButton.setAttribute(
-      "aria-pressed",
-      String(state.sort === "edited"),
-    );
+    syncSortSelect();
+    // 既定のままの値は控えめな色で示す（SCR-004）
+    groupSelect.toggleAttribute("data-default", state.group === "none");
+    sortSelect.toggleAttribute("data-default", state.sort === "recommended");
     getFilterInputs().forEach((input) => {
       const key = input.dataset.filterKey as FilterKey;
       input.checked = getStateValues(key).includes(input.value as never);
     });
-    recentButtons.forEach((button) => {
-      const days = Number(button.dataset.recentButton);
-      button.setAttribute("aria-pressed", String(state.recentDays === days));
+    recentInputs.forEach((input) => {
+      input.checked = Number(input.value) === state.recentDays;
     });
   };
 
@@ -617,7 +650,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     const next = createBaseState();
     next.query = searchInput.value;
     next.group = isGroupName(groupSelect.value) ? groupSelect.value : "none";
-    next.sort = state.sort;
+    next.sort = isSortName(sortSelect.value) ? sortSelect.value : state.sort;
     getFilterInputs()
       .filter((input) => input.checked)
       .forEach((input) => {
@@ -631,9 +664,14 @@ const initializePreviewPosts = (root: HTMLElement) => {
         if (key === "category") next.category.push(input.value);
         if (key === "tag") next.tag.push(input.value);
       });
-    next.recentDays = state.recentDays;
+    const recent = recentInputs.find((input) => input.checked);
+    next.recentDays = recent ? Number(recent.value) : 0;
     return next;
   };
+
+  const facetCounts = Array.from(
+    root.querySelectorAll<HTMLElement>("[data-facet-count]"),
+  );
 
   const updateFilterSummary = () => {
     const filterEntries: Array<[FilterKey, string]> = [
@@ -653,26 +691,73 @@ const initializePreviewPosts = (root: HTMLElement) => {
       ]),
       ...state.tag.map((value): [FilterKey, string] => ["tag", value]),
     ];
-    const count = filterEntries.length + Number(state.recentDays > 0);
-    filterCount.textContent = String(count);
-    filterCount.hidden = count === 0;
+    // 選んでいる数は条件ごとのボタンと、Narrow で畳んだボタンに出す。
+    // 期間は数えない。ボタンの外に択一として見えている
+    facetCounts.forEach((count) => {
+      const key = count.dataset.facetCount as FilterKey;
+      const selected = getStateValues(key).length;
+      count.textContent = `(${selected})`;
+      count.hidden = selected === 0;
+    });
+    filterCount.textContent = `(${filterEntries.length})`;
+    filterCount.hidden = filterEntries.length === 0;
 
-    const labels = filterEntries.map(([key, value]) =>
-      getFilterLabel(key, value),
+    // 各条件は、外したあとの状態と組にして持つ
+    const conditions: Array<[string, () => PreviewState]> = filterEntries.map(
+      ([key, value]) => [
+        getFilterLabel(key, value),
+        () => withoutFilter(key, value),
+      ],
     );
-    if (state.query) labels.unshift(`検索: ${state.query}`);
-    if (state.recentDays > 0) labels.push(`最近の記事: ${state.recentDays}日`);
-    const active = labels.length > 0;
+    if (state.query) {
+      conditions.unshift([
+        `検索: ${state.query}`,
+        () => ({ ...state, query: "" }),
+      ]);
+    }
+    if (state.recentDays > 0) {
+      conditions.push([
+        `公開日: ${state.recentDays}日`,
+        () => ({ ...state, recentDays: 0 }),
+      ]);
+    }
     filterChips.replaceChildren(
-      ...labels.map((text) => {
-        const chip = document.createElement("span");
+      ...conditions.map(([text, remove]) => {
+        const item = document.createElement("li");
+        const chip = document.createElement("button");
+        chip.type = "button";
         chip.className = "preview-filter-chip";
-        chip.textContent = text;
-        return chip;
+        chip.setAttribute("aria-label", `${text} を外す`);
+        const mark = document.createElement("span");
+        mark.className = "preview-filter-chip-remove";
+        mark.setAttribute("aria-hidden", "true");
+        mark.textContent = "×";
+        chip.append(text, mark);
+        chip.addEventListener("click", () => applyState(remove()));
+        item.append(chip);
+        return item;
       }),
     );
-    activeFilters.hidden = !active;
-    return active;
+    activeFilters.hidden = conditions.length === 0;
+  };
+
+  const withoutFilter = (key: FilterKey, value: string): PreviewState => {
+    const next = { ...state };
+    if (key === "priority") {
+      next.priority = state.priority.filter((item) => item !== value);
+    }
+    if (key === "writing") {
+      next.writing = state.writing.filter((item) => item !== value);
+    }
+    if (key === "publication") {
+      next.publication = state.publication.filter((item) => item !== value);
+    }
+    if (key === "memo") next.memo = state.memo.filter((item) => item !== value);
+    if (key === "category") {
+      next.category = state.category.filter((item) => item !== value);
+    }
+    if (key === "tag") next.tag = state.tag.filter((item) => item !== value);
+    return next;
   };
 
   const render = () => {
@@ -712,7 +797,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
       table.append(body);
     });
 
-    resultCount.textContent = `表示中 ${visibleRows.length} / 全${total}件`;
+    resultCount.textContent = `表示中 ${visibleRows.length} / ${total}件`;
     tableWrap.hidden = visibleRows.length === 0;
     emptyState.hidden = visibleRows.length > 0;
     updateFilterSummary();
@@ -734,40 +819,28 @@ const initializePreviewPosts = (root: HTMLElement) => {
       });
     });
   });
-  editedSortButton.addEventListener("click", () => {
-    applyState({
-      ...state,
-      sort: state.sort === "edited" ? "recommended" : "edited",
-    });
-  });
-  recentButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const days = Number(button.dataset.recentButton);
-      applyState({
-        ...state,
-        recentDays: state.recentDays === days ? 0 : days,
-      });
-    });
-  });
   searchInput.addEventListener("input", () => {
     applyState(readStateFromControls());
   });
   controls.addEventListener("change", () => {
     applyState(readStateFromControls());
   });
+  facetsToggle.addEventListener("click", () => {
+    const expanded = facetsToggle.getAttribute("aria-expanded") === "true";
+    facetsToggle.setAttribute("aria-expanded", String(!expanded));
+    facets.classList.toggle("is-expanded", !expanded);
+  });
+  // 条件の吹き出しは、行の中の分野の吹き出しと同じく開閉ボタンの直下に置く
   root
-    .querySelectorAll<HTMLButtonElement>("[data-filter-clear]")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        const next = { ...state };
-        next.priority = [];
-        next.writing = [];
-        next.publication = [];
-        next.memo = [];
-        next.category = [];
-        next.tag = [];
-        next.recentDays = 0;
-        applyState(next);
+    .querySelectorAll<HTMLElement>("[data-facet-popover]")
+    .forEach((popover) => {
+      popover.addEventListener("toggle", (event) => {
+        if (!(event instanceof ToggleEvent) || event.newState !== "open") {
+          return;
+        }
+        const trigger = popover.previousElementSibling;
+        if (!(trigger instanceof HTMLElement)) return;
+        placePopoverBelow(trigger, popover);
       });
     });
   root
@@ -825,15 +898,6 @@ const initializePreviewPosts = (root: HTMLElement) => {
         row.hidden = expanded;
       });
   });
-  onPageEvent(document, "pointerdown", (event) => {
-    if (
-      filterDetails.open &&
-      event.target instanceof Node &&
-      !filterDetails.contains(event.target)
-    ) {
-      filterDetails.open = false;
-    }
-  });
   const tooltipAnchors = root.querySelectorAll<HTMLElement>(
     "[data-tooltip-anchor]",
   );
@@ -852,8 +916,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
     });
   });
   onPageEvent(document, "keydown", (event) => {
+    // 条件の吹き出しは popover が Escape で閉じる
     if (event.key !== "Escape") return;
-    filterDetails.open = false;
     root
       .querySelectorAll<HTMLElement>("[data-tooltip-anchor]:hover")
       .forEach((anchor) => anchor.classList.add("is-tooltip-dismissed"));
@@ -869,15 +933,14 @@ const initializePreviewPosts = (root: HTMLElement) => {
     render();
   });
 
-  recentButtons.forEach((button) => {
-    const days = Number(button.dataset.recentButton);
+  recentDayOptions.forEach((days) => {
     const cutoff = getRecentCutoff(days);
     const total = rows.filter((row) => row.published >= cutoff).length;
-    const count = button.querySelector("[data-recent-count]");
+    const count = root.querySelector(`[data-recent-count="${days}"]`);
     if (!(count instanceof HTMLElement)) {
       throw new Error("Recent count not found");
     }
-    count.textContent = total > 0 ? String(total) : "";
+    count.textContent = total > 0 ? `(${total})` : "";
   });
 
   syncControls();
