@@ -203,6 +203,7 @@ export const TAGS = [
   "スタックトレース",
   "CLI",
   "非対話モード",
+  "SNS",
 ] as const;
 export type Tag = (typeof TAGS)[number];
 
