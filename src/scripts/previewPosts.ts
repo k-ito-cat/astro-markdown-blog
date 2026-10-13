@@ -24,6 +24,7 @@ import {
 } from "~/utils/previewPost";
 import {
   RECORD_TYPE,
+  RECORD_TYPE_LABELS,
   RECORD_TYPE_ORDER,
   type RecordType,
 } from "~/constants/recordType";
@@ -31,7 +32,13 @@ import { normalizeSearchText } from "~/utils/search";
 import { initPreviewInlineEdit } from "~/scripts/previewInlineEdit";
 import { placePopoverBelow } from "~/scripts/popoverPlacement";
 
-type GroupName = "priority" | "writing" | "publication" | "none";
+type GroupName =
+  | "priority"
+  | "writing"
+  | "publication"
+  | "recordType"
+  | "category"
+  | "none";
 type SortColumn =
   | "title"
   | "priority"
@@ -86,7 +93,14 @@ type GroupDefinition = {
   label: string;
 };
 
-const GROUP_NAMES = ["priority", "writing", "publication", "none"] as const;
+const GROUP_NAMES = [
+  "priority",
+  "writing",
+  "publication",
+  "recordType",
+  "category",
+  "none",
+] as const;
 /** 並び替えやグループ分けより前に、常に最上部へ出す塊。見出しは持たない */
 const PINNED_GROUP: GroupDefinition = { value: "pinned", label: "" };
 const SORT_COLUMNS = [
@@ -297,7 +311,18 @@ const writeStateToUrl = (state: PreviewState) => {
   window.history.replaceState(window.history.state, "", url);
 };
 
-const getGroupDefinitions = (group: GroupName): GroupDefinition[] => {
+const getGroupDefinitions = (
+  group: GroupName,
+  categories: string[],
+): GroupDefinition[] => {
+  if (group === "recordType") {
+    return Object.values(RECORD_TYPE)
+      .sort((a, b) => RECORD_TYPE_ORDER[a] - RECORD_TYPE_ORDER[b])
+      .map((value) => ({ value, label: RECORD_TYPE_LABELS[value] }));
+  }
+  if (group === "category") {
+    return categories.map((value) => ({ value, label: value }));
+  }
   if (group === "priority") {
     return Object.values(POST_PRIORITY)
       .sort((a, b) => POST_PRIORITY_ORDER[a] - POST_PRIORITY_ORDER[b])
@@ -320,6 +345,9 @@ const getGroupValue = (row: PreviewRow, group: GroupName) => {
   if (group === "priority") return row.priority;
   if (group === "writing") return row.writing;
   if (group === "publication") return row.publication;
+  if (group === "recordType") return row.recordType;
+  // 分野は複数付くが、1つ目を主な分野として 1 か所にだけ置く（SCR-004）
+  if (group === "category") return row.categories[0] ?? "";
   return "all";
 };
 
@@ -431,6 +459,7 @@ const createGroupBody = (
   group: GroupName,
   rows: PreviewRow[],
   collapsed: boolean,
+  chevronTemplate: HTMLTemplateElement,
 ) => {
   const body = document.createElement("tbody");
   body.className = "preview-post-group";
@@ -447,10 +476,8 @@ const createGroupBody = (
     button.className = "preview-group-toggle";
     button.dataset.groupToggle = `${group}:${definition.value}`;
     button.setAttribute("aria-expanded", String(!collapsed));
-    const chevron = document.createElement("span");
-    chevron.className = "preview-group-chevron";
-    chevron.setAttribute("aria-hidden", "true");
-    chevron.textContent = "▾";
+    // 文字の三角は書体ごとに形も高さも変わるので、ほかの開閉と同じ octicon にする
+    const chevron = chevronTemplate.content.cloneNode(true);
     const label = document.createElement("span");
     label.textContent = definition.label;
     const count = document.createElement("span");
@@ -499,6 +526,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const activeFilters = root.querySelector("[data-active-filters]");
   const filterChips = root.querySelector("[data-filter-chips]");
   const filterCount = root.querySelector("[data-filter-count]");
+  const groupChevronTemplate = root.querySelector("[data-group-chevron]");
   const facets = root.querySelector("[data-facets]");
   const facetsToggle = root.querySelector("[data-facets-toggle]");
 
@@ -524,6 +552,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
     throw new Error("Filter chips not found");
   if (!(filterCount instanceof HTMLElement))
     throw new Error("Filter count not found");
+  if (!(groupChevronTemplate instanceof HTMLTemplateElement))
+    throw new Error("Group chevron template not found");
   if (!(facets instanceof HTMLElement)) throw new Error("Facets not found");
   if (!(facetsToggle instanceof HTMLButtonElement))
     throw new Error("Facets toggle not found");
@@ -767,7 +797,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
       rows.filter((row) => matchesState(row, state, recentCutoff)),
       state.sort,
     );
-    const definitions = getGroupDefinitions(state.group);
+    const definitions = getGroupDefinitions(state.group, categoryValues);
     root.dataset.group = state.group;
     table
       .querySelectorAll("tbody[data-post-group]")
@@ -778,7 +808,15 @@ const initializePreviewPosts = (root: HTMLElement) => {
     const pinnedRows = visibleRows.filter((row) => row.pinned);
     const unpinnedRows = visibleRows.filter((row) => !row.pinned);
     if (pinnedRows.length > 0) {
-      table.append(createGroupBody(PINNED_GROUP, "none", pinnedRows, false));
+      table.append(
+        createGroupBody(
+          PINNED_GROUP,
+          "none",
+          pinnedRows,
+          false,
+          groupChevronTemplate,
+        ),
+      );
     }
 
     definitions.forEach((definition) => {
@@ -793,6 +831,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
         state.group,
         groupRows,
         collapsedGroups.has(groupKey),
+        groupChevronTemplate,
       );
       table.append(body);
     });

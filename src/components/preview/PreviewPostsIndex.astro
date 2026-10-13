@@ -223,7 +223,16 @@ const publishedMemoFilterParams = new URLSearchParams({
     <Icon name="octicon:pencil-16" />
     <Icon name="octicon:link-16" />
     <Icon name="octicon:check-16" />
+    <Icon name="octicon:chevron-down-16" />
   </div>
+  <!-- グループの見出しは JS で組み立てるので、開閉の記号をここから複製する -->
+  <template data-group-chevron>
+    <Icon
+      name="octicon:chevron-down-16"
+      class="preview-group-chevron"
+      aria-hidden="true"
+    />
+  </template>
 
   <main class="preview-shell">
     <header class="preview-header">
@@ -765,6 +774,8 @@ const publishedMemoFilterParams = new URLSearchParams({
             <option value="priority">優先度</option>
             <option value="writing">執筆状態</option>
             <option value="publication">公開状態</option>
+            <option value="recordType">型</option>
+            <option value="category">分野</option>
           </select>
         </label>
       </div>
@@ -2741,7 +2752,8 @@ const publishedMemoFilterParams = new URLSearchParams({
     background: transparent;
     border: 0;
     border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    /* 表の本文（13px）より一段大きくし、見出しとして読ませる */
+    font-size: 15px;
     font-weight: 600;
     text-align: left;
   }
@@ -2751,18 +2763,27 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   .preview-group-chevron {
-    display: inline-block;
+    flex: none;
+    width: 16px;
+    height: 16px;
     color: var(--text-muted);
-    transition: transform 140ms ease-out;
+    transition: transform var(--duration-feedback) var(--ease-trace);
   }
 
   .preview-group-toggle[aria-expanded="false"] .preview-group-chevron {
     transform: rotate(-90deg);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .preview-group-chevron {
+      transition: none;
+    }
+  }
+
   .preview-group-count {
     margin-left: auto;
     color: var(--text-muted);
+    font-family: var(--font-machine);
     font-size: 12px;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
