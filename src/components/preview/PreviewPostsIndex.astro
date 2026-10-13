@@ -782,6 +782,19 @@ const publishedMemoFilterParams = new URLSearchParams({
     </form>
 
     <!--
+      保存した設定を反映するまで一覧を隠す間、その位置に行の形の罫線を置く。
+      空白を見せず、一覧と同じ位置で入れ替える（SCR-004）
+    -->
+    <div class="preview-skeleton" role="status">
+      <span class="sr-only">読み込み中</span>
+      {
+        Array.from({ length: 8 }, () => (
+          <span class="preview-skeleton-row" aria-hidden="true" />
+        ))
+      }
+    </div>
+
+    <!--
       絞った結果の状態。条件があるときだけ外す操作を置き、その直下に件数を出す。
       件数は表の直前に置き、何件に絞れたかを一覧の頭で読ませる
     -->
@@ -1538,6 +1551,92 @@ const publishedMemoFilterParams = new URLSearchParams({
     display: grid;
     gap: 10px;
     margin-top: 28px;
+  }
+
+  /*
+   * 保存した設定を反映するまで、設定に左右される部分を隠す。JS が動かなくても
+   * 隠れたままにならないよう、2秒で必ず出す（SCR-004、PRN-001 の 10）
+   */
+  preview-posts:not([data-ready]) :is(
+      .preview-view,
+      .preview-result-bar,
+      .preview-table-wrap,
+      .preview-empty
+    ) {
+    visibility: hidden;
+    animation: preview-reveal 0s 2s forwards;
+  }
+
+  @keyframes preview-reveal {
+    to {
+      visibility: visible;
+    }
+  }
+
+  /*
+   * 隠している一覧の位置に、行の形の罫線を重ねる。器の高さを 0 にして下へ
+   * はみ出させるので、一覧と入れ替わってもレイアウトは動かない。
+   * 一覧と同じく 2 秒で引く
+   */
+  .preview-skeleton {
+    display: none;
+  }
+
+  preview-posts:not([data-ready]) .preview-skeleton {
+    position: relative;
+    display: grid;
+    height: 0;
+    margin-top: 28px;
+    overflow: visible;
+    animation: preview-skeleton-out 0s 2s forwards;
+  }
+
+  @keyframes preview-skeleton-out {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  /* 1行ぶんの高さに、題名の位置の短い線と行の区切り線を引く */
+  .preview-skeleton-row {
+    position: relative;
+    display: block;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    animation: preview-skeleton-pulse 1.4s ease-in-out infinite alternate;
+  }
+
+  .preview-skeleton-row::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    width: min(40%, 320px);
+    height: 1px;
+    background: var(--border-strong);
+  }
+
+  .preview-skeleton-row:nth-child(3n)::before {
+    width: min(28%, 220px);
+  }
+
+  .preview-skeleton-row:nth-child(3n + 1)::before {
+    width: min(34%, 270px);
+  }
+
+  @keyframes preview-skeleton-pulse {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.45;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-skeleton-row {
+      animation: none;
+    }
   }
 
   .preview-active-filters {

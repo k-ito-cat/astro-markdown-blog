@@ -101,6 +101,8 @@ const GROUP_NAMES = [
   "category",
   "none",
 ] as const;
+/** グループの選択と開閉は執筆者の設定として残す。URL に指定があればそちらを優先する */
+const VIEW_STORAGE_KEY = "preview-posts:view";
 /** 並び替えやグループ分けより前に、常に最上部へ出す塊。見出しは持たない */
 const PINNED_GROUP: GroupDefinition = { value: "pinned", label: "" };
 const SORT_COLUMNS = [
@@ -265,7 +267,9 @@ const readStateFromUrl = (
   const group = params.get("group");
   const sort = params.get("sort");
   state.query = params.get("q") ?? "";
-  state.group = isGroupName(group) ? group : "none";
+  state.group = isGroupName(group)
+    ? group
+    : (readStoredView()?.group ?? "none");
   state.sort = isSortName(sort) ? sort : "recommended";
   state.priority = getAllowedValues(
     params,
@@ -349,6 +353,35 @@ const getGroupValue = (row: PreviewRow, group: GroupName) => {
   // 分野は複数付くが、1つ目を主な分野として 1 か所にだけ置く（SCR-004）
   if (group === "category") return row.categories[0] ?? "";
   return "all";
+};
+
+type StoredView = { group: GroupName; collapsed: string[] };
+
+// 保存できない環境でも、そのページの中では切り替えられる
+const readStoredView = (): StoredView | null => {
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const { group, collapsed } = parsed as Record<string, unknown>;
+    return {
+      group: typeof group === "string" && isGroupName(group) ? group : "none",
+      collapsed: Array.isArray(collapsed)
+        ? collapsed.filter((key): key is string => typeof key === "string")
+        : [],
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredView = (view: StoredView) => {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(view));
+  } catch {
+    /* 保存できなくても表示は切り替わっている */
+  }
 };
 
 const matchesState = (
@@ -586,8 +619,12 @@ const initializePreviewPosts = (root: HTMLElement) => {
     })
     .filter((days) => days > 0);
   const total = rows.length;
-  const collapsedGroups = new Set<string>();
+  const collapsedGroups = new Set<string>(readStoredView()?.collapsed ?? []);
   let state = readStateFromUrl(categoryValues, tagValues, recentDayOptions);
+
+  const storeView = () => {
+    writeStoredView({ group: state.group, collapsed: [...collapsedGroups] });
+  };
 
   const getFilterInputs = () =>
     Array.from(
@@ -847,6 +884,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     syncControls();
     render();
     writeStateToUrl(state);
+    storeView();
   };
 
   controls.addEventListener("submit", (event) => event.preventDefault());
@@ -930,6 +968,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     button.setAttribute("aria-expanded", String(!expanded));
     if (expanded) collapsedGroups.add(groupKey);
     else collapsedGroups.delete(groupKey);
+    storeView();
     const body = button.closest("tbody");
     body
       ?.querySelectorAll<HTMLTableRowElement>("[data-post-row]")
@@ -986,6 +1025,8 @@ const initializePreviewPosts = (root: HTMLElement) => {
   render();
   writeStateToUrl(state);
   initPreviewInlineEdit(root);
+  // 保存した設定を反映し終えたので、隠していた一覧を出す（SCR-004）
+  root.dataset.ready = "";
 };
 
 export const initPreviewPosts = () => {
