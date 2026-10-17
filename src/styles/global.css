@@ -83,6 +83,14 @@
   --color-record-thought: #6b4f9e;
   --color-record-impression: #a8447a;
 
+  /*
+   * preview の記事一覧で今日あったことを示すラベルの文字色。危険・警告の意味は
+   * 持たず、このラベルの外では使わない。緑は型「検証」の深緑より彩度を上げて
+   * 見分ける（foundations.md の Color）
+   */
+  --color-preview-today-new: #15803d;
+  --color-preview-today-edited: #b45309;
+
   --font-human: "Zen Kaku Gothic New", system-ui, -apple-system, sans-serif;
   --font-machine: "IBM Plex Mono", ui-monospace, monospace;
   --text-xs: 0.75rem;
@@ -188,6 +196,9 @@
   --color-record-practice: #66620f;
   --color-record-verification: #356b44;
   --color-record-impression: #94366a;
+  /* 今日のラベルの緑とオレンジも、この紙で 4.5:1 を割るので濃度を下げる */
+  --color-preview-today-new: #137536;
+  --color-preview-today-edited: #a64b08;
   --color-surface: #efe8d9;
   --color-accent: #aecd9e;
   --color-text-muted: #606b67;

@@ -59,14 +59,27 @@ const SORT_COLUMN_TITLES: Partial<Record<string, string>> = {
 };
 
 // 今日かどうかは開いた時点で決める。開いたまま日付をまたいだら開き直すまで古いまま
-const todayDateString = new Date().toDateString();
-const formatEditedToday = (edited: Date) =>
-  edited.toDateString() === todayDateString
-    ? `今日 ${edited.toLocaleTimeString("ja-JP", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    : null;
+const startOfToday = new Date();
+startOfToday.setHours(0, 0, 0, 0);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 今日を 0 とした暦日の差 */
+const daysAgo = (date: Date) => {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return Math.round((startOfToday.getTime() - day.getTime()) / DAY_MS);
+};
+
+/*
+ * タイトル横に出す、今日あったこと。記録日が今日なら新規、最終編集が今日なら編集。
+ * 今日作った記事はファイル時刻も今日になるので、新規を優先する（SCR-004）
+ */
+const getTodayActivity = (published: Date, edited: Date) => {
+  if (daysAgo(published) === 0) return "新規";
+  // 「編集」だけでは今日のことだと読めないので、本日を付ける
+  if (daysAgo(edited) === 0) return "本日編集";
+  return null;
+};
 
 // 最終編集の列は日時を出すことに徹する。今日かどうかはタイトル横のラベルが示す
 const formatEdited = (edited: Date) => {
@@ -99,7 +112,7 @@ const previewPosts = (
         memoState,
         edited,
         editedLabel: formatEdited(edited),
-        editedToday: formatEditedToday(edited),
+        todayActivity: getTodayActivity(post.data.publishedAt, edited),
         pinned: isPreviewPinned(previewSlug),
         searchText: normalizeSearchText(
           [
@@ -917,6 +930,19 @@ const publishedMemoFilterParams = new URLSearchParams({
                         >
                           {previewPost.data.title}
                         </a>
+                        {previewPost.todayActivity && (
+                          <span
+                            class:list={[
+                              "preview-today-label",
+                              {
+                                "is-edited":
+                                  previewPost.todayActivity === "本日編集",
+                              },
+                            ]}
+                          >
+                            {previewPost.todayActivity}
+                          </span>
+                        )}
                       </span>
                       <button
                         type="button"
@@ -980,14 +1006,6 @@ const publishedMemoFilterParams = new URLSearchParams({
                       <code class="preview-slug">
                         {previewPost.previewSlug}
                       </code>
-                      {previewPost.editedToday && (
-                        <span
-                          class="preview-status-badge preview-edited-chip"
-                          title="最終編集。ファイル時刻による目安"
-                        >
-                          {previewPost.editedToday}
-                        </span>
-                      )}
                     </span>
                     <button
                       type="button"
@@ -2799,11 +2817,34 @@ const publishedMemoFilterParams = new URLSearchParams({
     display: none;
   }
 
-  .preview-edited-chip {
-    margin-left: 6px;
-    padding: 0 5px;
-    background: var(--tint-edited);
-    font-variant-numeric: tabular-nums;
+  /*
+   * タイトル横の今日のラベル。面は持たず、緑とオレンジの太字の文字で置く。
+   * 面に塗ると一覧の中で主張が強すぎる（foundations.md の Color、SCR-004）
+   */
+  .preview-today-label {
+    color: var(--color-preview-today-new);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .preview-today-label.is-edited {
+    color: var(--color-preview-today-edited);
+  }
+
+  /*
+   * タイトルとは中黒で区切り、「タイトル・新規」と続けて読ませる。中黒は字幅の
+   * 中に余白を持つので、.preview-title-name の gap は打ち消す
+   */
+  .preview-today-label {
+    margin-left: -0.4em;
+  }
+
+  .preview-today-label::before {
+    content: "・";
+    color: var(--text-muted);
+    font-weight: 400;
   }
 
   .preview-category-trigger {
