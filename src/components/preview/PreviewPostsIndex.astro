@@ -822,13 +822,14 @@ const publishedMemoFilterParams = new URLSearchParams({
     </form>
 
     <!--
-      保存した設定を反映するまで一覧を隠す間、その位置に行の形の罫線を置く。
-      空白を見せず、一覧と同じ位置で入れ替える（SCR-004）
+      保存した設定を反映するまで、結果の行と一覧の代わりに置く。画面1枚分の
+      場所を取り、入れ替わりで操作部が動かないようにする（SCR-004）
     -->
     <div class="preview-skeleton" role="status">
       <span class="sr-only">読み込み中</span>
+      <span class="preview-skeleton-count" aria-hidden="true"></span>
       {
-        Array.from({ length: 8 }, () => (
+        Array.from({ length: 16 }, () => (
           <span class="preview-skeleton-row" aria-hidden="true" />
         ))
       }
@@ -1608,12 +1609,8 @@ const publishedMemoFilterParams = new URLSearchParams({
    * 保存した設定を反映するまで、設定に左右される部分を隠す。JS が動かなくても
    * 隠れたままにならないよう、2秒で必ず出す（SCR-004、PRN-001 の 10）
    */
-  preview-posts:not([data-ready]) :is(
-      .preview-view,
-      .preview-result-bar,
-      .preview-table-wrap,
-      .preview-empty
-    ) {
+  /* 「表示」は大きさが変わらないので、場所を取ったまま見えなくする */
+  preview-posts:not([data-ready]) .preview-view {
     visibility: hidden;
     animation: preview-reveal 0s 2s forwards;
   }
@@ -1625,8 +1622,32 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   /*
-   * 隠している一覧の位置に、行の形の罫線を重ねる。器の高さを 0 にして下へ
-   * はみ出させるので、一覧と入れ替わってもレイアウトは動かない。
+   * 結果の行と一覧は、既定の表示と保存した表示で高さが違う。場所を取ったまま
+   * 隠すと入れ替わりで内容が上下に動くので、画面に固定して流れから外す。
+   * fixed にした要素はページのスクロール量も増やさない
+   */
+  preview-posts:not([data-ready]) :is(
+      .preview-result-bar,
+      .preview-table-wrap,
+      .preview-empty
+    ) {
+    position: fixed;
+    visibility: hidden;
+    pointer-events: none;
+    animation: preview-restore 0s 2s forwards;
+  }
+
+  @keyframes preview-restore {
+    to {
+      position: static;
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+
+  /*
+   * 外した一覧の代わりに、行の形の罫線で画面1枚分の場所を取る。操作部は
+   * 動かさず、入れ替わりで変わるのはこの範囲だけにする（SCR-004）。
    * 一覧と同じく 2 秒で引く
    */
   .preview-skeleton {
@@ -1634,27 +1655,47 @@ const publishedMemoFilterParams = new URLSearchParams({
   }
 
   preview-posts:not([data-ready]) .preview-skeleton {
-    position: relative;
     display: grid;
-    height: 0;
+    align-content: start;
+    height: 100vh;
     margin-top: 28px;
-    overflow: visible;
+    overflow: hidden;
     animation: preview-skeleton-out 0s 2s forwards;
   }
 
   @keyframes preview-skeleton-out {
     to {
+      position: fixed;
       visibility: hidden;
     }
   }
 
-  /* 1行ぶんの高さに、題名の位置の短い線と行の区切り線を引く */
+  /* 件数の行にあたる短い線。実際の一覧と同じく、その下から行が始まる */
+  .preview-skeleton-count {
+    display: block;
+    width: 120px;
+    height: 1px;
+    margin: 10px 0 25px;
+    background: var(--border-strong);
+  }
+
+  /*
+   * 1行ぶんの高さに、題名の位置の短い線と行の区切り線を引く。高さは実際の行
+   * （上下の余白とタイトル、slug の 2 段）に合わせる
+   */
   .preview-skeleton-row {
     position: relative;
     display: block;
-    height: 52px;
+    height: 64px;
     border-bottom: 1px solid var(--border);
     animation: preview-skeleton-pulse 1.4s ease-in-out infinite alternate;
+  }
+
+  /* 狭い画面の一覧は行がカードになり、項目を縦に積むぶん背が高い */
+  @media (max-width: 767px) {
+    .preview-skeleton-row {
+      height: 120px;
+    }
   }
 
   .preview-skeleton-row::before {
