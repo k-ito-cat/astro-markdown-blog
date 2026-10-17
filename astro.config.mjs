@@ -45,6 +45,29 @@ pluginFramesTexts.overrideTexts(undefined, {
 
 // https://astro.build/config
 export default defineConfig({
+  /*
+   * TODO: Cloudflare へ移管する際に、リクエストに依存するページだけを SSR
+   * （ページ単位の `export const prerender = false`）にすることを検討する。
+   * 公開ページは静的のまま置く。CDN から完成した HTML を返す静的生成のほうが
+   * TTFB・Core Web Vitals・SEO の面で有利で、SSR にする理由はない。
+   *
+   * SSR にしたいのは preview の記事一覧。グループの選択と開閉を localStorage に
+   * 持つため、静的に生成した最初の HTML は常に既定の表示になり、JS が組み直すまで
+   * スケルトンで隠している。入れ替わりで高さが変わり、レイアウトがずれる。設定を
+   * Cookie に置いてサーバーで描けば、最初から保存した表示になりスケルトンが不要になる。
+   * SSR でもサーバーは localStorage を読めない（ブラウザ内にだけあり、リクエストで
+   * 送られない）ので、保存先を Cookie に移すことが前提になる。
+   * 静的ページは Cookie もクエリも読めないので、今の構成では実現できない。
+   * ページ単位の SSR にはアダプターが要るため、移管で Cloudflare のアダプターを
+   * 入れるときに合わせて行う。spec/product.md の「build / deploy 方式を変更しない」
+   * も、そのときに見直す。
+   *
+   * 未解決: preview の編集 API（frontmatterEditor などの Vite ミドルウェア）と一覧の
+   * 最終編集時刻は、Node の fs でローカルファイルを直接読み書きしている。Cloudflare
+   * のアダプターで開発時の描画も Cloudflare の実行環境（workerd）で動く場合、fs が
+   * 使えず preview が動かなくなる可能性がある。開発時の実行環境と、これらの API の
+   * 置き場所を、移管時に公式ドキュメントで確認してから決める。
+   */
   output: "static",
   // og:image を絶対URLで組み立てるために必須
   site: "https://k-ito-blog.netlify.app",
