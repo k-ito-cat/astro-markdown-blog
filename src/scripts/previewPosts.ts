@@ -46,10 +46,12 @@ type SortColumn =
   | "publication"
   | "recordType"
   | "memo"
-  | "updated";
+  | "updated"
+  | "edited";
 type SortDirection = "asc" | "desc";
-/** edited は列を持たない並び順で、最終編集が新しい順に並べる */
-type SortName = "recommended" | "edited" | `${SortColumn}-${SortDirection}`;
+type SortName = "recommended" | `${SortColumn}-${SortDirection}`;
+/** 最終編集が列を持つ前の URL（sort=edited）。新しい順として読む */
+const LEGACY_EDITED_SORT = "edited";
 type FilterKey =
   | "priority"
   | "writing"
@@ -113,6 +115,7 @@ const SORT_COLUMNS = [
   "recordType",
   "memo",
   "updated",
+  "edited",
 ] as const;
 const DEFAULT_SORT_DIRECTION: Record<SortColumn, SortDirection> = {
   title: "asc",
@@ -122,6 +125,7 @@ const DEFAULT_SORT_DIRECTION: Record<SortColumn, SortDirection> = {
   recordType: "asc",
   memo: "asc",
   updated: "desc",
+  edited: "desc",
 };
 const TABLE_COLUMN_COUNT = SORT_COLUMNS.length;
 const MEMO_STATES = [
@@ -228,7 +232,7 @@ const isSortColumn = (value: string): value is SortColumn =>
 
 const isSortName = (value: string | null): value is SortName => {
   if (value === null) return false;
-  if (value === "recommended" || value === "edited") return true;
+  if (value === "recommended") return true;
 
   const [column, direction] = value.split("-");
   return (
@@ -239,7 +243,7 @@ const isSortName = (value: string | null): value is SortName => {
 };
 
 const parseSort = (sort: SortName) => {
-  if (sort === "recommended" || sort === "edited") return null;
+  if (sort === "recommended") return null;
 
   const [column, direction] = sort.split("-");
   if (column === undefined || !isSortColumn(column)) {
@@ -270,7 +274,12 @@ const readStateFromUrl = (
   state.group = isGroupName(group)
     ? group
     : (readStoredView()?.group ?? "none");
-  state.sort = isSortName(sort) ? sort : "recommended";
+  state.sort =
+    sort === LEGACY_EDITED_SORT
+      ? "edited-desc"
+      : isSortName(sort)
+        ? sort
+        : "recommended";
   state.priority = getAllowedValues(
     params,
     "priority",
@@ -454,14 +463,11 @@ const compareColumn = (a: PreviewRow, b: PreviewRow, column: SortColumn) => {
   if (column === "memo") {
     return MEMO_STATE_ORDER[a.memo] - MEMO_STATE_ORDER[b.memo];
   }
+  if (column === "edited") return a.edited - b.edited;
   return a.updated - b.updated;
 };
 
 const sortRows = (rows: PreviewRow[], sort: SortName) => {
-  if (sort === "edited") {
-    return rows.sort((a, b) => b.edited - a.edited || compareTitle(a, b));
-  }
-
   const parsed = parseSort(sort);
   if (parsed === null) return rows.sort(compareRecommended);
 
@@ -678,11 +684,20 @@ const initializePreviewPosts = (root: HTMLElement) => {
   const columnSortOption = document.createElement("option");
   columnSortOption.disabled = true;
 
+  /*
+   * 並び順の選択肢は「既定」と各列（標準の向き）。列見出しで向きを反転して
+   * いる間だけ、その状態を選べない選択肢として足して見せる
+   */
   const syncSortSelect = () => {
     const parsed = parseSort(state.sort);
     if (parsed === null) {
       columnSortOption.remove();
       sortSelect.value = state.sort;
+      return;
+    }
+    if (parsed.direction === DEFAULT_SORT_DIRECTION[parsed.column]) {
+      columnSortOption.remove();
+      sortSelect.value = parsed.column;
       return;
     }
 
@@ -694,6 +709,14 @@ const initializePreviewPosts = (root: HTMLElement) => {
     columnSortOption.textContent = `列: ${columnLabel} ${formatSortLabel(parsed.direction)}`;
     sortSelect.append(columnSortOption);
     sortSelect.value = state.sort;
+  };
+
+  // 列を選んだら標準の向きで並べる。反転中の選択肢はそのまま今の並びを保つ
+  const readSortFromSelect = (): SortName => {
+    const value = sortSelect.value;
+    if (value === "recommended") return "recommended";
+    if (isSortColumn(value)) return `${value}-${DEFAULT_SORT_DIRECTION[value]}`;
+    return state.sort;
   };
 
   const syncControls = () => {
@@ -717,7 +740,7 @@ const initializePreviewPosts = (root: HTMLElement) => {
     const next = createBaseState();
     next.query = searchInput.value;
     next.group = isGroupName(groupSelect.value) ? groupSelect.value : "none";
-    next.sort = isSortName(sortSelect.value) ? sortSelect.value : state.sort;
+    next.sort = readSortFromSelect();
     getFilterInputs()
       .filter((input) => input.checked)
       .forEach((input) => {

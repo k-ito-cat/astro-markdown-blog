@@ -47,7 +47,16 @@ const SORT_COLUMNS = [
   { value: "recordType", label: "記事の型" },
   { value: "memo", label: "メモ状態" },
   { value: "updated", label: "更新日" },
+  { value: "edited", label: "最終編集" },
 ] as const;
+
+/*
+ * 列見出しの補足。最終編集は公開側に出る更新日と別の値で、ファイル時刻による
+ * 目安なので、取り違えないよう見出しで断る（TRM-023）
+ */
+const SORT_COLUMN_TITLES: Partial<Record<string, string>> = {
+  edited: "ファイル時刻による目安。clone・一括置換で変わる",
+};
 
 // 今日かどうかは開いた時点で決める。開いたまま日付をまたいだら開き直すまで古いまま
 const todayDateString = new Date().toDateString();
@@ -58,6 +67,20 @@ const formatEditedToday = (edited: Date) =>
         minute: "2-digit",
       })}`
     : null;
+
+// 最終編集の列は日時を出すことに徹する。今日かどうかはタイトル横のラベルが示す
+const formatEdited = (edited: Date) => {
+  const date = [
+    edited.getFullYear(),
+    String(edited.getMonth() + 1).padStart(2, "0"),
+    String(edited.getDate()).padStart(2, "0"),
+  ].join("-");
+  const time = edited.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${date} ${time}`;
+};
 
 const previewPosts = (
   await Promise.all(
@@ -75,6 +98,7 @@ const previewPosts = (
         previewSlug,
         memoState,
         edited,
+        editedLabel: formatEdited(edited),
         editedToday: formatEditedToday(edited),
         pinned: isPreviewPinned(previewSlug),
         searchText: normalizeSearchText(
@@ -756,14 +780,17 @@ const publishedMemoFilterParams = new URLSearchParams({
 
         <label class="preview-field">
           <span class="preview-field-label">並び順</span>
-          <select
-            name="sort"
-            class="preview-select"
-            title="最終編集はファイル時刻による目安。clone・一括置換で変わる"
-            data-sort-select
-          >
+          <!--
+            列見出しと同じ並べ替えを選べる。列見出しが隠れるカード表示でも並べ替える
+            ための入口で、各列は標準の向きで選ばれる（SCR-004）
+          -->
+          <select name="sort" class="preview-select" data-sort-select>
             <option value="recommended">既定</option>
-            <option value="edited">最終編集が新しい順</option>
+            {
+              SORT_COLUMNS.map((column) => (
+                <option value={column.value}>{column.label}</option>
+              ))
+            }
           </select>
         </label>
 
@@ -828,6 +855,7 @@ const publishedMemoFilterParams = new URLSearchParams({
                   <button
                     type="button"
                     class="preview-sort-button"
+                    title={SORT_COLUMN_TITLES[column.value]}
                     data-sort-column={column.value}
                   >
                     {column.label}
@@ -1078,6 +1106,11 @@ const publishedMemoFilterParams = new URLSearchParams({
                       aria-label={`${previewPost.data.title} の更新日`}
                       data-edit-date
                     />
+                  </td>
+                  <td class="preview-date-cell" data-label="最終編集">
+                    <time datetime={previewPost.edited.toISOString()}>
+                      {previewPost.editedLabel}
+                    </time>
                   </td>
                 </tr>
               );
