@@ -2663,7 +2663,7 @@ const publishedMemoFilterParams = new URLSearchParams({
     max-width: 100%;
     padding: 2px 7px;
     color: var(--text-secondary);
-    background: var(--bg-subtle);
+    background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-label);
     font-size: inherit;
@@ -2700,53 +2700,50 @@ const publishedMemoFilterParams = new URLSearchParams({
     outline-offset: 1px;
   }
 
-  preview-posts {
-    /* 薄い赤は共通の役割 token を使う（design/tokens.md 破壊操作） */
-    --tint-danger: var(--danger-tint);
-    --tint-warning: color-mix(in oklab, var(--warning) 13%, var(--bg-base));
-    --tint-active: color-mix(in oklab, var(--link) 13%, var(--bg-base));
-    --tint-done: color-mix(in oklab, var(--accent-warm) 55%, var(--bg-base));
-    /* 最終編集は改訂の痕跡として Accent に寄せ、完了の印より一段淡くする */
-    --tint-edited: color-mix(in oklab, var(--accent-warm) 30%, var(--bg-base));
-  }
-
+  /*
+   * 状態は文字色だけで示す。面を敷くと一覧のあちこちで色の塊が目に留まり、
+   * 読む順番を奪う。1行に複数の状態が並ぶので、色の面積を抑える
+   */
   .preview-post-row[data-priority="high"] [data-edit-select="priority"] {
     color: var(--danger);
-    background: var(--tint-danger);
   }
 
   .preview-post-row[data-priority="medium"] [data-edit-select="priority"],
   .preview-post-row[data-publication="draft"] [data-edit-select="status"],
   .preview-post-row[data-writing="planned"] [data-edit-select="writingStatus"] {
     color: var(--warning);
-    background: var(--tint-warning);
   }
 
   .preview-post-row[data-priority="low"] [data-edit-select="priority"],
   .preview-post-row[data-writing="writing"] [data-edit-select="writingStatus"] {
     color: var(--link);
-    background: var(--tint-active);
   }
 
   .preview-post-row[data-publication="published"] [data-edit-select="status"],
   .preview-post-row[data-writing="done"] [data-edit-select="writingStatus"] {
     color: var(--text-primary);
-    background: var(--tint-done);
   }
 
   .preview-post-row[data-memo="HAS_MEMO"] .preview-memo-badge {
     color: var(--warning);
-    background: var(--tint-warning);
   }
 
   .preview-post-row[data-memo="BROKEN_MEMO"] .preview-memo-badge {
     color: var(--danger);
-    background: var(--tint-danger);
   }
 
   .preview-post-row[data-memo="NO_MEMO"] .preview-memo-badge {
     color: var(--text-muted);
-    background: none;
+  }
+
+  /* 手を動かす対象を示す状態は太字にし、色に頼らず強さでも見分けさせる（SCR-004） */
+  .preview-post-row[data-priority="high"] [data-edit-select="priority"],
+  .preview-post-row[data-writing="writing"] [data-edit-select="writingStatus"],
+  .preview-post-row[data-writing="planned"] [data-edit-select="writingStatus"],
+  .preview-post-row[data-publication="draft"] [data-edit-select="status"],
+  .preview-post-row[data-publication="published"] [data-edit-select="status"],
+  .preview-post-row[data-memo="HAS_MEMO"] .preview-memo-badge {
+    font-weight: 700;
   }
 
   .preview-post-row[data-writing="on_hold"] > th,
