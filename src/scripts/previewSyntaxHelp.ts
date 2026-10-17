@@ -110,8 +110,11 @@ const initSyntaxPreviews = (help: HTMLElement) => {
 
         // 上の検証を通った時点で中身は文字列だけなので、その形で受け直す
         const html = value.html as string[];
+        // innerHTML では宣言的 Shadow DOM が働かず、UIプレビュー（CMP-017）が空になる。
+        // 使えるブラウザでは setHTMLUnsafe で入れる
         previews.forEach((preview, index) => {
-          preview.innerHTML = html[index];
+          if ("setHTMLUnsafe" in preview) preview.setHTMLUnsafe(html[index]);
+          else preview.innerHTML = html[index];
         });
         loaded = true;
       })

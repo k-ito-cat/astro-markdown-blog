@@ -15,6 +15,7 @@ import remarkReviewCallout from "./src/plugins/remarkReviewCallout.mjs";
 import remarkGlossaryTerm from "./src/plugins/remarkGlossaryTerm.mjs";
 import remarkImageFigure from "./src/plugins/remarkImageFigure.mjs";
 import remarkPathList from "./src/plugins/remarkPathList.mjs";
+import remarkMockUi from "./src/plugins/remarkMockUi.mjs";
 import rehypeTableScroll from "./src/plugins/rehypeTableScroll.mjs";
 import rehypeImageMount from "./src/plugins/rehypeImageMount.mjs";
 import rehypeInPageLink from "./src/plugins/rehypeInPageLink.mjs";
@@ -82,6 +83,7 @@ export default defineConfig({
         remarkDividerVariant,
         remarkImageFigure,
         remarkPathList,
+        remarkMockUi,
         // リンクカードより先に置く。説明の中のリンクを段落直下から外し、
         // カード化の対象に入らないようにする
         remarkGlossaryTerm,

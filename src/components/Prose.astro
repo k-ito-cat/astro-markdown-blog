@@ -66,6 +66,7 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
   import { initFootnoteMark } from "~/scripts/footnoteMark";
   import { initGlossaryTerms } from "~/scripts/glossaryTerm";
   import { initLightbox } from "~/scripts/lightbox";
+  import { initMockUi } from "~/scripts/mockUi";
 
   onPageLoad(() => {
     const signal = pageSignal();
@@ -74,6 +75,7 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     initFootnoteMark(signal);
 
     initLightbox(signal);
+    initMockUi(signal);
 
     // 見出し(h2/h3/h4)をリンク化
     const headingEls = document.querySelectorAll(
@@ -1277,6 +1279,123 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     line-height: 1.7;
     /* ここは読んで選ぶための文。figure から拡大のカーソルを継がせない */
     cursor: text;
+  }
+
+  /*
+   * UIプレビュー（CMP-017）。上端の「UIプレビュー」「コード」のタブで、本物の
+   * 操作部ではないことを示す。モックは Shadow DOM の区画に描くので、本文の
+   * スタイルは中へ届かない
+   */
+  .prose .mock-ui {
+    max-width: var(--measure-prose);
+    margin: 24px auto;
+    cursor: auto;
+  }
+
+  /* タブは JS が動いてから出す。それまではパネルを上下に並べて両方見せる */
+  .prose .mock-ui:not([data-mock-ready]) .mock-ui-tabs {
+    display: none;
+  }
+
+  .prose .mock-ui:not([data-mock-ready]) .mock-ui-code {
+    margin-top: 8px;
+  }
+
+  /* タブは補足の操作なので控えめな色で置き、選択中だけ本文色と下線で示す */
+  .prose .mock-ui-tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+
+  /*
+   * 下線は枠線ではなく下端の線として描く。枠線だと :focus-visible やブラウザ
+   * 既定の角丸に引っ張られて端が曲がる
+   */
+  .prose .mock-ui-tabs button {
+    position: relative;
+    min-height: 28px;
+    padding: 0;
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font-family: var(--font-machine);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+
+  .prose .mock-ui-tabs button:hover {
+    color: var(--color-interaction-text);
+  }
+
+  .prose .mock-ui-tabs button[aria-selected="true"] {
+    color: var(--text-primary);
+  }
+
+  .prose .mock-ui-tabs button[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: currentColor;
+  }
+
+  .prose .mock-ui-tabs button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /*
+   * 文字や色は継承で区画の中へ入るので、ブラウザの初期値に戻してから描く。
+   * 本文幅を超えるモックは、本文を広げず区画の中で横に送る
+   */
+  .prose .mock-ui-stage {
+    all: initial;
+    display: block;
+    padding: 20px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    font-family: system-ui, sans-serif;
+  }
+
+  /* all: initial で hidden の display: none まで外れるので、戻す */
+  .prose .mock-ui-stage[hidden] {
+    display: none;
+  }
+
+  /*
+   * 枠は普段は出さない。ホバーできる端末でだけ、触れている間とフォーカスが
+   * ある間に出す。ホバーできない端末はタブとキャプションで範囲を示す
+   * （CMP-017、hig.md の input.parity）。線を透明にするだけなので位置は動かない
+   */
+  .prose .mock-ui-stage {
+    border-color: transparent;
+  }
+
+  @media (hover: hover) {
+    .prose .mock-ui-stage {
+      transition: border-color var(--duration-feedback) ease;
+    }
+
+    .prose .mock-ui-stage:hover,
+    .prose .mock-ui-stage:focus-within {
+      border-color: var(--border);
+    }
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: reduce) {
+    .prose .mock-ui-stage {
+      transition: none;
+    }
+  }
+
+  .prose .mock-ui-code > * {
+    margin: 0;
   }
 
   .prose .prose-memo-section {
