@@ -432,13 +432,65 @@ const SNIPPET_GROUPS = [
               >
             </button>
           </div>
+          <button
+            type="button"
+            class="help-toc-rail"
+            popovertarget="syntax-help-toc"
+            aria-label="記法の目次"
+            data-help-toc-trigger
+          >
+            {
+              SNIPPET_GROUPS.map((group, groupIndex) => (
+                <span class="help-toc-rail-group">
+                  {group.items.map((_, itemIndex) => (
+                    <span
+                      class="help-toc-dash"
+                      data-help-toc-dash={`syntax-help-${groupIndex}-${itemIndex}`}
+                    />
+                  ))}
+                </span>
+              ))
+            }
+          </button>
+          <div
+            id="syntax-help-toc"
+            class="help-toc"
+            popover
+            data-help-toc
+          >
+            <nav aria-label="記法の目次">
+              {
+                SNIPPET_GROUPS.map((group, groupIndex) => (
+                  <section class="help-toc-group">
+                    <p class="help-toc-title">{group.title}</p>
+                    <ul>
+                      {group.items.map((item, itemIndex) => (
+                        <li>
+                          <button
+                            type="button"
+                            class="help-toc-item"
+                            data-help-toc-target={`syntax-help-${groupIndex}-${itemIndex}`}
+                          >
+                            {item.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))
+              }
+            </nav>
+          </div>
           {
-            SNIPPET_GROUPS.map((group) => (
+            SNIPPET_GROUPS.map((group, groupIndex) => (
               <section class="help-group">
                 <h2>{group.title}</h2>
                 <ul>
-                  {group.items.map((item) => (
-                    <li class="help-item">
+                  {group.items.map((item, itemIndex) => (
+                    <li
+                      class="help-item"
+                      id={`syntax-help-${groupIndex}-${itemIndex}`}
+                    >
                       <p class="help-label">{item.label}</p>
                       <div
                         class="help-switch"
@@ -942,6 +994,8 @@ const SNIPPET_GROUPS = [
 
   .body-editor-help-body {
     --syntax-help-toolbar-height: 43px;
+    /* 右端に立てる目次の線の列へ、中身が重ならない幅を空ける */
+    padding-right: 44px;
   }
 
   /* 左に塊への案内、右に表示例の切り替えを置く */
@@ -956,6 +1010,179 @@ const SNIPPET_GROUPS = [
     height: var(--syntax-help-toolbar-height);
     background: var(--bg-base);
     border-bottom: 1px solid var(--border);
+  }
+
+  /*
+   * 目次の入口。項目ごとの短い横線を、ペインの右端の上下中央に立てる。
+   * スクロールバーに掛からないよう端から離し、当たり判定は列の幅ごと持つ（hig.md の Touch target）
+   */
+  .body-editor .help-toc-rail {
+    position: fixed;
+    top: calc(
+      var(--preview-pane-top, 52px) +
+        (100dvh - var(--preview-pane-top, 52px)) / 2
+    );
+    right: 12px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    width: 24px;
+    height: auto;
+    padding: 8px 4px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--border-strong);
+    transform: translateY(-50%);
+  }
+
+  .body-editor .help-toc-rail:is(:hover, :focus-visible):not(:disabled),
+  .body-editor .help-toc-rail[aria-expanded="true"] {
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  .help-toc-rail-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .help-toc-dash {
+    width: 8px;
+    height: 1px;
+    background: currentColor;
+  }
+
+  /* いま見ている項目は、色と長さで示す */
+  .help-toc-dash.is-current {
+    width: 14px;
+    background: var(--color-primary);
+  }
+
+  /*
+   * 目次。ペインに重ねて出すので、ここだけ面と影を持つ（tokens.md の overlay）。
+   * 位置は開いたときに線の列へ重ねて JS で合わせる。
+   * 右端の線の列から出る面なので、右から寄って入る（hig.md の Motion の例外）
+   */
+  .help-toc {
+    position: fixed;
+    inset: auto;
+    width: max-content;
+    min-width: 180px;
+    max-width: min(260px, calc(100vw - 32px));
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: 0 12px 28px rgb(0 0 0 / 14%);
+    opacity: 0;
+    translate: 8px 0;
+    transition:
+      opacity var(--duration-state) var(--ease-trace),
+      translate var(--duration-state) var(--ease-trace),
+      display var(--duration-state) allow-discrete,
+      overlay var(--duration-state) allow-discrete;
+  }
+
+  .help-toc:popover-open {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .help-toc:popover-open {
+      opacity: 0;
+      translate: 8px 0;
+    }
+  }
+
+  /*
+   * 送るのは内側にする。端を溶かす mask を外枠に掛けると、枠と影まで消えるため。
+   * スクロールバーは出さず、続きがある側の端を溶かして示す
+   */
+  .help-toc nav {
+    display: grid;
+    gap: 14px;
+    max-height: min(
+      480px,
+      calc(100dvh - var(--preview-pane-top, 52px) - 16px)
+    );
+    padding: 12px 14px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .help-toc nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .help-toc nav[data-more-below] {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+  }
+
+  .help-toc nav[data-more-above] {
+    mask-image: linear-gradient(to top, #000 calc(100% - 32px), transparent);
+  }
+
+  .help-toc nav[data-more-above][data-more-below] {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
+
+  .help-toc-title {
+    margin: 0 0 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .help-toc ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .body-editor .help-toc-item {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 3px 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .body-editor .help-toc-item:is(:hover, :focus-visible):not(:disabled) {
+    background: transparent;
+    color: var(--color-primary);
+  }
+
+  /*
+   * 現在地は色・太さ・Line の 3 つで示す（design/hig.md の nav.current）。
+   * 押せる幅は行いっぱいに残し、Line は語の下にだけ引く
+   */
+  .body-editor .help-toc-item.is-current {
+    color: var(--color-primary);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
   }
 
   .body-editor .help-preview-toggle {

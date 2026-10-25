@@ -4,6 +4,9 @@ import {
   observePage,
 } from "~/scripts/pageLifecycle";
 const FEEDBACK_MS = 1600;
+const TOC_HOVER_OPEN_MS = 200;
+const TOC_HOVER_CLOSE_MS = 250;
+const TOC_MARGIN = 8;
 const PREVIEW_STORAGE_KEY = "preview-syntax-help:previews";
 
 /**
@@ -21,6 +24,13 @@ export const setPaneCloseGuard = (
 
 const canClosePane = (pane: HTMLDetailsElement) =>
   closeGuards.get(pane)?.() ?? true;
+
+/**
+ * ペインの中で開いた目次（popover）は、Escape や外の押下をブラウザが先に受けて閉じる。
+ * そのときペインまで閉じると、目次だけ閉じたい操作で両方消えるので、判定に使う
+ */
+const hasOpenPopover = (pane: HTMLDetailsElement) =>
+  pane.querySelector(":popover-open") !== null;
 
 const setState = (button: HTMLElement, state: "copied" | "failed") => {
   button.dataset.copyState = state;
@@ -284,7 +294,11 @@ const initPanes = (root: ParentNode) => {
 
   panes.forEach((pane) => {
     pane.addEventListener("toggle", () => {
-      if (!pane.open) return;
+      // 中で開いた目次は最上層にいるので、ペインを閉じても残る。一緒に閉じる
+      if (!pane.open) {
+        pane.querySelector<HTMLElement>(":popover-open")?.hidePopover();
+        return;
+      }
 
       // 開いた側を引っ込める。閉じられないペインの上に重ねるより、開かない方が迷わない
       const blocked = panes.some(
@@ -310,6 +324,8 @@ const initPanes = (root: ParentNode) => {
       return;
     }
 
+    // 目次が開いていれば、ブラウザが目次だけを閉じる
+    if (hasOpenPopover(opened)) return;
     if (!canClosePane(opened)) return;
 
     opened.open = false;
@@ -330,6 +346,7 @@ const initPanes = (root: ParentNode) => {
 
     const target = event.target as Node | null;
     if (target && opened.contains(target)) return;
+    if (hasOpenPopover(opened)) return;
     if (!canClosePane(opened)) return;
 
     opened.open = false;
@@ -435,6 +452,179 @@ const initGroupNav = (pane: HTMLElement, toolbar: HTMLElement) => {
   onPageCleanup(() => observer.disconnect());
 };
 
+/**
+ * 項目への目次。塊の名前からは、脚注のようにどの塊にあるか分からない項目を辿れない。
+ * 項目名を並べて押せば送れるようにする。
+ */
+const initToc = (pane: HTMLElement, toolbar: HTMLElement) => {
+  const toc = pane.querySelector<HTMLElement>("[data-help-toc]");
+  const rail = pane.querySelector<HTMLElement>("[data-help-toc-trigger]");
+  if (!toc || !rail) return;
+
+  const entries = Array.from(
+    toc.querySelectorAll<HTMLElement>("[data-help-toc-target]"),
+  ).flatMap((button) => {
+    const id = button.dataset.helpTocTarget ?? "";
+    const item = document.getElementById(id);
+    const dash = rail.querySelector<HTMLElement>(
+      `[data-help-toc-dash="${id}"]`,
+    );
+    return item && dash ? [{ button, dash, item }] : [];
+  });
+  if (entries.length === 0) return;
+
+  // 押しただけで編集が終わらないよう、フォーカスは編集欄に残す
+  [rail, toc].forEach((element) => {
+    element.addEventListener("mousedown", (event) => event.preventDefault());
+  });
+
+  /** 吸着した帯と塊の見出しの下へ、項目の頭を出す位置 */
+  const topOf = (item: HTMLElement) => {
+    const heading = item.closest(".help-group")?.querySelector("h2");
+    return (
+      offsetIn(pane, item) - toolbar.offsetHeight - (heading?.offsetHeight ?? 0)
+    );
+  };
+
+  /** 線の列に重ねて右端を揃え、上下の中心も揃える。ペインの上端と画面の下端からははみ出さない */
+  const place = () => {
+    const anchor = rail.getBoundingClientRect();
+    const panel = toc.getBoundingClientRect();
+    const paneTop = pane.getBoundingClientRect().top;
+    const centered = anchor.top + anchor.height / 2 - panel.height / 2;
+    const top = Math.max(
+      paneTop + TOC_MARGIN,
+      Math.min(centered, window.innerHeight - panel.height - TOC_MARGIN),
+    );
+    toc.style.right = `${window.innerWidth - anchor.right}px`;
+    toc.style.top = `${top}px`;
+  };
+
+  /** 続きがある側の端だけを溶かす */
+  const list = toc.querySelector<HTMLElement>("nav");
+  const syncEdges = () => {
+    if (!list) return;
+
+    const above = list.scrollTop > 0;
+    const below = list.scrollTop + list.clientHeight < list.scrollHeight - 1;
+    list.toggleAttribute("data-more-above", above);
+    list.toggleAttribute("data-more-below", below);
+  };
+  list?.addEventListener("scroll", syncEdges, { passive: true });
+
+  /*
+   * hover で開いたものは離れると閉じ、押して開いたものは閉じる操作まで残す。
+   * 開くまで待つのは、右端のスクロールバーへ向かう途中で開かないようにするため
+   */
+  let openedByHover = false;
+  let timer = 0;
+  const cancel = () => window.clearTimeout(timer);
+  const schedule = (action: () => void, ms: number) => {
+    cancel();
+    timer = window.setTimeout(action, ms);
+  };
+  onPageCleanup(cancel);
+
+  const isOpen = () => toc.matches(":popover-open");
+
+  rail.addEventListener("pointerenter", (event) => {
+    if (event.pointerType !== "mouse") return;
+    if (isOpen()) {
+      cancel();
+      return;
+    }
+
+    schedule(() => {
+      openedByHover = true;
+      toc.showPopover();
+    }, TOC_HOVER_OPEN_MS);
+  });
+
+  toc.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") cancel();
+  });
+
+  [rail, toc].forEach((element) => {
+    element.addEventListener("pointerleave", (event) => {
+      if (event.pointerType !== "mouse") return;
+      if (!isOpen()) {
+        cancel();
+        return;
+      }
+      if (!openedByHover) return;
+
+      schedule(() => toc.hidePopover(), TOC_HOVER_CLOSE_MS);
+    });
+  });
+
+  toc.addEventListener("toggle", (event) => {
+    if (!(event instanceof ToggleEvent)) return;
+    if (event.newState === "open") {
+      place();
+      syncEdges();
+      return;
+    }
+
+    openedByHover = false;
+    cancel();
+  });
+
+  toc.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+
+    const button = event.target.closest<HTMLElement>("[data-help-toc-target]");
+    const entry = entries.find((candidate) => candidate.button === button);
+    if (!entry) return;
+
+    pane.scrollTo({ top: topOf(entry.item) });
+    toc.hidePopover();
+  });
+
+  /** 送るたびに測り直さないよう、項目の位置は測った時点のものを持ち回る */
+  let offsets: number[] = [];
+  const measure = () => {
+    offsets = entries.map(({ item }) => topOf(item));
+  };
+
+  let shown = -1;
+  const syncCurrent = () => {
+    const at = pane.scrollTop + 1;
+    let current = 0;
+    offsets.forEach((top, index) => {
+      if (top <= at) current = index;
+    });
+    // 末尾の項目は頭が吸着線まで上がらない。底に着いたら最後とする
+    const atBottom =
+      pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 1;
+    if (atBottom) current = offsets.length - 1;
+    if (current === shown) return;
+
+    shown = current;
+    entries.forEach(({ button, dash }, index) => {
+      const isCurrent = index === current;
+      dash.classList.toggle("is-current", isCurrent);
+      button.classList.toggle("is-current", isCurrent);
+      if (isCurrent) button.setAttribute("aria-current", "true");
+      else button.removeAttribute("aria-current");
+    });
+  };
+
+  measure();
+  syncCurrent();
+  pane.addEventListener("scroll", syncCurrent);
+
+  // 表示例の開閉で中身の高さが変わる。位置を測り直す
+  const observer = new ResizeObserver(() => {
+    measure();
+    shown = -1;
+    syncCurrent();
+  });
+  pane
+    .querySelectorAll<HTMLElement>(".help-group")
+    .forEach((group) => observer.observe(group));
+  onPageCleanup(() => observer.disconnect());
+};
+
 /** 記法ヘルプのコピーと、右ペインの開閉をつなぐ */
 export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
   initPanes(root);
@@ -447,7 +637,10 @@ export const initPreviewSyntaxHelp = (root: ParentNode = document) => {
 
   const body = help.querySelector<HTMLElement>(".body-editor-help-body");
   const toolbar = help.querySelector<HTMLElement>(".syntax-help-toolbar");
-  if (body && toolbar) initGroupNav(body, toolbar);
+  if (body && toolbar) {
+    initGroupNav(body, toolbar);
+    initToc(body, toolbar);
+  }
 
   help.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
