@@ -895,7 +895,11 @@ const { content: Content, status, hidesMemo = false } = Astro.props;
     font-weight: 600;
   }
 
-  .prose thead th {
+  /* 日本語は任意の位置で折り返せるため、何もしないと長文の列に押されて
+     短い列が潰れる。上ヘッダは折り返さず、列を見出しの幅より細くしない。
+     列ごとの指定は見出しの `{…}` で書く（rehypeTableColumns） */
+  .prose thead th,
+  .prose .table-col-nowrap {
     white-space: nowrap;
   }
 

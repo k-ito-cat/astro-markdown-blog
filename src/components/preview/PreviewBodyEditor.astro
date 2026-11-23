@@ -135,6 +135,17 @@ const SNIPPET_GROUPS = [
         note: "同じ観点の項目が 3 つ以上並ぶときに使う。2 つなら文のままでよい",
       },
       {
+        label: "テーブル（列の幅）",
+        code: "| 記法 {nowrap} | 説明 {60%} | 回数 {4em} |\n| --- | --- | ---: |\n| `O(log n)` | 1 回ごとに対象を半分に絞る | 6 |",
+        options: [
+          { label: "折り返さない", code: "{nowrap}" },
+          { label: "幅の目安（表に対する割合）", code: "{60%}" },
+          { label: "幅の下限", code: "{4em}" },
+          { label: "併記", code: "{nowrap 4em}" },
+        ],
+        note: "見出しの末尾に書き、その列のセルすべてに効く。見出しは既定で折り返さず、列は見出しより細くならない。それでも長文の列に押されて潰れる列に使う。単位は % と em だけで、読めない指定は見出しに文字のまま残る。Markdown の表（上ヘッダ）だけが対象",
+      },
+      {
         label: "テーブル（左ヘッダ）",
         code: '<table>\n<tr><th scope="row">項目</th><td>説明</td></tr>\n<tr><th scope="row">項目</th><td>説明</td></tr>\n</table>',
         note: "Markdown のテーブルは上ヘッダのみ。左ヘッダは HTML で書く",
